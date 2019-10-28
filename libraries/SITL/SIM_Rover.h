@@ -37,7 +37,7 @@ public:
         return new SimRover(frame_str);
     }
 
-private:
+protected:
     float max_speed = 20.0f;            // vehicle's maximum forward speed in m/s
     float max_accel = 10.0f;            // vehicle's maximum forward acceleration in m/s/s
     float max_wheel_turn = 35.0f;       // ackermann steering vehicle's maximum steering angle
