@@ -784,7 +784,7 @@ void SITL_State::_simulator_servos(struct sitl_input &input)
         switch (_sitl->wind_type) {
         case SITL::SITL::WIND_TYPE_SQRT:
             if (altitude < _sitl->wind_type_alt) {
-                wind_speed *= sqrtf(MAX(altitude / _sitl->wind_type_alt, 0));
+                wind_speed *= sqrtf(MAX((_sitl->wind_type_alt>0?altitude / _sitl->wind_type_alt:0), 0));
             }
             break;
 
