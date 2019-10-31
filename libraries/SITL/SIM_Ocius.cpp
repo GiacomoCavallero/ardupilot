@@ -137,7 +137,7 @@ void SimOcius::update(const struct sitl_input &input)
     float yaw_rate = calc_yaw_rate(steering, speed);
 
     DEBUGV("SimOcius:: Have current speed: %.1f, direction: %.1f\n",
-        input.water.speed, input.water.direction);
+        sitl->tide.speed.get(), sitl->tide.direction.get());
     if (isfinite(sitl->tide.speed) && isfinite(sitl->tide.direction)) {
         float curr_speed = sitl->tide.speed;
         float curr_dir = CLIP_360(sitl->tide.direction + 180.0);
