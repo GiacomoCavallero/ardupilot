@@ -115,6 +115,57 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
         0,
         control_mode->speed_error(),
         control_mode->crosstrack_error());
+
+    // TODO: check can be sent
+    Location wp;
+    bool have_wp = rover.control_mode->get_desired_location(wp);
+    mavlink_msg_ocius_nav_controller_output_send(chan,
+            MIN(control_mode->get_distance_to_destination(), UINT32_MAX),
+            (have_wp?wp.lat:0), (have_wp?wp.lng:0));
+}
+
+void GCS_MAVLINK_Rover::send_sail_status() {
+    Location hold_loc;
+    bool have_wp = rover.mode_hold.get_desired_location(hold_loc);
+
+    mavlink_msg_sail_status_send(chan,
+            rover.g2.sailboat.sail.current_position, rover.g2.sailboat.rudder.current_position,
+            rover.g2.sailboat.mast.current_position, rover.g2.sailboat.winch.current_position,
+            rover.g2.sailboat.sail.set_position, rover.g2.sailboat.rudder.set_position,
+            rover.g2.sailboat.mast.set_position, rover.g2.sailboat.winch.set_position,
+            rover.g2.sailboat.sail.homed, rover.g2.sailboat.rudder.homed,
+            rover.g2.sailboat.mast.homed, rover.g2.sailboat.winch.homed,
+            // TODO: populate with parameters when created
+            0,0,0,0,0,0,0,0,0,0,0,
+//            rover.g2.sailboat.sail_mode, rover.g2.sailboat.sail_hold_mode, rover.g2.sailboat.sail_hold_radius,
+//            rover.g2.sailboat.sail_max_wind,
+//            rover.g2.sailboat.sail_attack_angle, rover.g2.sailboat.sail_attack_err,
+//            rover.g2.sailboat.sail_throttle_mode,
+//            rover.g2.sailboat.sail_tack_angle, rover.g2.sailboat.sail_max_tack,
+//            rover.g2.sailboat.sail_tack_push, rover.g2.sailboat.sail_tack_push_angle,
+            0, 0, 0, 0,
+            (have_wp?hold_loc.lat:0), (have_wp?hold_loc.lng:0));
+}
+
+void GCS_MAVLINK_Rover::send_water() {
+    mavlink_msg_water_send(chan,
+            rover.g2.sailboat.nmea2k_sensors.triducer.speed_thru_water,
+            rover.g2.sailboat.nmea2k_sensors.triducer.water_temp,
+            rover.g2.sailboat.nmea2k_sensors.triducer.water_depth);
+}
+
+void GCS_MAVLINK_Rover::send_compass_raw() {
+    mavlink_msg_compass_raw_send(chan,
+            1,
+            rover.g2.sailboat.nmea2k_sensors.compass.reference,
+            rover.g2.sailboat.nmea2k_sensors.compass.last_update,
+            rover.g2.sailboat.nmea2k_sensors.compass.heading,
+            rover.g2.sailboat.nmea2k_sensors.compass.variation,
+            rover.g2.sailboat.nmea2k_sensors.compass.deviation,
+            0,
+//            rover.g.mag_offset,
+            0, 0, 0, 0  // TODO: get lat,lon,cog,sog
+        );
 }
 
 void Rover::send_servo_out(mavlink_channel_t chan)
@@ -341,6 +392,23 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
         }
         break;
     }
+    case MSG_SAIL_STATUS:
+        CHECK_PAYLOAD_SIZE(SAIL_STATUS);
+        send_sail_status();
+        break;
+    case MSG_WATER:
+        CHECK_PAYLOAD_SIZE(WATER);
+        send_water();
+        break;
+    case MSG_COMPASS_RAW:
+        CHECK_PAYLOAD_SIZE(COMPASS_RAW);
+        send_compass_raw();
+        break;
+    case MSG_AIS_VESSEL_STATUS:
+    case MSG_RADIO_LINK_STATUS:
+        // TODO: send the Ocius messages
+        printf("Hello (%d).\n", (int)id);
+        break;
 
     default:
         return GCS_MAVLINK::try_send_message(id);
@@ -449,6 +517,15 @@ const AP_Param::GroupInfo GCS_MAVLINK_Parameters::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("ADSB",   9, GCS_MAVLINK_Parameters, streamRates[9],  0),
 
+    // @Param: OCIUS
+    // @DisplayName: OCIUS stream rate to ground station
+    // @Description: OCIUS stream rate to ground station
+    // @Units: Hz
+    // @Range: 0 50
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("OCIUS",   10, GCS_MAVLINK_Parameters, streamRates[10],  2),
+
     AP_GROUPEND
 };
 
@@ -519,6 +596,13 @@ static const ap_message STREAM_PARAMS_msgs[] = {
 static const ap_message STREAM_ADSB_msgs[] = {
     MSG_ADSB_VEHICLE
 };
+static const ap_message STREAM_OCIUS_msgs[] = {
+    MSG_SAIL_STATUS,
+    MSG_WATER,
+    MSG_AIS_VESSEL_STATUS,
+    MSG_COMPASS_RAW,
+    MSG_RADIO_LINK_STATUS,
+};
 
 const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
     MAV_STREAM_ENTRY(STREAM_RAW_SENSORS),
@@ -531,6 +615,7 @@ const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
     MAV_STREAM_ENTRY(STREAM_EXTRA3),
     MAV_STREAM_ENTRY(STREAM_ADSB),
     MAV_STREAM_ENTRY(STREAM_PARAMS),
+    MAV_STREAM_ENTRY(STREAM_OCIUS),
     MAV_STREAM_TERMINATOR // must have this at end of stream_entries
 };
 

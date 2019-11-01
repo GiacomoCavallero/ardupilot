@@ -16,6 +16,9 @@
 /*
     Rover Sailboat functionality
 */
+
+#include "ocius.h"
+
 class Sailboat
 {
 public:
@@ -112,4 +115,9 @@ private:
     uint32_t tack_clear_ms;         // system time when tack was cleared
     bool tack_assist;               // true if we should use some throttle to assist tack
     UseMotor motor_state;           // current state of motor output
+
+    NMEA2K nmea2k_sensors;
+    EncodedServo rudder, sail, mast, winch;
+
+    friend class GCS_MAVLINK_Rover;
 };

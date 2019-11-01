@@ -31,6 +31,10 @@ protected:
     void send_nav_controller_output() const override;
     void send_pid_tuning() override;
 
+    void send_sail_status();
+    void send_water();
+    void send_compass_raw();
+
 private:
 
     void handleMessage(const mavlink_message_t &msg) override;
