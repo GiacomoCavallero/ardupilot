@@ -13,289 +13,264 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*
-  rover simulator class
+    Sailboat simulator class
+
+    see explanation of lift and drag explained here: https://en.wikipedia.org/wiki/Forces_on_sails
+
+    To-Do: add heel handling by calculating lateral force from wind vs gravity force from heel to arrive at roll rate or acceleration
 */
 
 #include "SIM_Ocius.h"
-
+#include <AP_Math/AP_Math.h>
+#include <AP_AHRS/AP_AHRS.h>
 #include <string.h>
 #include <stdio.h>
 
-//TODO: Need to provide sensor data for wind/water speed and direction
-//#include <AP_GPS/AP_GPS_OCIUSN2K.h>
+extern const AP_HAL::HAL& hal;
 
 namespace SITL {
 
-#define CLIP_180(A)     ((A) < -180? (A) + 360: (A) > 180? (A) - 360: (A))
-#define CLIP_360(A)     ((A) < 0? (A) + 360: (A) > 360? (A) - 360: (A))
+#define STEERING_SERVO_CH   0   // steering controlled by servo output 1
+#define MAINSAIL_SERVO_CH   3   // main sail controlled by servo output 4
+#define THROTTLE_SERVO_CH   2   // throttle controlled by servo output 3
 
-#define KNOTS_PER_METRE     1.94384
-
-#define PWM_2_FLOAT(PWM)      ((float)((PWM - 1100) / 800.0F))
-#define FLOAT_2_PWM(REL)      ((int)(REL * 800) + 1100)
-
-//#define DEBUGV(fmt, ...) printf(fmt, ##__VA_ARGS__);gcs().send_text(MAV_SEVERITY_INFO, fmt, ##__VA_ARGS__);
-//#define DEBUGV(fmt, ...) printf(fmt, ##__VA_ARGS__);
-#define DEBUGV(fmt, ...)
+    // very roughly sort of a stability factors for waves
+#define WAVE_ANGLE_GAIN 1
+#define WAVE_HEAVE_GAIN 1
 
 SimOcius::SimOcius(const char *frame_str) :
-    SimRover(frame_str),
-    rudder(radians(-45), radians(45), 0.15),
-    mast(radians(-90), 0, 0.30, radians(-90)),
-    wing_sail(radians(-90), radians(90), 0.10),
-    winch(0, radians(360 * 30), 2),
-    is_wamv(false)
+    Aircraft(frame_str),
+    steering_angle_max(35),
+    turning_circle(1.8),
+    sail_area(0.0),
+    wave_heave(0),
+    wave_phase(0)
 {
-    // TODO: SimOcius::SimOcius() - Add default configurations
-    is_wamv = (strcasecmp(frame_str, "wamv") == 0);
+    wamv = (strcmp(frame_str, "wamv") == 0);
 }
 
-#define     OPTIMAL_LIFT_ANGLE      35
-#define     STALL_ANGLE             50
+// calculate the lift and drag as values from 0 to 1
+// given an apparent wind speed in m/s and angle-of-attack in degrees
+void SimOcius::calc_lift_and_drag(float wind_speed, float angle_of_attack_deg, float& lift, float& drag) const
+{
+    const uint16_t index_width_deg = 10;
+    const uint8_t index_max = ARRAY_SIZE(lift_curve) - 1;
+
+    // check extremes
+    if (angle_of_attack_deg <= 0.0f) {
+        lift = lift_curve[0];
+        drag = drag_curve[0];
+    } else if (angle_of_attack_deg >= index_max * index_width_deg) {
+        lift = lift_curve[index_max];
+        drag = drag_curve[index_max];
+    } else {
+        uint8_t index = constrain_int16(angle_of_attack_deg / index_width_deg, 0, index_max);
+        float remainder = angle_of_attack_deg - (index * index_width_deg);
+        lift = linear_interpolate(lift_curve[index], lift_curve[index+1], remainder, 0.0f, index_width_deg);
+        drag = linear_interpolate(drag_curve[index], drag_curve[index+1], remainder, 0.0f, index_width_deg);
+    }
+
+    // apply scaling by wind speed
+    lift *= wind_speed * sail_area;
+    drag *= wind_speed * sail_area;
+}
+
+// return turning circle (diameter) in meters for steering angle proportion in the range -1 to +1
+float SimOcius::get_turn_circle(float steering) const
+{
+    if (is_zero(steering)) {
+        return 0;
+    }
+    return turning_circle * sinf(radians(steering_angle_max)) / sinf(radians(steering * steering_angle_max));
+}
+
+// return yaw rate in deg/sec given a steering input (in the range -1 to +1) and speed in m/s
+float SimOcius::get_yaw_rate(float steering, float speed) const
+{
+    if (is_zero(steering) || is_zero(speed)) {
+        return 0;
+    }
+    float d = get_turn_circle(steering);
+    float c = M_PI * d;
+    float t = c / speed;
+    float rate = 360.0f / t;
+    return rate;
+}
+
+// return lateral acceleration in m/s/s given a steering input (in the range -1 to +1) and speed in m/s
+float SimOcius::get_lat_accel(float steering, float speed) const
+{
+    float yaw_rate = get_yaw_rate(steering, speed);
+    float accel = radians(yaw_rate) * speed;
+    return accel;
+}
+
+// simulate basic waves / swell
+void SimOcius::update_wave(float delta_time)
+{
+    const float wave_heading = sitl->wave.direction;
+    const float wave_speed = sitl->wave.speed;
+    const float wave_lenght = sitl->wave.length;
+    const float wave_amp = sitl->wave.amp;
+
+    // apply rate propositional to error between boat angle and water angle
+    // this gives a 'stability' effect
+    float r, p, y;
+    dcm.to_euler(&r, &p, &y); 
+
+    // if not armed don't do waves, to allow gyro init
+    if (sitl->wave.enable == 0 || !hal.util->get_soft_armed() || is_zero(wave_amp) ) { 
+        wave_gyro = Vector3f(-r,-p,0.0f) * WAVE_ANGLE_GAIN;
+        wave_heave = -velocity_ef.z * WAVE_HEAVE_GAIN;
+        wave_phase = 0.0f;
+        return;
+    }
+
+    // calculate the sailboat speed in the direction of the wave
+    const float boat_speed = velocity_ef.x * sinf(radians(wave_heading)) + velocity_ef.y * cosf(radians(wave_heading));
+
+    // update the wave phase
+    const float aprarent_wave_distance = (wave_speed - boat_speed) * delta_time;
+    const float apparent_wave_phase_change = (aprarent_wave_distance / wave_lenght) * M_2PI;
+
+    wave_phase += apparent_wave_phase_change;
+    wave_phase = wrap_2PI(wave_phase);
+
+    // calculate the angles at this phase on the wave
+    // use basic sine wave, dy/dx of sine = cosine
+    // atan( cosine ) = wave angle
+    const float wave_slope = (wave_amp * 0.5f) * (M_2PI / wave_lenght) * cosf(wave_phase);
+    const float wave_angle = atanf(wave_slope);
+
+    // convert wave angle to vehicle frame
+    const float heading_dif = wave_heading - y;
+    float angle_error_x = (sinf(heading_dif) * wave_angle) - r;
+    float angle_error_y = (cosf(heading_dif) * wave_angle) - p;
+
+    // apply gain
+    wave_gyro.x = angle_error_x * WAVE_ANGLE_GAIN;
+    wave_gyro.y = angle_error_y * WAVE_ANGLE_GAIN;
+    wave_gyro.z = 0.0f;
+
+    // calculate wave height (NED)
+    if (sitl->wave.enable == 2) {
+        wave_heave = (wave_slope - velocity_ef.z) * WAVE_HEAVE_GAIN;
+    } else {
+        wave_heave = 0.0f;
+    }
+}
 
 /*
-  update the rover simulation by one time step
+  update the sailboat simulation by one time step
  */
 void SimOcius::update(const struct sitl_input &input)
 {
-    DEBUGV("SimOcius:: Updating simulator state.\n");
-    float steering, throttle;
+    // update wind
+    update_wind(input);
 
+    float steering = 0.0f;
 
-    // The Wam-V uses skid steering
-    if (is_wamv) {
-        float motor1 = -2 * ((input.servos[0] - 1000) / 1000.0f - 0.5f);
-        float motor2 = -2 * ((input.servos[2] - 1000) / 1000.0f - 0.5f);
-        steering = motor2 - motor1;
-        throttle = 0.5*(motor1 + motor2);
+    float throttle_force = 0.0f;
+    if (wamv) {
+        // FIXME: the Wam-V uses skid steering
+    } else {
+        // the steering controls the rudder, the throttle controls the main sail position
+        steering = -2*((input.servos[STEERING_SERVO_CH]-1000)/1000.0f - 0.5f);
+
+        // throttle force (for motor sailing)
+        // gives throttle force == hull drag at 10m/s
+        const uint16_t throttle_out = constrain_int16(input.servos[THROTTLE_SERVO_CH], 1000, 2000);
+        throttle_force = -(throttle_out-1500) * 0.1f * 0.122f;
     }
-    else {
-        steering = 2 * ((input.servos[0] - 1000) / 1000.0f - 0.5f);
-        //        throttle = -2*((input.servos[2]-1000)/1000.0f - 0.5f);
-        throttle = -(input.servos[2] - 1500) / 400.0f;
-        DEBUGV("SimOcius:: servo 1: %u, servo 3: %u\n", input.servos[0], input.servos[2]);
-    }
+
+    // calculate mainsail angle from servo output 4, 0 to 90 degrees
+    float mainsail_angle_bf = constrain_float((input.servos[MAINSAIL_SERVO_CH]-1000)/1000.0f * 90.0f, 0.0f, 90.0f);
+
+    // calculate apparent wind in earth-frame (this is the direction the wind is coming from)
+    // Note than the SITL wind direction is defined as the direction the wind is travelling to
+    // This is accounted for in these calculations
+    Vector3f wind_apparent_ef = wind_ef + velocity_ef;
+    const float wind_apparent_dir_ef = degrees(atan2f(wind_apparent_ef.y, wind_apparent_ef.x));
+    const float wind_apparent_speed = safe_sqrt(sq(wind_apparent_ef.x)+sq(wind_apparent_ef.y));
+
+    const float wind_apparent_dir_bf = wrap_180(wind_apparent_dir_ef - degrees(AP::ahrs().yaw));
+
+    // set RPM and airspeed from wind speed, allows to test RPM and Airspeed wind vane back end in SITL
+    rpm1 = wind_apparent_speed;
+    airspeed_pitot = wind_apparent_speed;
+
+    // calculate angle-of-attack from wind to mainsail
+    float aoa_deg = MAX(fabsf(wind_apparent_dir_bf) - mainsail_angle_bf, 0);
+
+    // calculate Lift force (perpendicular to wind direction) and Drag force (parallel to wind direction)
+    float lift_wf, drag_wf;
+    calc_lift_and_drag(wind_apparent_speed, aoa_deg, lift_wf, drag_wf);
+
+    // rotate lift and drag from wind frame into body frame
+    const float sin_rot_rad = sinf(radians(wind_apparent_dir_bf));
+    const float cos_rot_rad = cosf(radians(wind_apparent_dir_bf));
+    const float force_fwd = fabsf(lift_wf * sin_rot_rad) - (drag_wf * cos_rot_rad);
 
     // how much time has passed?
     float delta_time = frame_time_us * 1.0e-6f;
-    DEBUGV("SimOcius:: Have steering: %.1f, throttle: %.1f, delta time: %.6f\n", steering, throttle, delta_time);
-
-    //if (input.debug[0] != 0.0 || input.debug[1] != 0.0)
-    //{
-    //    accel_body.zero();
-    //    dcm.zero();
-    //    gyro.zero();
-    //    gyro_prev.zero();
-    //    ang_accel.zero();
-
-    //    velocity_ef.x = input.debug[0];
-    //    velocity_ef.y = input.debug[1];
-    //    velocity_ef.z = 0;
-    //}
-    //else
-    //{
-//    steering = -steering;
-
-//    printf("SimOcius:: Sail Motor - pos: %.3f, target: %.3f, input: %.3f(%u)\n",
-//            wing_sail.position, wing_sail.target, PWM_2_FLOAT(input.servos[9]), input.servos[9]);
-//    printf("SimOcius:: Mast Motor - pos: %.3f, target: %.3f, input: %.3f(%u)\n",
-//            mast.position, mast.target, PWM_2_FLOAT(input.servos[8]), input.servos[8]);
-
-    // Update rudder/mast/sail positions
-    rudder.setRelativeTarget((steering + 1) / 2);
-    rudder.update(delta_time);
-    if (input.servos[8])
-        mast.setRelativeTarget(PWM_2_FLOAT(input.servos[8]));
-    mast.update(delta_time);
-    if (input.servos[9])
-        wing_sail.setRelativeTarget(PWM_2_FLOAT(input.servos[9]));
-    wing_sail.update(delta_time);
-    if (input.servos[13])
-        winch.setRelativeTarget(PWM_2_FLOAT(input.servos[13]));
-    winch.update(delta_time);
-
-
-
-    //    DEBUGV("SimOcius:: Sail sim: %d, %.2f, %d\n", input.servos[9], wing_sail.target, FLOAT_2_PWM(wing_sail.getRelativePosition()));
-    //
-    DEBUGV("SimOcius:: Mast: %d, Sail %d\n", input.servos[8], input.servos[9]);
-
-    // use rudder position for the steering
-    steering = -((rudder.getRelativePosition() * 2) - 1);
 
     // speed in m/s in body frame
-    Vector3f velocity_body = dcm.transposed() * velocity_ef;
-    //    printf("Current velocity: %.3f\n", velocity_body.x);
-    //    Matrix3f I = dcm * dcm.transposed();
-    //    printf("[[ %.3f, %.3f, %.3f ]\n[ %.3f, %.3f, %.3f ]\n[ %.3f, %.3f, %.3f ]]\n",
-    //            I.a.x, I.a.y, I.a.z, I.b.x, I.b.y, I.b.z, I.c.x, I.c.y, I.c.z);
+    Vector3f velocity_body = dcm.transposed() * velocity_ef_water;
 
-        // speed along x axis, +ve is forward
+    // speed along x axis, +ve is forward
     float speed = velocity_body.x;
 
     // yaw rate in degrees/s
-    float yaw_rate = calc_yaw_rate(steering, speed);
+    float yaw_rate = get_yaw_rate(steering, speed);
 
-    DEBUGV("SimOcius:: Have current speed: %.1f, direction: %.1f\n",
-        sitl->tide.speed.get(), sitl->tide.direction.get());
-    if (isfinite(sitl->tide.speed) && isfinite(sitl->tide.direction)) {
-        float curr_speed = sitl->tide.speed;
-        float curr_dir = CLIP_360(sitl->tide.direction + 180.0);
-        Vector3f vel_water = Vector3f(-curr_speed*cos(radians(curr_dir)), -curr_speed*sin(radians(curr_dir)), 0),
-            rel_water = vel_water - velocity_ef;
-
-        yaw_rate = calc_yaw_rate(steering, rel_water.length());
-    }
-    DEBUGV("SimOcius:: Have steering: %.1f, yaw_rate: %.1f\n", steering, yaw_rate);
-
-    sitl_fdm fdm;
-    fill_fdm(fdm);
-    //    printf("Current headings: dcm: %.2f fdm: %.2f\n", fdm.yawDeg, (float)fdm.heading);
-
-    //    printf("Yaw rate: %.2f(%.2f, %.2f, %.2f, %.2f)\n", yaw_rate, steering, speed, velocity_body.y, velocity_ef.length());
-
-    gyro = Vector3f(0, 0, radians(yaw_rate));
+    gyro = Vector3f(0,0,radians(yaw_rate)) + wave_gyro;
 
     // update attitude
     dcm.rotate(gyro * delta_time);
     dcm.normalize();
 
-    // accel in body frame due to motor
-    accel_body = Vector3f(0, 0, 0);
+    // hull drag
+    float hull_drag = sq(speed) * 0.5f;
+    if (!is_positive(speed)) {
+        hull_drag *= -1.0f;
+    }
+
+    // accel in body frame due acceleration from sail and deceleration from hull friction
+    accel_body = Vector3f((throttle_force + force_fwd) - hull_drag, 0, 0);
+    accel_body /= mass;
 
     // add in accel due to direction change
     accel_body.y += radians(yaw_rate) * speed;
 
-    //if we are a boat then we will drift if wind has a velocity or current has a velocity
-
-    // Calculate hull water speed, calculate lateral water speed
-    float rel_current_deg = CLIP_360(sitl->tide.direction - fdm.yawDeg + 180.0);
-    double hull_water = velocity_body.x + sitl->tide.speed * cos(radians(rel_current_deg));
-    double lateral_water = velocity_body.y + sitl->tide.speed * sin(radians(rel_current_deg));
-    //        printf("Hdg: %.1f, Current Dir: %.1f Current Spd: %.1f \n", fdm.yawDeg, input.current.direction, input.current.speed);
-
-/**    TODO: // Fake the sesor readings for wind and water speed/direction
-    public_nmea2k_readings.wind_type = 0;
-    public_nmea2k_readings.wind_speed = input.wind.speed * KNOTS_PER_METRE * 100;
-    public_nmea2k_readings.wind_direction = input.wind.direction * 100;
-    public_nmea2k_readings.water_speed = hull_water;
-    DEBUGV("SimOcius:: Publishing sensors - wind %.1f, %.1f\n", public_nmea2k_readings.wind_speed, input.wind.direction);
-**/
-    // Simple change to speed up Wam-Vs
-    if (is_wamv) hull_water /= 2;
-    double drag_hull = (pow(1.005, fabs(hull_water * KNOTS_PER_METRE * hull_water * KNOTS_PER_METRE)) - 1) * 5;
-    //        printf("h_w: %.2lf, knt_w: %.2lf, pow: %.3lf, d_h_fml: %.3lf, d_h: %.3lf\n",
-    //                hull_water, hull_water * KNOTS_PER_METRE, pow(1.005, fabs(hull_water*KNOTS_PER_METRE * hull_water * KNOTS_PER_METRE)),
-    //                (pow(1.005, fabs(hull_water * KNOTS_PER_METRE * hull_water * KNOTS_PER_METRE)) - 1) * 5, drag_hull);
-
-    if (hull_water < 0) drag_hull = -drag_hull;
-    //        printf("Hull speed: %.2lf, drag %.3lf\n", hull_water, drag_hull);
-    double drag_lateral = (pow(1.1, fabs(lateral_water * KNOTS_PER_METRE)) - 1) * 20;
-    if (lateral_water < 0) drag_lateral = -drag_lateral;
-    //        printf("Lateral speed: %.2lf, drag %.3lf\n", lateral_water, drag_lateral);
-
-    accel_body.x += throttle - drag_hull;
-    accel_body.y -= drag_lateral;
-
-    //        printf("Local Acceleration (%.3f, %.3f, %.3f)\n", accel_body.x, accel_body.y, accel_body.z);
-
-    if (isfinite(input.wind.speed) && isfinite(input.wind.direction) && isfinite(velocity_ef.x) && isfinite(velocity_ef.y)) {
-        float wind_speed = input.wind.speed;
-        float wind_dir = input.wind.direction;
-        Vector3f vel_wind = Vector3f(-wind_speed*cos(radians(wind_dir)), -wind_speed*sin(radians(wind_dir)), 0),
-            rel_wind = vel_wind - velocity_ef;
-        //
-        //            printf("True wind(%.2f, %.2f, %.2f)\n", vel_wind.x, vel_wind.y, vel_wind.z);
-        //            printf("Relative wind(%.2f, %.2f, %.2f)\n", rel_wind.x, rel_wind.y, rel_wind.z);
-        wind_speed = rel_wind.length();
-        wind_dir = degrees(atan2(-rel_wind.y, -rel_wind.x)) - fdm.yawDeg;
-        wind_dir = CLIP_180(wind_dir);
-
-        //            printf("Apparent Wind (%.1f deg, %.3f m/s), hdg: %.1lf\n", wind_dir, wind_speed, fdm.yawDeg);
-
-        if (mast.position >= -M_PI_4) {
-            // Calculate the lift & drag on the sail/wing
-            float sail_area = fabs(cos(wing_sail.position - radians(wind_dir)));
-
-            if (sail_area < 0.1) {
-                // set a minimum value for sail exposure
-                sail_area = 0.1;
-            }
-
-            //                printf("Exposed sail area: %.3f\n", sail_area);
-
-            const float K_wind = 0.04;
-            float wind_drag = sail_area * wind_speed * K_wind;
-
-            accel_body -= Vector3f(wind_drag*cos(radians(wind_dir)), wind_drag*sin(radians(wind_dir)), 0);
-
-
-            // Calculate the lift from the sail
-            float attack_angle = 0;
-            float sail_angle = degrees(-wing_sail.position);
-            const float sail_default_attack = 5;
-            if (wind_dir > 0) {
-                attack_angle = wind_dir - 90 + sail_angle + sail_default_attack;
-            }
-            else {
-                attack_angle = -wind_dir - 90 - sail_angle + sail_default_attack;
-            }
-            DEBUGV("SimOcius: apparent_wind: %.1f, sail_angle: %.1f, attack_angle: %.1f\n", wind_dir, sail_angle, attack_angle);
-
-            //                printf("Attack angle: %.1f\n", attack_angle);
-
-            float lift = 0;
-            if (fabs(attack_angle) < OPTIMAL_LIFT_ANGLE) {
-                lift = attack_angle / OPTIMAL_LIFT_ANGLE;
-            }
-            else if (fabs(attack_angle) < STALL_ANGLE) {
-                lift = (STALL_ANGLE - fabs(attack_angle)) / (STALL_ANGLE - OPTIMAL_LIFT_ANGLE);
-                if (attack_angle < 0)
-                    lift = -lift;
-                //                } else {
-                //                    printf("Sail Stalled\n");
-            }
-            Vector3f wind_v = Vector3f(cos(radians(wind_dir)), sin(radians(wind_dir)), 0), lift_v;
-            if (wind_v.y < 0) {
-                lift_v.x = -wind_v.y;
-                lift_v.y = wind_v.x;
-            }
-            else {
-                lift_v.x = wind_v.y;
-                lift_v.y = -wind_v.x;
-            }
-
-            //                printf("Lift vector: (%.3f, %.3f, %.3f)\n", lift_v.x, lift_v.y, lift_v.z);
-            lift_v *= wind_speed * wind_speed * lift;
-
-            //            float K_lift = 1 / 180.0;
-            float K_lift = 1 / 250.0;
-            lift_v *= K_lift;
-            //                printf("Lift vector(2): (%.3f, %.3f, %.3f), lift, %.3f\n", lift_v.x, lift_v.y, lift_v.z, lift);
-            accel_body += lift_v;
-
-            DEBUGV("SimOcius: wind: %.2lf, lift: %.2lf, drag: %.2lf, attack: %.1lf\n", wind_speed, lift, wind_drag, attack_angle);
-        }
-    }
-    //    printf("Current boat acceleration(%.2f, %.2f, %.2f)\n", accel_earth.x, accel_earth.y, accel_earth.z);
-
-        // now in earth frame
-    Vector3f accel_earth = dcm * accel_body;
-    accel_earth += Vector3f(0, 0, GRAVITY_MSS);
+    // now in earth frame
+    // remove roll and pitch effects from waves
+    float r, p, y;
+    dcm.to_euler(&r, &p, &y);
+    Matrix3f temp_dcm;
+    temp_dcm.from_euler(0.0f, 0.0f, y);
+    Vector3f accel_earth = temp_dcm * accel_body;
 
     // we are on the ground, so our vertical accel is zero
-    accel_earth.z = 0;
+    accel_earth.z = 0 + wave_heave;
 
     // work out acceleration as seen by the accelerometers. It sees the kinematic
     // acceleration (ie. real movement), plus gravity
     accel_body = dcm.transposed() * (accel_earth + Vector3f(0, 0, -GRAVITY_MSS));
 
+    // tide calcs
+    Vector3f tide_velocity_ef;
+     if (hal.util->get_soft_armed() && !is_zero(sitl->tide.speed) ) {
+        tide_velocity_ef.x = -cosf(radians(sitl->tide.direction)) * sitl->tide.speed;
+        tide_velocity_ef.y = -sinf(radians(sitl->tide.direction)) * sitl->tide.speed;
+        tide_velocity_ef.z = 0.0f;
+     }
+
     // new velocity vector
-    velocity_ef += accel_earth * delta_time;
-    //}
+    velocity_ef_water += accel_earth * delta_time;
+    velocity_ef = velocity_ef_water + tide_velocity_ef;
 
     // new position vector
-    position = velocity_ef * delta_time;
+    position += velocity_ef * delta_time;
 
     // update lat/lon/altitude
     update_position();
@@ -303,6 +278,10 @@ void SimOcius::update(const struct sitl_input &input)
 
     // update magnetic field
     update_mag_field_bf();
+
+    // update wave calculations
+    update_wave(delta_time);
+
 }
 
 } // namespace SITL
