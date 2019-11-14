@@ -5,6 +5,10 @@
 #include "AP_HAL_SITL.h"
 #include <AP_ESC_Telem/AP_ESC_Telem_SITL.h>
 
+namespace SITL {
+class SimOcius;
+}
+
 class HALSITL::RCOutput : public AP_HAL::RCOutput {
 public:
     explicit RCOutput(SITL_State *sitlState): _sitlState(sitlState), _freq_hz(50) {}
@@ -18,6 +22,8 @@ public:
     void read(uint16_t* period_us, uint8_t len) override;
     void cork(void) override;
     void push(void) override;
+    AP_HAL::ServoStatus read_actual(uint8_t chan) override;
+    void read_actual(AP_HAL::ServoStatus* status, uint8_t len) override;
 
     /*
       force the safety switch on, disabling PWM output from the IO board
@@ -43,6 +49,9 @@ private:
     uint16_t _enable_mask;
     bool _corked;
     uint16_t _pending[SITL_NUM_CHANNELS];
+    AP_HAL::ServoStatus _actual[SITL_NUM_CHANNELS];
+
+    friend class SITL::SimOcius;
 };
 
 #endif

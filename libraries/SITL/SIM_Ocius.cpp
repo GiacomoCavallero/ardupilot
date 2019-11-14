@@ -23,6 +23,11 @@
 #include "SIM_Ocius.h"
 #include <AP_Math/AP_Math.h>
 #include <AP_AHRS/AP_AHRS.h>
+
+//#include <APMrover2/Rover.h>
+
+#include <AP_HAL_SITL/RCOutput.h>
+
 #include <string.h>
 #include <stdio.h>
 
@@ -34,6 +39,9 @@ namespace SITL {
 #define MAINSAIL_SERVO_CH   3   // main sail controlled by servo output 4
 #define THROTTLE_SERVO_CH   2   // throttle controlled by servo output 3
 
+#define MAST_RAISE_CH       8   // mast raise/lower controlled by servo output 9
+#define SAIL_ROTATE_CH      9   // sail rotate controlled by servo output 10
+
     // very roughly sort of a stability factors for waves
 #define WAVE_ANGLE_GAIN 1
 #define WAVE_HEAVE_GAIN 1
@@ -44,7 +52,10 @@ SimOcius::SimOcius(const char *frame_str) :
     turning_circle(1.8),
     sail_area(0.0),
     wave_heave(0),
-    wave_phase(0)
+    wave_phase(0),
+    rudder(0),
+    mast(-1,0.3f),
+    sail(0,0.3f)
 {
     wamv = (strcmp(frame_str, "wamv") == 0);
 }
@@ -165,6 +176,9 @@ void SimOcius::update_wave(float delta_time)
  */
 void SimOcius::update(const struct sitl_input &input)
 {
+    // how much time has passed?
+    float delta_time = frame_time_us * 1.0e-6f;
+
     // update wind
     update_wind(input);
 
@@ -176,11 +190,43 @@ void SimOcius::update(const struct sitl_input &input)
     } else {
         // the steering controls the rudder, the throttle controls the main sail position
         steering = -2*((input.servos[STEERING_SERVO_CH]-1000)/1000.0f - 0.5f);
+        rudder.set_desired_position(steering);
+        rudder.update(delta_time);
+        steering = rudder.get_position();
 
         // throttle force (for motor sailing)
         // gives throttle force == hull drag at 10m/s
         const uint16_t throttle_out = constrain_int16(input.servos[THROTTLE_SERVO_CH], 1000, 2000);
         throttle_force = -(throttle_out-1500) * 0.1f * 0.122f;
+
+        if (input.servos[MAST_RAISE_CH] >= 1000 && input.servos[MAST_RAISE_CH] <= 2000) {
+            float mast_set_pos = 2*((input.servos[MAST_RAISE_CH]-1000)/1000.0f - 0.5f);
+            mast.set_desired_position(mast_set_pos);
+        }
+        mast.update(delta_time);
+
+        sail_area = sin(M_PI * (mast.get_position() + 1) / 4);
+
+        if (input.servos[SAIL_ROTATE_CH] >= 1000 && input.servos[SAIL_ROTATE_CH] <= 2000) {
+            float sail_set_pos = 2*((input.servos[SAIL_ROTATE_CH]-1000)/1000.0f - 0.5f);
+            sail.set_desired_position(sail_set_pos);
+        }
+        sail.update(delta_time);
+
+        HALSITL::RCOutput* rcout = dynamic_cast<HALSITL::RCOutput*>(AP_HAL::get_HAL().rcout);
+        if (rcout) {
+            AP_HAL::ServoStatus status;
+            status.homed = AP_HAL::SERVO_HOMED;
+            status.moving = fabs(rudder.get_position() - rudder.get_desired_position()) > FLT_EPSILON;
+            status.pwm = (-rudder.get_position()*500) + 1500;
+            rcout->_actual[STEERING_SERVO_CH] = status;
+            status.moving = fabs(mast.get_position() - mast.get_desired_position()) > FLT_EPSILON;
+            status.pwm = (mast.get_position()*500) + 1500;
+            rcout->_actual[MAST_RAISE_CH] = status;
+            status.moving = fabs(sail.get_position() - sail.get_desired_position()) > FLT_EPSILON;
+            status.pwm = (sail.get_position()*500) + 1500;
+            rcout->_actual[SAIL_ROTATE_CH] = status;
+        }
     }
 
     // calculate mainsail angle from servo output 4, 0 to 90 degrees
@@ -210,9 +256,6 @@ void SimOcius::update(const struct sitl_input &input)
     const float sin_rot_rad = sinf(radians(wind_apparent_dir_bf));
     const float cos_rot_rad = cosf(radians(wind_apparent_dir_bf));
     const float force_fwd = fabsf(lift_wf * sin_rot_rad) - (drag_wf * cos_rot_rad);
-
-    // how much time has passed?
-    float delta_time = frame_time_us * 1.0e-6f;
 
     // speed in m/s in body frame
     Vector3f velocity_body = dcm.transposed() * velocity_ef_water;

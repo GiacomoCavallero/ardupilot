@@ -124,17 +124,28 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
             (have_wp?wp.lat:0), (have_wp?wp.lng:0));
 }
 
+#define RUDDER_CH   0
+#define MAST_CH     8
+#define SAIL_CH     9
+#define WINCH_CH    13
 void GCS_MAVLINK_Rover::send_sail_status() {
     Location hold_loc;
     bool have_wp = rover.mode_hold.get_desired_location(hold_loc);
 
+    AP_HAL::RCOutput* rcout = AP_HAL::get_HAL().rcout;
+    AP_HAL::ServoStatus rudder_status = rcout->read_actual(RUDDER_CH),
+            mast_status = rcout->read_actual(MAST_CH),
+            sail_status = rcout->read_actual(SAIL_CH),
+            winch_status = rcout->read_actual(WINCH_CH);
+
+
     mavlink_msg_sail_status_send(chan,
-            rover.g2.sailboat.sail.current_position, rover.g2.sailboat.rudder.current_position,
-            rover.g2.sailboat.mast.current_position, rover.g2.sailboat.winch.current_position,
-            rover.g2.sailboat.sail.set_position, rover.g2.sailboat.rudder.set_position,
-            rover.g2.sailboat.mast.set_position, rover.g2.sailboat.winch.set_position,
-            rover.g2.sailboat.sail.homed, rover.g2.sailboat.rudder.homed,
-            rover.g2.sailboat.mast.homed, rover.g2.sailboat.winch.homed,
+            sail_status.pwm, rudder_status.pwm,
+            mast_status.pwm, winch_status.pwm,
+            rcout->read(SAIL_CH), rcout->read(RUDDER_CH),
+            rcout->read(MAST_CH), rcout->read(WINCH_CH),
+            sail_status.homed, rudder_status.homed,
+            mast_status.homed, winch_status.homed,
             // TODO: populate with parameters when created
             0,0,0,0,0,0,0,0,0,0,0,
 //            rover.g2.sailboat.sail_mode, rover.g2.sailboat.sail_hold_mode, rover.g2.sailboat.sail_hold_radius,

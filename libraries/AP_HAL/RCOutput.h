@@ -31,6 +31,24 @@
 
 class ByteBuffer;
 
+namespace AP_HAL {
+
+enum ServoHoming {
+    SERVO_UNHOMED = 0,
+    SERVO_HOMED = 1,
+    SERVO_HOMING = 2,
+};
+
+struct ServoStatus {
+    uint16_t pwm;
+    bool moving;
+    ServoHoming homed;
+
+    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED) {}
+};
+
+}
+
 class AP_HAL::RCOutput {
 public:
     virtual void init() = 0;
@@ -87,6 +105,13 @@ public:
      * reported */
     virtual uint16_t read(uint8_t chan) = 0;
     virtual void     read(uint16_t* period_us, uint8_t len) = 0;
+
+    /* On servos that have a potentiometer or other sensor, this returns
+     * the PWM of the current position. */
+    virtual ServoStatus read_actual(uint8_t chan) { return ServoStatus(); }
+    virtual void     read_actual(ServoStatus* status, uint8_t len) {
+        memset(status, 0, sizeof(ServoStatus)*len);
+    }
 
     /* Read the current input state. This returns the last value that was written. */
     virtual uint16_t read_last_sent(uint8_t chan) { return read(chan); }

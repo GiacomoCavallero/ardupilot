@@ -22,11 +22,50 @@
 
 namespace SITL {
 
+class SlowResponseServo {
+    float position; // -1..1
+    float desired_position; // -1..1
+    float rate_of_change;
+public:
+    SlowResponseServo(float initial_position, float rate_o_change = 1) :
+        position(initial_position),
+        desired_position(initial_position),
+        rate_of_change(rate_o_change)
+    {}
+
+    float get_position() { return position; }
+
+    float get_desired_position() { return desired_position; }
+
+    void set_desired_position(float desired) {
+        if (desired < -1) {
+            desired_position = -1;
+        } else if (desired > 1) {
+            desired_position = 1;
+        } else {
+            desired_position = desired;
+        }
+    }
+
+    void update(float delta_time) {
+        float delta_pos = rate_of_change * delta_time;
+
+        if (delta_pos >= fabs(desired_position - position)) {
+            position = desired_position;
+        } else if (desired_position > position) {
+            position += delta_pos;
+        } else {
+            position -= delta_pos;
+        }
+    }
+};
+
 /*
   a sailboat simulator
  */
 class SimOcius : public Aircraft {
 public:
+
     SimOcius(const char *frame_str);
 
     /* update model by one time step */
@@ -43,6 +82,7 @@ protected:
     bool wamv;
     float sail_area; // 1.0 for normal area
 
+    SlowResponseServo rudder, mast, sail;
 private:
 
     // calculate the lift and drag as values from 0 to 1 given an apparent wind speed in m/s and angle-of-attack in degrees

@@ -17,7 +17,9 @@
 
 using namespace HALSITL;
 
-void RCOutput::init() {}
+void RCOutput::init() {
+    memset(_actual, 0, sizeof(_actual));
+}
 
 void RCOutput::set_freq(uint32_t chmask, uint16_t freq_hz)
 {
@@ -159,4 +161,18 @@ bool RCOutput::force_safety_on(void)
     return sitl->force_safety_on();
 }
 
+AP_HAL::ServoStatus RCOutput::read_actual(uint8_t ch)
+{
+    if (ch < SITL_NUM_CHANNELS) {
+        return _actual[ch];
+    }
+    return AP_HAL::ServoStatus();
+}
+
+void RCOutput::read_actual(AP_HAL::ServoStatus* status, uint8_t len)
+{
+    memcpy(status, _actual, len * sizeof(AP_HAL::ServoStatus));
+}
+
 #endif //!defined(HAL_BUILD_AP_PERIPH)
+
