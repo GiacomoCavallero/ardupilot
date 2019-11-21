@@ -292,7 +292,8 @@ bool Rover::should_log(uint32_t mask)
 // this affects whether the vehicle tries to maintain position after reaching waypoints
 bool Rover::is_boat() const
 {
-    return ((enum frame_class)g2.frame_class.get() == FRAME_BOAT);
+    enum frame_class frame = (enum frame_class)g2.frame_class.get();
+    return (frame == FRAME_BOAT || frame == FRAME_BLUEBOTTLE || frame == FRAME_WAMV);
 }
 
 #include <AP_Avoidance/AP_Avoidance.h>

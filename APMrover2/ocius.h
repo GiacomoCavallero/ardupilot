@@ -34,11 +34,11 @@ enum WIND_STRENGTH {
     WIND_GOOD = 6,
 };
 
-enum MOTOR_HOMING_STATUS {
-    MOTOR_UNHOMED   = 0,
-    MOTOR_HOMED     = 1,
-    MOTOR_HOMING    = 2,
-};
+//enum MOTOR_HOMING_STATUS {
+//    MOTOR_UNHOMED   = 0,
+//    MOTOR_HOMED     = 1,
+//    MOTOR_HOMING    = 2,
+//};
 
 enum SAIL_HOLD_MODE {
     HOLD_DRIFT      = 0,
@@ -111,12 +111,12 @@ public:
 //    NMEA2K() {}
 };
 
-class EncodedServo {
-public:
-    uint16_t set_position;
-    uint16_t current_position;
-    uint32_t raw_position;
-    MOTOR_HOMING_STATUS homed;
-
-    EncodedServo() : set_position(0), current_position(0), raw_position(0), homed(MOTOR_UNHOMED) {}
-};
+//class EncodedServo {
+//public:
+//    uint16_t set_position;
+//    uint16_t current_position;
+//    uint32_t raw_position;
+//    MOTOR_HOMING_STATUS homed;
+//
+//    EncodedServo() : set_position(0), current_position(0), raw_position(0), homed(MOTOR_UNHOMED) {}
+//};

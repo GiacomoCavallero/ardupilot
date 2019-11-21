@@ -766,6 +766,11 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_long_packet(const mavlink_command_l
                                               static_cast<int16_t>(packet.param3),
                                               packet.param4);
 
+    case MAV_CMD_DO_SET_SERVO:
+        if (rover.g2.frame_class.get() == FRAME_BLUEBOTTLE) {
+            return rover.g2.sailboat.set_servo(packet.param1, packet.param2, true);
+        }
+        return GCS_MAVLINK::handle_command_long_packet(packet);
     default:
         return GCS_MAVLINK::handle_command_long_packet(packet);
     }

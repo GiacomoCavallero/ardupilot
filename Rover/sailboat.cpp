@@ -102,15 +102,28 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("LOIT_RADIUS", 9, Sailboat, loit_radius, 5),
 
+    // @Param: STOW_ERROR
+    // @DisplayName: Sailboat error in sail position acceptable when stowing
+    // @Description: Sailboat error in sail position acceptable when stowing, outside this range lowering the sail can damage the vessel.
+    // @Units: pwm
+    // @Range: 0 500
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("STOW_ERROR", 62, Sailboat, sail_stow_error, 10),
+
     AP_GROUPEND
 };
 
+#define MAST_SERVO_CH       9
+#define SAIL_SERVO_CH       10
+#define WINCH_SERVO_CH      14
 
 /*
   constructor
  */
 Sailboat::Sailboat()
 {
+    stowing_sail = false;
     AP_Param::setup_object_defaults(this, var_info);
 }
 
@@ -557,4 +570,120 @@ bool Sailboat::motor_assist_low_wind() const
     return (is_positive(sail_windspeed_min) &&
             rover.g2.windvane.wind_speed_enabled() &&
             (rover.g2.windvane.get_true_wind_speed() < sail_windspeed_min));
+}
+
+MAV_RESULT Sailboat::set_servo(uint8_t channel, uint16_t pwm, bool gcs_command) {
+    AP_ServoRelayEvents *handler = AP::servorelayevents();
+    if (handler == nullptr) {
+        return MAV_RESULT_UNSUPPORTED;
+    }
+
+//    if (!gcs_command && !rover.arming.is_armed()) {
+//        // Reject servo commands if disarmed and not from GCS
+//        return MAV_RESULT_TEMPORARILY_REJECTED;
+//    }
+
+    if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
+    }
+    printf("123....\n");
+    if (channel == MAST_SERVO_CH) {
+        return set_mast_position(pwm, gcs_command);
+    } else if (channel == SAIL_SERVO_CH) {
+        return set_sail_position(pwm, gcs_command);
+    } else if (channel == WINCH_SERVO_CH) {
+        return set_winch_position(pwm, gcs_command);
+    }
+    if (handler->do_set_servo(channel, pwm)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+    return MAV_RESULT_FAILED;
+}
+
+MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
+    uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH);
+    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_actual(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
+    if (mast_set_pos == pwm) {
+        if (mast_status.moving ||
+                abs(mast_status.pwm - mast_set_pos) < 100) {
+            // If we're already in position or still moving to the position no need to do anything.
+            return MAV_RESULT_ACCEPTED;
+        }
+    }
+
+    if (!rover.arming.is_armed() && !gcs_command) {
+        return MAV_RESULT_TEMPORARILY_REJECTED;
+    }
+
+    if (pwm > 1800) {
+    } else if (sail_status.homed == AP_HAL::SERVO_HOMED &&
+            !sail_status.moving &&
+            abs(sail_status.pwm - 1500) <= sail_stow_error) {
+        // Sail is homed, not moving and within limits of center, safe to lower
+    } else {
+        return MAV_RESULT_TEMPORARILY_REJECTED;
+    }
+
+    AP_ServoRelayEvents *handler = AP::servorelayevents();
+    if (handler->do_set_servo(MAST_SERVO_CH, pwm)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+    return MAV_RESULT_FAILED;
+}
+
+MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
+    uint16_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
+    if (sail_set_pos == pwm) {
+        if (sail_status.moving ||
+                abs(sail_status.pwm - sail_set_pos) < 100) {
+            // If we're already in position or still moving to the position no need to do anything.
+            return MAV_RESULT_ACCEPTED;
+        }
+    }
+    // Only move if armed or received a GCS command to center the sail.
+    if (gcs_command && pwm == 1500) {
+    } else if (!rover.arming.is_armed()) {
+        return MAV_RESULT_TEMPORARILY_REJECTED;
+    } else if (pwm != 1500 && !sail_is_safe()) {
+        // Sail is not safe to move.
+        return MAV_RESULT_TEMPORARILY_REJECTED;
+    }
+
+    AP_ServoRelayEvents *handler = AP::servorelayevents();
+    if (handler->do_set_servo(SAIL_SERVO_CH, pwm)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+    return MAV_RESULT_FAILED;
+}
+
+MAV_RESULT Sailboat::set_winch_position(uint16_t pwm, bool gcs_command) {
+    // TODO: Sailboat::set_winch_position
+    if (!rover.arming.is_armed()) {
+        return MAV_RESULT_TEMPORARILY_REJECTED;
+    } else if (pwm == 0) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Bluebottle: Winch emergency stop received.");
+    }
+
+    AP_ServoRelayEvents *handler = AP::servorelayevents();
+    if (handler->do_set_servo(WINCH_SERVO_CH, pwm)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+    return MAV_RESULT_FAILED;
+}
+
+bool Sailboat::sail_is_safe() {
+    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_actual(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
+    if (mast_status.homed != AP_HAL::SERVO_HOMED)   // Mast(D) isn't homed.
+        return false;
+    if (sail_status.homed != AP_HAL::SERVO_HOMED)   // Sail(A) isn't homed.
+        return false;
+    if (mast_status.moving)                         // Mast is moving
+        return false;
+    if (mast_status.pwm < (1900 - 10))              // Mast is not upright.
+            return false;
+    if (stowing_sail)    // Sail in the process of stowing
+        return false;
+    return true;
 }

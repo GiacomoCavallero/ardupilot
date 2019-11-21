@@ -100,4 +100,6 @@ enum frame_class {
     FRAME_ROVER = 1,
     FRAME_BOAT = 2,
     FRAME_BALANCEBOT = 3,
+    FRAME_BLUEBOTTLE = 20,
+    FRAME_WAMV = 21,
 };

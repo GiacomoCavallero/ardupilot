@@ -88,6 +88,12 @@ public:
     // return sailboat loiter radius
     float get_loiter_radius() const {return loit_radius;}
 
+    MAV_RESULT set_servo(uint8_t channel, uint16_t pwm, bool gcs_command = false);
+    MAV_RESULT set_mast_position(uint16_t pwm, bool gcs_command = false);
+    MAV_RESULT set_sail_position(uint16_t pwm, bool gcs_command = false);
+    MAV_RESULT set_winch_position(uint16_t pwm, bool gcs_command = false);
+    bool sail_is_safe();
+
 private:
 
     // true if motor is on to assist with slow tack
@@ -106,6 +112,7 @@ private:
     AP_Float sail_windspeed_min;
     AP_Float xtrack_max;
     AP_Float loit_radius;
+    AP_Int16 sail_stow_error;
 
     RC_Channel *channel_mainsail;   // rc input channel for controlling mainsail
     bool currently_tacking;         // true when sailboat is in the process of tacking to a new heading
@@ -116,8 +123,9 @@ private:
     bool tack_assist;               // true if we should use some throttle to assist tack
     UseMotor motor_state;           // current state of motor output
 
+    bool stowing_sail;
     NMEA2K nmea2k_sensors;
-    EncodedServo rudder, sail, mast, winch;
+//    EncodedServo rudder, sail, mast, winch;
 
     friend class GCS_MAVLINK_Rover;
 };
