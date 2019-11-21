@@ -90,7 +90,7 @@ const AP_Param::GroupInfo SITL::var_info2[] = {
     AP_GROUPINFO("TEMP_BFACTOR", 4, SITL,  temp_baro_factor, 0),
 
     AP_GROUPINFO("WIND_DIR_Z",  10, SITL,  wind_dir_z,     0),
-    AP_GROUPINFO("WIND_T"      ,15, SITL,  wind_type, SITL::WIND_TYPE_SQRT),
+    AP_GROUPINFO("WIND_T"      ,15, SITL,  wind_type, SITL::WIND_TYPE_NO_LIMIT),
     AP_GROUPINFO("WIND_T_ALT"  ,16, SITL,  wind_type_alt, 60),
     AP_GROUPINFO("WIND_T_COEF", 17, SITL,  wind_type_coef, 0.01f),
     AP_GROUPINFO("RC_CHANCOUNT",21, SITL,  rc_chancount, 16),
