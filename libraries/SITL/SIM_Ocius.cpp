@@ -31,12 +31,13 @@
 #include <string.h>
 #include <stdio.h>
 
+#define BLUEBOTTLE_FORCE_REDUCTION      0.122F
+
 extern const AP_HAL::HAL& hal;
 
 namespace SITL {
 
 #define STEERING_SERVO_CH   0   // steering controlled by servo output 1
-#define MAINSAIL_SERVO_CH   3   // main sail controlled by servo output 4
 #define THROTTLE_SERVO_CH   2   // throttle controlled by servo output 3
 
 #define MAST_RAISE_CH       8   // mast raise/lower controlled by servo output 9
@@ -64,22 +65,38 @@ SimOcius::SimOcius(const char *frame_str) :
 // given an apparent wind speed in m/s and angle-of-attack in degrees
 void SimOcius::calc_lift_and_drag(float wind_speed, float angle_of_attack_deg, float& lift, float& drag) const
 {
+    const float sail_camber = 5;
     const uint16_t index_width_deg = 10;
     const uint8_t index_max = ARRAY_SIZE(lift_curve) - 1;
 
+    float aoa_drag = fabs(angle_of_attack_deg);
     // check extremes
-    if (angle_of_attack_deg <= 0.0f) {
-        lift = lift_curve[0];
+    if (aoa_drag <= 0.0f) {
         drag = drag_curve[0];
-    } else if (angle_of_attack_deg >= index_max * index_width_deg) {
-        lift = lift_curve[index_max];
+    } else if (aoa_drag >= index_max * index_width_deg) {
         drag = drag_curve[index_max];
     } else {
-        uint8_t index = constrain_int16(angle_of_attack_deg / index_width_deg, 0, index_max);
-        float remainder = angle_of_attack_deg - (index * index_width_deg);
-        lift = linear_interpolate(lift_curve[index], lift_curve[index+1], remainder, 0.0f, index_width_deg);
+        uint8_t index = constrain_int16(aoa_drag / index_width_deg, 0, index_max);
+        float remainder = aoa_drag - (index * index_width_deg);
         drag = linear_interpolate(drag_curve[index], drag_curve[index+1], remainder, 0.0f, index_width_deg);
     }
+
+    float aoa_lift = angle_of_attack_deg + sail_camber;
+    bool lift_is_neg = aoa_lift < 0.0f;
+    aoa_lift = fabs(aoa_lift);
+
+    // check extremes
+    // TODO: angle of attack is negative, do we have negative lift??
+    if (aoa_lift <= 0.0f) {
+        lift = lift_curve[0];
+    } else if (aoa_lift >= index_max * index_width_deg) {
+        lift = lift_curve[index_max];
+    } else {
+        uint8_t index = constrain_int16(aoa_lift / index_width_deg, 0, index_max);
+        float remainder = aoa_lift - (index * index_width_deg);
+        lift = linear_interpolate(lift_curve[index], lift_curve[index+1], remainder, 0.0f, index_width_deg);
+    }
+    if (lift_is_neg) lift = -lift;
 
     // apply scaling by wind speed
     lift *= wind_speed * sail_area;
@@ -171,6 +188,21 @@ void SimOcius::update_wave(float delta_time)
     }
 }
 
+// return the angle of attack for the sail
+float SimOcius::get_angle_of_attack(float wind_apparent_dir_bf){
+    float angle_of_attack = 0;
+
+    float sail_angle = sail.get_position() * 90;
+
+    if (wind_apparent_dir_bf > 0) {
+        angle_of_attack = wind_apparent_dir_bf - 90 - sail_angle;
+    } else {
+        angle_of_attack = -wind_apparent_dir_bf - 90 + sail_angle;
+    }
+
+    return angle_of_attack;
+}
+
 /*
   update the sailboat simulation by one time step
  */
@@ -197,7 +229,7 @@ void SimOcius::update(const struct sitl_input &input)
         // throttle force (for motor sailing)
         // gives throttle force == hull drag at 10m/s
         const uint16_t throttle_out = constrain_int16(input.servos[THROTTLE_SERVO_CH], 1000, 2000);
-        throttle_force = -(throttle_out-1500) * 0.1f * 0.122f;
+        throttle_force = -(throttle_out-1500) * 0.1f * BLUEBOTTLE_FORCE_REDUCTION;
 
         if (input.servos[MAST_RAISE_CH] >= 1000 && input.servos[MAST_RAISE_CH] <= 2000) {
             float mast_set_pos = 2*((input.servos[MAST_RAISE_CH]-1000)/1000.0f - 0.5f);
@@ -229,9 +261,6 @@ void SimOcius::update(const struct sitl_input &input)
         }
     }
 
-    // calculate mainsail angle from servo output 4, 0 to 90 degrees
-    float mainsail_angle_bf = constrain_float((input.servos[MAINSAIL_SERVO_CH]-1000)/1000.0f * 90.0f, 0.0f, 90.0f);
-
     // calculate apparent wind in earth-frame (this is the direction the wind is coming from)
     // Note than the SITL wind direction is defined as the direction the wind is travelling to
     // This is accounted for in these calculations
@@ -246,7 +275,7 @@ void SimOcius::update(const struct sitl_input &input)
     airspeed_pitot = wind_apparent_speed;
 
     // calculate angle-of-attack from wind to mainsail
-    float aoa_deg = MAX(fabsf(wind_apparent_dir_bf) - mainsail_angle_bf, 0);
+    float aoa_deg = get_angle_of_attack(wind_apparent_dir_bf);
 
     // calculate Lift force (perpendicular to wind direction) and Drag force (parallel to wind direction)
     float lift_wf, drag_wf;
@@ -255,7 +284,7 @@ void SimOcius::update(const struct sitl_input &input)
     // rotate lift and drag from wind frame into body frame
     const float sin_rot_rad = sinf(radians(wind_apparent_dir_bf));
     const float cos_rot_rad = cosf(radians(wind_apparent_dir_bf));
-    const float force_fwd = fabsf(lift_wf * sin_rot_rad) - (drag_wf * cos_rot_rad);
+    const float force_fwd = (lift_wf * sin_rot_rad - (drag_wf * cos_rot_rad)) * BLUEBOTTLE_FORCE_REDUCTION;
 
     // speed in m/s in body frame
     Vector3f velocity_body = dcm.transposed() * velocity_ef_water;

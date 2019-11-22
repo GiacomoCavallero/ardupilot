@@ -97,6 +97,9 @@ private:
     // return lateral acceleration in m/s/s given a steering input (in the range -1 to +1) and speed in m/s
     float get_lat_accel(float steering, float speed) const;
 
+    // return the angle of attack for the sail
+    float get_angle_of_attack(float wind_apparent_dir_bf);
+
     // simulate waves and swell
     void update_wave(float delta_time);
 
