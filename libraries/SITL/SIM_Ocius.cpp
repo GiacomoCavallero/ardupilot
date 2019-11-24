@@ -192,13 +192,16 @@ void SimOcius::update_wave(float delta_time)
 float SimOcius::get_angle_of_attack(float wind_apparent_dir_bf){
     float angle_of_attack = 0;
 
-    float sail_angle = sail.get_position() * 90;
+    float sail_angle = sail.get_position() * 90 * (10.0f / 8.0f);
 
     if (wind_apparent_dir_bf > 0) {
-        angle_of_attack = wind_apparent_dir_bf - 90 - sail_angle;
+        angle_of_attack = wrap_180(wind_apparent_dir_bf - 90 - sail_angle);
     } else {
-        angle_of_attack = -wind_apparent_dir_bf - 90 + sail_angle;
+        angle_of_attack = wrap_180(-wind_apparent_dir_bf - 90 + sail_angle);
     }
+
+//    printf("wind: %.1f + sail_angle: %.1lf == aoa: %.1f\n",
+//            wind_apparent_dir_bf, sail_angle, angle_of_attack);
 
     return angle_of_attack;
 }
@@ -280,6 +283,7 @@ void SimOcius::update(const struct sitl_input &input)
     // calculate Lift force (perpendicular to wind direction) and Drag force (parallel to wind direction)
     float lift_wf, drag_wf;
     calc_lift_and_drag(wind_apparent_speed, aoa_deg, lift_wf, drag_wf);
+    if (wind_apparent_dir_bf < 0) lift_wf = -lift_wf;
 
     // rotate lift and drag from wind frame into body frame
     const float sin_rot_rad = sinf(radians(wind_apparent_dir_bf));
