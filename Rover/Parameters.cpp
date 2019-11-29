@@ -831,4 +831,6 @@ void Rover::load_parameters(void)
                                                       AP_BoardConfig::BOARD_SAFETY_OPTION_BUTTON_ACTIVE_SAFETY_ON|
                                                       AP_BoardConfig::BOARD_SAFETY_OPTION_BUTTON_ACTIVE_ARMED);
 #endif
+
+    g2.sailboat.set_sail_mode((Sailboat::SailMode)g2.sailboat.sail_mode.get());
 }

@@ -27,7 +27,7 @@ public:
     Sailboat();
 
     // enabled
-    bool sail_enabled() const { return enable > 0;}
+    bool sail_enabled() const;
 
     // true if sailboat navigation (aka tacking) is enabled
     bool tack_enabled() const;
@@ -78,9 +78,20 @@ public:
         USE_MOTOR_ALWAYS = 2
     };
 
+    enum SailMode {
+        MOTOR_ONLY=0,
+        MOTOR_SAIL=1,
+        SAIL_ONLY=2,
+        WAVE_POWER=3,
+        MOTOR_SOLAR=5
+    };
+
     // set state of motor
     // if report_failure is true a message will be sent to all GCSs
     void set_motor_state(UseMotor state, bool report_failure = true);
+
+    // set the sailing mode
+    void set_sail_mode(SailMode sailmode);
 
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
@@ -92,7 +103,8 @@ public:
     MAV_RESULT set_mast_position(uint16_t pwm, bool gcs_command = false);
     MAV_RESULT set_sail_position(uint16_t pwm, bool gcs_command = false);
     MAV_RESULT set_winch_position(uint16_t pwm, bool gcs_command = false);
-    bool sail_is_safe();
+    bool sail_is_safe() const;
+    uint16_t get_optimal_sail_position() const;
 
 private:
 
@@ -112,7 +124,9 @@ private:
     AP_Float sail_windspeed_min;
     AP_Float xtrack_max;
     AP_Float loit_radius;
+    AP_Float sail_windspeed_max;
     AP_Int16 sail_stow_error;
+    AP_Int8 sail_mode;
 
     RC_Channel *channel_mainsail;   // rc input channel for controlling mainsail
     bool currently_tacking;         // true when sailboat is in the process of tacking to a new heading
@@ -128,4 +142,5 @@ private:
 //    EncodedServo rudder, sail, mast, winch;
 
     friend class GCS_MAVLINK_Rover;
+    friend class Rover;
 };

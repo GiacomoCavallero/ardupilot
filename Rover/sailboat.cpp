@@ -111,6 +111,24 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("STOW_ERROR", 62, Sailboat, sail_stow_error, 10),
 
+    // @Param: MODE
+    // @DisplayName: Sailboat sailing mode
+    // @Description: Sailboat sailing mode: 0: MOTOR_ONLY, 1: MOTOR_SAIL, 2: SAIL_ONLY, 3: WAVE_POWER, 4, MOTOR_SOLAR
+    // @Units: enum
+    // @Range: 0 4
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MODE", 61, Sailboat, sail_mode, 0),
+
+    // @Param: WNDSPD_MAX
+    // @DisplayName: Sailboat maximum wind speed to sail in
+    // @Description: Sailboat maximum wind speed to continue sail in, at lower wind speeds the sailboat will motor if one is fitted
+    // @Units: m/s
+    // @Range: 0 30
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("WNDSPD_MAX", 60, Sailboat, sail_windspeed_max, 15),
+
     AP_GROUPEND
 };
 
@@ -125,6 +143,19 @@ Sailboat::Sailboat()
 {
     stowing_sail = false;
     AP_Param::setup_object_defaults(this, var_info);
+}
+
+bool Sailboat::sail_enabled() const {
+    if (!enable)
+        return false;
+
+    enum frame_class frame = (enum frame_class)rover.g2.frame_class.get();
+    if (frame == FRAME_BLUEBOTTLE) {
+        return sail_is_safe();
+    } else if (frame == FRAME_WAMV) {
+        return false;
+    }
+    return true;
 }
 
 // true if sailboat navigation (aka tacking) is enabled
@@ -546,6 +577,22 @@ void Sailboat::set_motor_state(UseMotor state, bool report_failure)
     }
 }
 
+// set the sailing mode
+void Sailboat::set_sail_mode(SailMode sailmode) {
+    switch (sailmode) {
+    case MOTOR_ONLY: case MOTOR_SOLAR:
+        set_motor_state(UseMotor::USE_MOTOR_ALWAYS);
+        break;
+
+    case MOTOR_SAIL: case WAVE_POWER:
+        set_motor_state(UseMotor::USE_MOTOR_ASSIST);
+        break;
+
+    case SAIL_ONLY:
+        set_motor_state(UseMotor::USE_MOTOR_NEVER);
+    }
+}
+
 // true if motor is on to assist with slow tack
 bool Sailboat::motor_assist_tack() const
 {
@@ -585,7 +632,6 @@ MAV_RESULT Sailboat::set_servo(uint8_t channel, uint16_t pwm, bool gcs_command) 
 
     if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
     }
-    printf("123....\n");
     if (channel == MAST_SERVO_CH) {
         return set_mast_position(pwm, gcs_command);
     } else if (channel == SAIL_SERVO_CH) {
@@ -672,7 +718,7 @@ MAV_RESULT Sailboat::set_winch_position(uint16_t pwm, bool gcs_command) {
     return MAV_RESULT_FAILED;
 }
 
-bool Sailboat::sail_is_safe() {
+bool Sailboat::sail_is_safe() const {
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_actual(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
     if (mast_status.homed != AP_HAL::SERVO_HOMED)   // Mast(D) isn't homed.

@@ -293,7 +293,14 @@ bool Rover::should_log(uint32_t mask)
 bool Rover::is_boat() const
 {
     enum frame_class frame = (enum frame_class)g2.frame_class.get();
-    return (frame == FRAME_BOAT || frame == FRAME_BLUEBOTTLE || frame == FRAME_WAMV);
+    switch (frame) {
+    case FRAME_BOAT:
+    case FRAME_BLUEBOTTLE:
+    case FRAME_WAMV:
+        return true;
+    default:
+        return false;
+    }
 }
 
 #include <AP_Avoidance/AP_Avoidance.h>
