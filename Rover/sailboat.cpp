@@ -240,6 +240,44 @@ void Sailboat::get_throttle_and_mainsail_out(float desired_speed, float &throttl
         return;
     }
 
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+        // TODO: adjust sail angle
+        if (sail_is_safe()) {
+            if (sail_mode == SAIL_ONLY || sail_mode == MOTOR_SAIL || sail_mode == MOTOR_SOLAR) {
+                int32_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
+                int32_t optimal_pos = get_optimal_sail_position();
+
+                if (abs(optimal_pos - sail_set_pos) >= sail_stow_error) {
+                    set_sail_position(optimal_pos);
+                }
+            }
+        }
+
+        // TODO: Throttle up in MOTOR_SAIL while tacking.
+        if (sail_mode == MOTOR_ONLY || sail_mode == MOTOR_SAIL ||
+                sail_mode == MOTOR_SOLAR ||
+                (sail_mode == WAVE_POWER &&
+                        desired_speed > KNOTS_PER_METRE * (0.5*1.1)))
+        {
+            throttle_out = 100.0f * rover.g2.attitude_control.get_throttle_out_speed(desired_speed,
+                                                                            rover.g2.motors.limit.throttle_lower,
+                                                                            rover.g2.motors.limit.throttle_upper,
+                                                                            rover.g.speed_cruise,
+                                                                            rover.g.throttle_cruise * 0.01f,
+                                                                            rover.G_Dt);
+        } else {
+            throttle_out = 0.0f;
+        }
+
+        if (throttle_out < 0.0f) {
+            // Never want negative throttle in auto modes.
+            throttle_out = 0.0f;
+        }
+
+        mainsail_out = 100.0f;
+        return;
+    }
+
     // run speed controller if motor is forced on or motor assistance is required for low speeds or tacking
     if ((motor_state == UseMotor::USE_MOTOR_ALWAYS) ||
          motor_assist_tack() ||
@@ -732,4 +770,55 @@ bool Sailboat::sail_is_safe() const {
     if (stowing_sail)    // Sail in the process of stowing
         return false;
     return true;
+}
+
+extern float calcSun(float lat, float lon);
+uint16_t Sailboat::get_optimal_sail_position() const {
+    uint16_t pwm = 1500;
+    if (sail_mode == MOTOR_SOLAR) {
+        float azi = calcSun((float)rover.current_loc.lat, (float)rover.current_loc.lng);
+        if (azi > -1) {
+//            float bearing = gps.bearing_true() / 100.0;
+            float bearing = degrees(rover.ahrs.yaw);
+            float sun_angle = CLIP_360(azi - bearing);
+
+            pwm = 1500;
+            if (sun_angle <= 90) {
+                pwm = 1500 + ((sun_angle)/90) * 400;
+            }
+            if (sun_angle > 90 && sun_angle <= 180) {
+                pwm = 1500 - ((180-sun_angle)/90) * 400;
+            }
+            if (sun_angle > 180 && sun_angle <= 270) {
+                pwm = 1500 + ((sun_angle-180)/90) * 400;
+            }
+            if (sun_angle > 270) {
+                pwm = 1500 - ((360-sun_angle)/90) * 400;
+            }
+        }
+    } else if (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY) {
+        float desired_angle = 0;
+
+        float wind_bf = degrees(rover.g2.windvane.get_apparent_wind_direction_rad());
+
+        float desired_attack = 0;
+//        float wind_bf_180 = CLIP_180(wind_bf);
+
+        float catch_zone = 90 - sail_angle_ideal;
+        if (fabs(wind_bf) > 180 - catch_zone) {
+            // Wind from behind, so square the sail
+            desired_angle = 0;
+        } else {
+            desired_attack = fabs(wind_bf) * sail_angle_ideal / (90 + sail_angle_ideal);
+
+            desired_angle = 90 - fabs(wind_bf) + desired_attack;
+            if (wind_bf < 0) {
+                desired_angle = -desired_angle;
+            }
+        }
+
+        pwm =  1500 - (desired_angle * 400) / 90;
+    }
+
+    return pwm;
 }
