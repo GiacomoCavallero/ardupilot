@@ -39,4 +39,21 @@ void ModeManual::update()
     g2.motors.set_throttle(desired_throttle);
     g2.motors.set_steering(desired_steering, false);
     g2.motors.set_lateral(desired_lateral);
+
+    if (rover.is_boat() && rover.g2.sailboat.sail_enabled() && rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+        // If on a Bluebottle in a sailing or solar mode, the sail automatically adjusts
+        switch (rover.g2.sailboat.get_sail_mode()) {
+        case Sailboat::MOTOR_SAIL: case Sailboat::SAIL_ONLY: case Sailboat::MOTOR_SOLAR:
+        {{
+            uint16_t pwm = g2.sailboat.get_optimal_sail_position();
+            if (pwm != 0) {
+                g2.sailboat.set_sail_position(pwm);
+            }
+        }}
+            break;
+
+        case MOTOR_ONLY: case WAVE_POWER:
+            break;
+        }
+    }
 }
