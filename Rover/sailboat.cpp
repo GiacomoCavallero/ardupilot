@@ -78,8 +78,8 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Param: WNDSPD_MIN
     // @DisplayName: Sailboat minimum wind speed to sail in
     // @Description: Sailboat minimum wind speed to continue sail in, at lower wind speeds the sailboat will motor if one is fitted
-    // @Units: m/s
-    // @Range: 0 5
+    // @Units: knots
+    // @Range: 0 20
     // @Increment: 0.1
     // @User: Standard
     AP_GROUPINFO("WNDSPD_MIN", 7, Sailboat, sail_windspeed_min, 0),
@@ -123,11 +123,20 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Param: WNDSPD_MAX
     // @DisplayName: Sailboat maximum wind speed to sail in
     // @Description: Sailboat maximum wind speed to continue sail in, at lower wind speeds the sailboat will motor if one is fitted
-    // @Units: m/s
-    // @Range: 0 30
+    // @Units: knots
+    // @Range: 0 50
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("WNDSPD_MAX", 60, Sailboat, sail_windspeed_max, 15),
+
+    // @Param: WNDSPD_MAX
+    // @DisplayName: Sailboat bit flags to activate/deactivate skills
+//     @Description: Sailboat bit flags (1: Jibe only, 2: Ignore X-Track, 4: Always Set heading to WP)
+    // @Units: bits
+    // @Range: 0 16
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("FLAGS", 11, Sailboat, sail_flags, 0),
 
     AP_GROUPEND
 };
@@ -247,7 +256,7 @@ void Sailboat::get_throttle_and_mainsail_out(float desired_speed, float &throttl
                 int32_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
                 int32_t optimal_pos = get_optimal_sail_position();
 
-                if (abs(optimal_pos - sail_set_pos) >= sail_stow_error) {
+                if (optimal_pos != 0 && abs(optimal_pos - sail_set_pos) >= sail_stow_error) {
                     set_sail_position(optimal_pos);
                 }
             }
@@ -654,7 +663,7 @@ bool Sailboat::motor_assist_low_wind() const
     // assist if wind speed is below cutoff
     return (is_positive(sail_windspeed_min) &&
             rover.g2.windvane.wind_speed_enabled() &&
-            (rover.g2.windvane.get_true_wind_speed() < sail_windspeed_min));
+            wind_strength == WIND_LOW);
 }
 
 MAV_RESULT Sailboat::set_servo(uint8_t channel, uint16_t pwm, bool gcs_command) {
@@ -774,7 +783,7 @@ bool Sailboat::sail_is_safe() const {
 
 extern float calcSun(float lat, float lon);
 uint16_t Sailboat::get_optimal_sail_position() const {
-    uint16_t pwm = 1500;
+    uint16_t pwm = 0;
     if (sail_mode == MOTOR_SOLAR) {
         float azi = calcSun((float)rover.current_loc.lat, (float)rover.current_loc.lng);
         if (azi > -1) {
@@ -821,4 +830,186 @@ uint16_t Sailboat::get_optimal_sail_position() const {
     }
 
     return pwm;
+}
+void Sailboat::check_wind() {
+    static uint32_t extremeWeatherStart = 0;
+    static uint32_t timeWeatherCleared = 0;
+    static uint32_t calmWeatherStart = 0;
+    static uint32_t calmWeatherEnd = 0;
+
+    // TODO: determine wind strength
+    if(!rover.g2.windvane.wind_speed_enabled()) {
+        wind_strength = WIND_UNKNOWN;
+        return;
+    }
+
+    float wind_speed = rover.g2.windvane.get_true_wind_speed();
+    float max_wind = sail_windspeed_max / KNOTS_PER_METRE;
+    float min_wind = sail_windspeed_min / KNOTS_PER_METRE;
+
+    if (wind_speed > max_wind) {
+        if (extremeWeatherStart == 0) {
+            extremeWeatherStart = millis();
+        }
+        timeWeatherCleared = 0;
+
+        if (wind_strength != WIND_HIGH) {
+            if (wind_speed >= (1.2 * max_wind)) {
+                // If wind gusts are 20% above the max, wind is high
+                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Strong wind gusts.");
+                wind_strength = WIND_HIGH;
+            } else if (millis() - extremeWeatherStart >= 30000) {
+                // If sustained wind is above the max for 30 seconds, it is high
+                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Sustained high winds.");
+                wind_strength = WIND_HIGH;
+            }
+        }
+    } else if (wind_strength == WIND_HIGH && wind_speed < (0.8 * max_wind)) {
+        if (timeWeatherCleared == 0) {
+            timeWeatherCleared = millis();
+        }
+        extremeWeatherStart = 0;
+    } else {
+        timeWeatherCleared = 0;
+        extremeWeatherStart = 0;
+    }
+
+    if (timeWeatherCleared != 0 && millis() - timeWeatherCleared > 30000) {
+        // Weather has cleared, raise sail if in a sailing mode
+        gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Extreme weather cleared.");
+        wind_strength = WIND_STRONG;
+        calmWeatherStart = calmWeatherEnd = 0;
+    } else if (wind_speed < min_wind) {
+        calmWeatherEnd = 0;
+        if (calmWeatherStart == 0) {
+            calmWeatherStart = millis();
+        } else if ((millis() - calmWeatherStart) > 10000) {
+            // If wind is below the min for 10 seconds, it is low.
+            if (wind_strength != WIND_LOW && sail_enabled() &&
+                    (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY)) {
+                gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Wind has dropped, too low for sailing.");
+            }
+            wind_strength = WIND_LOW;
+        }
+    } else if (wind_strength != WIND_HIGH){
+        calmWeatherStart = 0;
+        if (wind_strength == WIND_LOW) {
+            if (calmWeatherEnd == 0) {
+                calmWeatherEnd = millis();
+            } else if ((millis() - calmWeatherEnd) > 10000) {
+                // If wind is above min for 10 seconds, it is fair wind for sailing
+                wind_strength = WIND_FAIR;
+                if (sail_enabled() && (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY)) {
+                    gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Wind has risen, sailing can resume.");
+                }
+            }
+        } else if (wind_speed < ((min_wind + max_wind) / 2.0)) {
+            wind_strength = WIND_FAIR;
+        } else {
+            wind_strength = WIND_STRONG;
+        }
+    }
+}
+
+void Sailboat::sail_guard() {
+    // TODO: determine wind strength
+    check_wind();
+
+    if (!rover.arming.is_armed() || !enable) {
+        // Cannot automatically home/stow/raise sail/mast if disarmed or sail not enabled in params.
+        return;
+    }
+
+    if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
+        // Vehicle not designed to stow sail.
+        return;
+    }
+
+    static uint32_t last_not_home_msg = 0;
+    uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
+
+    if (mast_status.homed != AP_HAL::SERVO_HOMED || sail_status.homed != AP_HAL::SERVO_HOMED) {
+        // Mast or Sail not homed
+        uint32_t now = millis();
+        if (last_not_home_msg == 0 || (now - last_not_home_msg) > 5000) {
+            if (mast_status.homed != AP_HAL::SERVO_HOMED) {
+                printf("Sailboat::sail_guard() - Mast not yet homed.\n");
+            }
+            if (sail_status.homed != AP_HAL::SERVO_HOMED) {
+                printf("Sailboat::sail_guard() - Sail not yet homed.\n");
+            }
+            last_not_home_msg = now;
+        }
+        if (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY || sail_mode == MOTOR_SOLAR) {
+            // TODO: MM: do we need to home the mast when the failsafe triggers?
+            // Only home the mast, if we are in a sail mode that automatically moves the sail
+
+            if (mast_status.homed != AP_HAL::SERVO_HOMED) {
+                // Mast not homed.
+                if (sail_status.moving) {
+                    // Sail is moving
+                    printf("ERROR: The mast isn't homed, but the sail is moving.\n");
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Sail moving before mast is homed.");
+                } else if (wind_strength == WIND_HIGH) {
+                        // The mast cannot be homed in high winds, so do nothing.
+                } else if (mast_status.homed != AP_HAL::SERVO_HOMING) {
+                    gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Homing the mast.");
+                    // Home the mast
+                    AP_HAL::get_HAL().rcout->home(MAST_SERVO_CH-1);
+                }
+            } else {
+                // Sail not homed
+        //printf("Rover::sail_guard() - Sail not yet homed.\n");
+                if (mast_status.moving) {
+                    // Mast is homed but moving, do nothing
+                } else if (mast_status.pwm < (1900 - 10)) {
+                    // Mast is not up
+                    if (wind_strength == WIND_HIGH) {
+                        // Wait for wind to drop
+                    } else {
+                        // raise mast before homing the sail
+                        gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Raising the mast to home the sail.");
+                        set_mast_position(1900);
+                    }
+                } else if (sail_status.homed != AP_HAL::SERVO_HOMING) {
+                    gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Homing the sail.");
+                    // Home the mast
+                    AP_HAL::get_HAL().rcout->home(SAIL_SERVO_CH-1);
+                }
+            }
+        }
+        return;
+    }
+
+    if (wind_strength >= WIND_HIGH) {
+        // Have high winds, stow the sail
+//        DEBUGV("Rover::sail_guard() - Stow sail\n");
+        if (!stowing_sail) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: High winds, stowing sail.");
+        }
+
+        stowing_sail = true;
+        if (!(sail_status.moving) && (abs(sail_status.pwm - 1500) <= sail_stow_error)) {
+            // Sail centered and stopped, lower mast
+            set_mast_position(1100);
+        } else {
+            // Center the sail, before lowering
+            set_sail_position(1500);
+        }
+        return;
+    } else if (sail_mode == MOTOR_SOLAR ||
+            (wind_strength > WIND_LOW && (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY))) {
+        if (mast_status.pwm < (1900 - 10)) {
+//            DEBUGV("Rover::sail_guard() - Raising the sail.\n");
+            // We are in a mode that uses the sail, so raise it
+            if (mast_set_pos < 1900 || stowing_sail) {
+                gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Raising the mast for sailing. (%d)",
+                        (int)mast_set_pos);
+            }
+            stowing_sail = false;
+            set_mast_position(1900);
+        }
+    }
 }

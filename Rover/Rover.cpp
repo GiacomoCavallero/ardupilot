@@ -109,6 +109,7 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK(afs_fs_check,           10,    200),
 #endif
     SCHED_TASK(read_airspeed,          10,    100),
+    SCHED_TASK_CLASS(Sailboat, &rover.g2.sailboat, sail_guard,  4,  100)
 };
 
 

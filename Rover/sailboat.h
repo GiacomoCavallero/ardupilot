@@ -79,11 +79,25 @@ public:
     };
 
     enum SailMode {
-        MOTOR_ONLY=0,
-        MOTOR_SAIL=1,
-        SAIL_ONLY=2,
-        WAVE_POWER=3,
-        MOTOR_SOLAR=5
+        MOTOR_ONLY      = 0,
+        MOTOR_SAIL      = 1,
+        SAIL_ONLY       = 2,
+        WAVE_POWER      = 3,
+        MOTOR_SOLAR     = 5
+    };
+
+    enum SailFlags {
+        FLAG_NONE           = 0,
+        FLAG_JIBE_ONLY      = 1,
+        FLAG_IGNORE_XTRACK  = 2
+    };
+
+    enum WindStrength {
+        WIND_UNKNOWN        = 0,  // No reading from weather vane
+        WIND_LOW            = 1,  // Wind too low for sailing
+        WIND_FAIR           = 2,  // Light sailing wind
+        WIND_STRONG         = 4,  // Strong sailing wind
+        WIND_HIGH           = 8,  // High winds, stow sail if possible
     };
 
     // set state of motor
@@ -105,7 +119,9 @@ public:
     MAV_RESULT set_winch_position(uint16_t pwm, bool gcs_command = false);
     bool sail_is_safe() const;
     uint16_t get_optimal_sail_position() const;
-
+    void check_wind();
+    void sail_guard();
+    SailMode get_sail_mode() const { return (SailMode)sail_mode.get(); }
 private:
 
     // true if motor is on to assist with slow tack
@@ -140,6 +156,7 @@ private:
     bool stowing_sail;
     NMEA2K nmea2k_sensors;
 //    EncodedServo rudder, sail, mast, winch;
+    WindStrength wind_strength;
 
     friend class GCS_MAVLINK_Rover;
     friend class Rover;
