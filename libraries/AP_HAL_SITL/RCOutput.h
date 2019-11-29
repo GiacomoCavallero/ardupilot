@@ -22,8 +22,8 @@ public:
     void read(uint16_t* period_us, uint8_t len) override;
     void cork(void) override;
     void push(void) override;
-    AP_HAL::ServoStatus read_actual(uint8_t chan) override;
-    void read_actual(AP_HAL::ServoStatus* status, uint8_t len) override;
+    AP_HAL::ServoStatus read_status(uint8_t chan) override;
+    void read_status(AP_HAL::ServoStatus* status, uint8_t len) override;
 
     /*
       force the safety switch on, disabling PWM output from the IO board

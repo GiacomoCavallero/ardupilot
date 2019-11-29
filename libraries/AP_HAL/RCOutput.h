@@ -69,6 +69,12 @@ public:
     virtual void     write(uint8_t chan, uint16_t period_us) = 0;
 
     /*
+     * Home a single servo.
+     * cork() has been called before.
+     */
+    virtual void     home(uint8_t chan) {}
+
+    /*
      * mark the channels in chanmask as reversible. This is needed for some ESC types (such as DShot)
      * so that output scaling can be performed correctly. The chanmask passed is added (ORed) into
      * any existing mask.
@@ -108,8 +114,8 @@ public:
 
     /* On servos that have a potentiometer or other sensor, this returns
      * the PWM of the current position. */
-    virtual ServoStatus read_actual(uint8_t chan) { return ServoStatus(); }
-    virtual void     read_actual(ServoStatus* status, uint8_t len) {
+    virtual ServoStatus read_status(uint8_t chan) { return ServoStatus(); }
+    virtual void     read_status(ServoStatus* status, uint8_t len) {
         memset(status, 0, sizeof(ServoStatus)*len);
     }
 

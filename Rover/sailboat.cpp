@@ -684,9 +684,9 @@ MAV_RESULT Sailboat::set_servo(uint8_t channel, uint16_t pwm, bool gcs_command) 
 }
 
 MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
-    uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH);
-    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_actual(MAST_SERVO_CH-1);
-    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
+    uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     if (mast_set_pos == pwm) {
         if (mast_status.moving ||
                 abs(mast_status.pwm - mast_set_pos) < 100) {
@@ -717,7 +717,7 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
 
 MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
     uint16_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
-    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     if (sail_set_pos == pwm) {
         if (sail_status.moving ||
                 abs(sail_status.pwm - sail_set_pos) < 100) {
@@ -757,8 +757,8 @@ MAV_RESULT Sailboat::set_winch_position(uint16_t pwm, bool gcs_command) {
 }
 
 bool Sailboat::sail_is_safe() const {
-    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_actual(MAST_SERVO_CH-1);
-    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_actual(SAIL_SERVO_CH-1);
+    AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
+    AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     if (mast_status.homed != AP_HAL::SERVO_HOMED)   // Mast(D) isn't homed.
         return false;
     if (sail_status.homed != AP_HAL::SERVO_HOMED)   // Sail(A) isn't homed.

@@ -161,7 +161,7 @@ bool RCOutput::force_safety_on(void)
     return sitl->force_safety_on();
 }
 
-AP_HAL::ServoStatus RCOutput::read_actual(uint8_t ch)
+AP_HAL::ServoStatus RCOutput::read_status(uint8_t ch)
 {
     if (ch < SITL_NUM_CHANNELS) {
         return _actual[ch];
@@ -169,7 +169,7 @@ AP_HAL::ServoStatus RCOutput::read_actual(uint8_t ch)
     return AP_HAL::ServoStatus();
 }
 
-void RCOutput::read_actual(AP_HAL::ServoStatus* status, uint8_t len)
+void RCOutput::read_status(AP_HAL::ServoStatus* status, uint8_t len)
 {
     memcpy(status, _actual, len * sizeof(AP_HAL::ServoStatus));
 }

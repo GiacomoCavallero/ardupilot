@@ -133,10 +133,10 @@ void GCS_MAVLINK_Rover::send_sail_status() {
     bool have_wp = rover.mode_hold.get_desired_location(hold_loc);
 
     AP_HAL::RCOutput* rcout = AP_HAL::get_HAL().rcout;
-    AP_HAL::ServoStatus rudder_status = rcout->read_actual(RUDDER_CH),
-            mast_status = rcout->read_actual(MAST_CH),
-            sail_status = rcout->read_actual(SAIL_CH),
-            winch_status = rcout->read_actual(WINCH_CH);
+    AP_HAL::ServoStatus rudder_status = rcout->read_status(RUDDER_CH),
+            mast_status = rcout->read_status(MAST_CH),
+            sail_status = rcout->read_status(SAIL_CH),
+            winch_status = rcout->read_status(WINCH_CH);
 
 
     mavlink_msg_sail_status_send(chan,
