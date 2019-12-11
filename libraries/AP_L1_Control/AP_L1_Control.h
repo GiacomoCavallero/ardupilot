@@ -101,6 +101,7 @@ private:
 
     // crosstrack error in meters
     float _crosstrack_error;
+    AP_Int8 _ignore_crosstrack_error;
 
     // target bearing in centi-degrees from last update
     int32_t _target_bearing_cd;

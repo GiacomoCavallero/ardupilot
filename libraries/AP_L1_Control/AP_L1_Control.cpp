@@ -38,6 +38,14 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FRAME("LIM_BANK",   3, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
 
+    // @Param: IGNORE_XTRACK
+    // @DisplayName: L1 control crosstrack integrator gain
+    // @Description: Flag to disable crosstrack navigation correction and head directly to the waypoint.
+    // @Range: 0 1
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("IGN_XTRACK",   4, AP_L1_Control, _ignore_crosstrack_error, 0),
+
     AP_GROUPEND
 };
 
@@ -277,7 +285,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
         Nu = atan2f(xtrackVel,ltrackVel);
         _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
-    } else if (alongTrackDist > AB_length + groundSpeed*3) {
+    } else if (_ignore_crosstrack_error || alongTrackDist > AB_length + groundSpeed*3) {
         // we have passed point B by 3 seconds. Head towards B
         // Calc Nu to fly To WP B
         const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
