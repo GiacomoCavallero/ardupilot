@@ -863,6 +863,18 @@ class navio2(linux):
             CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_LINUX_NAVIO2',
         )
 
+        env.INCLUDES += [
+            cfg.srcnode.find_dir('modules/epos2_bridge/include').abspath(),
+        ]
+
+        env.LINKFLAGS += [
+            '-Lmodules/epos2_bridge',
+        ]
+
+        env.LIB += [
+            'epos2_bridge',
+        ]
+
 class edge(linux):
     toolchain = 'arm-linux-gnueabihf'
 
