@@ -15,6 +15,8 @@ typedef Linux::RCOutput_Sysfs RCOutput_Ocius_Parent;
 class RCOutput_Ocius : public RCOutput_Ocius_Parent {
 protected:
     uint16_t* pwm_last;
+    AP_HAL::ServoStatus *pwm_status;
+
     bool* motor_enabled;
     int* consecutive_failures;
     int* last_move_attempt;
@@ -50,14 +52,19 @@ public:
     void init();
     void write(uint8_t ch, uint16_t period_us);
     uint16_t read(uint8_t ch);
-    uint16_t read_pos(uint8_t ch);
+//    uint16_t read_pos(uint8_t ch);
+
+    /* On servos that have a potentiometer or other sensor, this returns
+     * the PWM of the current position. */
+    AP_HAL::ServoStatus read_status(uint8_t chan) override;
+    void read_status(AP_HAL::ServoStatus* status, uint8_t len) override;
+
     void home_mast();
     void home_sail();
     void motor_status_check(void);
-    void motor_status_read(void);
+//    void motor_status_read(void);
 
     void stinger_sail_comm_thread();
     void stinger_check_mast_signal();
-    void stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t nodeid);
-
+    void stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_t ch, uint8_t nodeid);
 };

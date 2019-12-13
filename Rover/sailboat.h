@@ -143,6 +143,8 @@ private:
     AP_Float sail_windspeed_max;
     AP_Int16 sail_stow_error;
     AP_Int8 sail_mode;
+    AP_Int16 sail_flags;
+    AP_Int32 sail_epos_zero;
 
     RC_Channel *channel_mainsail;   // rc input channel for controlling mainsail
     bool currently_tacking;         // true when sailboat is in the process of tacking to a new heading
@@ -160,4 +162,15 @@ private:
 
     friend class GCS_MAVLINK_Rover;
     friend class Rover;
+};
+
+class Winch {
+public:
+    // var_info for holding Parameter information
+    static const struct AP_Param::GroupInfo var_info[];
+
+    // parameters
+    AP_Int8 enable;
+    AP_Int32 encoder_in;
+    AP_Int32 encoder_out;
 };

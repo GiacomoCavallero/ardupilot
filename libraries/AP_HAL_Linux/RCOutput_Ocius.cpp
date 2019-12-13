@@ -15,13 +15,14 @@
 
 #include <epos2_bridge.h>
 
-#define STINGER_BATTERY_POWER_CHANN     (11 - 1)
-#define STINGER_MAST_LOWER_CHANN        (12 - 1)
-#define STINGER_MAST_RAISE_CHANN        (13 - 1)
-#define STINGER_WINCH_CHANN             (14 - 1)
-#define STINGER_SAIL_CHANN              (rover.g.sail_chann_wing-1)
+#define BLUEBOTTLE_MAST_CHANN              ( 9 - 1)
+#define BLUEBOTTLE_SAIL_CHANN              (10 - 1)
+#define BLUEBOTTLE_BATTERY_POWER_CHANN     (11 - 1)
+#define BLUEBOTTLE_MAST_LOWER_CHANN        (12 - 1)
+#define BLUEBOTTLE_MAST_RAISE_CHANN        (13 - 1)
+#define BLUEBOTTLE_WINCH_CHANN             (14 - 1)
 
-#define STINGER_MAST_RELAY_DURATION     7500
+#define BLUEBOTTLE_MAST_RELAY_DURATION     7500
 
 /* this function is run by the second thread */
 void* thread_init(void *thread_data) {
@@ -38,6 +39,8 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t addr, bool external_clock, uint8_t channe
 RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t channel_count) : RCOutput_Ocius_Parent(chip, channel_base, channel_count) {
 #endif
     pwm_last = new uint16_t[_channel_count];
+    pwm_status = new AP_HAL::ServoStatus[_channel_count];
+
     motor_enabled = new bool[_channel_count];
 
     consecutive_failures = new int[_channel_count];
@@ -46,6 +49,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t chann
     last_move_time = new int[_channel_count];
 
     memset(pwm_last, 0, sizeof(uint16_t)*(unsigned int)channel_count);
+    memset(pwm_status, 0, sizeof(AP_HAL::ServoStatus)*(unsigned int)channel_count);
     memset(motor_enabled, 0, sizeof(bool)*(unsigned int)channel_count);
     memset(consecutive_failures, -1, sizeof(int)*(unsigned int)channel_count);
     memset(last_move_attempt, 0, sizeof(int)*(unsigned int)channel_count);
@@ -70,17 +74,19 @@ RCOutput_Ocius::~RCOutput_Ocius() {
 void RCOutput_Ocius::init() {
     RCOutput_Ocius_Parent::init();
     SRV_Channels::set_output_pwm_chan(0, 1500); // center the rudder
-    SRV_Channels::set_output_pwm_chan(STINGER_BATTERY_POWER_CHANN, 1100);
-    SRV_Channels::set_output_pwm_chan(STINGER_MAST_RAISE_CHANN, 1100);
-    SRV_Channels::set_output_pwm_chan(STINGER_MAST_LOWER_CHANN, 1100);
+    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_BATTERY_POWER_CHANN, 1100);
+    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
+    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
 }
 
+static uint32_t timeMastSignalStarted = 0;
+
+#define mast_status     pwm_status[BLUEBOTTLE_MAST_CHANN]
+#define sail_status     pwm_status[BLUEBOTTLE_SAIL_CHANN]
+#define winch_status    pwm_status[BLUEBOTTLE_WINCH_CHANN]
+
 void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
-//    if (period_us == 0) {
-//	// F**&^&ing stupid 0s
-//	return;
-//    }
-    if (rover.g.sail_comm_serial == VESSEL_STINGER && ch == (rover.rcmap.roll()-1)) {
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && ch == (rover.rcmap.roll()-1)) {
         if (period_us < 1250) {
 //            printf("Reducing rudder travel on Bruce(-).\n");
             period_us = 1250;
@@ -92,8 +98,8 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
 
     RCOutput_Ocius_Parent::write(ch, period_us);
 
-    if ((period_us == 0 && (rover.g.sail_comm_serial != VESSEL_STINGER || ch != STINGER_WINCH_CHANN)) ||
-            rover.control_mode->mode_number() == INITIALISING) {
+    if ((period_us == 0 && (rover.g2.frame_class != FRAME_BLUEBOTTLE || ch != BLUEBOTTLE_WINCH_CHANN)) ||
+            rover.control_mode->mode_number() == Mode::Number::INITIALISING) {
         // This indicates no value set to pwm yet so ignore, or boat is still initialising
         return;
     } else if (period_us == 0  && pwm_last[ch] != 0) {
@@ -101,15 +107,11 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
         gcs().send_text(MAV_SEVERITY_NOTICE, "RCO_Ocius: Recieved a PWM of 0 for the winch.\n");
     }
 
-    if (rover.g.sail_comm_serial == VESSEL_NEMO) {
-        // Nemo has been retired
-    } else if (rover.g.sail_comm_serial == VESSEL_STINGER) {
-//	printf("Have a message to redirect to Stinger. (ch: %u, pwm: %u)\n", (uint32_t)ch, (uint32_t)period_us);
-        // redirect messages for Stinger
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+        // redirect messages for Bluebottle
         if (ch == (rover.rcmap.throttle()-1)) {
             // No longer need to do anything, handled by the Torqeedo process
-        } else if (ch == rover.g.sail_chann_mast-1) {
-//            printf("Have a mast pwm to redirect to Stinger. (pwm: %u)\n", (uint32_t)period_us);
+        } else if (ch == BLUEBOTTLE_MAST_CHANN) {
             // Set channels to raise/lower mast
             if (period_us == pwm_last[ch]) {
                 // No change in PWM value, ignore
@@ -117,26 +119,26 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
             } else if (period_us >= 1000 && period_us <= 1200) {
                 // lower mast
                 printf("RCO_Ocius: Pulling mast down. (%u)\n", period_us);
-                SRV_Channels::set_output_pwm_chan(STINGER_MAST_RAISE_CHANN, 1100);
-                SRV_Channels::set_output_pwm_chan(STINGER_MAST_LOWER_CHANN, 1900);
-                rover.sail_status.mast.moving = true;
-                rover.sail_status.timeMastSignalStarted = millis();
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1900);
+                mast_status.moving = true;
+                timeMastSignalStarted = millis();
                 if (period_us == 1100) {
                     // We offset by 1, so that messages from GCS don't need to change
-                    SRV_Channels::set_output_pwm_chan(rover.g.sail_chann_mast-1, 1101);
+                    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, 1101);
                 }
                 // TODO Disable sail motor
 
             } else if (period_us >= 1800 && period_us <= 2000) {
                 // raise mast
                 printf("RCO_Ocius: Pushing mast up. (%u)\n", period_us);
-                SRV_Channels::set_output_pwm_chan(STINGER_MAST_LOWER_CHANN, 1100);
-                SRV_Channels::set_output_pwm_chan(STINGER_MAST_RAISE_CHANN, 1900);
-                rover.sail_status.mast.moving = true;
-                rover.sail_status.timeMastSignalStarted = millis();
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1900);
+                mast_status.moving = true;
+                timeMastSignalStarted = millis();
                 if (period_us == 1900) {
                     // We offset by 1, so that messages from GCS don't need to change
-                    SRV_Channels::set_output_pwm_chan(rover.g.sail_chann_mast-1, 1899);
+                    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, 1899);
                 }
             } else if (period_us == 0) {
                 // Ignoring 0 value, need to locate the source
@@ -144,13 +146,13 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
             } else {
                 // stop all signals / unhome mast
                 printf("RCO_Ocius: Killing mast hydraulics, unhoming motor. (%u)\n", period_us);
-                SRV_Channels::set_output_pwm_chan(STINGER_MAST_LOWER_CHANN, 1100);
-                SRV_Channels::set_output_pwm_chan(STINGER_MAST_RAISE_CHANN, 1100);
-                rover.sail_status.timeMastSignalStarted = 0;
-                rover.sail_status.mast.flag = MOTOR_UNHOMED;
-                rover.sail_status.mast.moving = false;
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
+                timeMastSignalStarted = 0;
+                mast_status.homed = AP_HAL::SERVO_UNHOMED;
+                mast_status.moving = false;
             }
-        } else if (ch == rover.g.sail_chann_wing-1) {
+        } else if (ch == BLUEBOTTLE_SAIL_CHANN) {
 //            printf("Have a sail pwm to redirect to Stinger. (pwm: %u)\n", (uint32_t)period_us);
             // Send message to slew the sail, do nothing, messages handled in child thread
         }
@@ -159,7 +161,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
 }
 
 uint16_t RCOutput_Ocius::read(uint8_t ch) {
-    if (rover.g.sail_comm_serial == VESSEL_STINGER) {
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
         if (ch == (rover.rcmap.throttle()-1)) {
             return pwm_last[ch];
         }
@@ -167,35 +169,41 @@ uint16_t RCOutput_Ocius::read(uint8_t ch) {
     return RCOutput_Ocius_Parent::read(ch);
 }
 
-uint16_t RCOutput_Ocius::read_pos(uint8_t ch) {
-    // TODO: RCOutput_Ocius::read_pos(uint8_t ch)
-    return 0;
-}
+//uint16_t RCOutput_Ocius::read_pos(uint8_t ch) {
+//    // TODO: RCOutput_Ocius::read_pos(uint8_t ch)
+//    return 0;
+//}
 
 void RCOutput_Ocius::home_mast() {
-    if (rover.g.sail_comm_serial == VESSEL_NEMO) {
-        // Nemo has been retired
-    } else if (rover.g.sail_comm_serial == VESSEL_STINGER) {
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
             // Home mast on stinger
-        if (rover.sail_status.mast.flag == MOTOR_HOMING) {
+        if (mast_status.homed == AP_HAL::SERVO_HOMING) {
             // Wait for current homing to complete.
             return;
         }
 //        printf("RCOutput_Ocius::home_mast() - Homing mast on Stinger.\n");
 //        gcs().send_text(MAV_SEVERITY_NOTICE, "Homing mast on Stinger.\n");
         uint16_t home_pos = 1900;
-        if (pwm_last[rover.g.sail_chann_mast-1] == 1900) {
+        if (pwm_last[BLUEBOTTLE_MAST_CHANN] == 1900) {
             home_pos = 1899;
         }
-        rover.sail_status.mast.flag = MOTOR_HOMING;
-        SRV_Channels::set_output_pwm_chan(rover.g.sail_chann_mast-1, home_pos);
+        mast_status.homed = AP_HAL::SERVO_HOMING;
+        SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, home_pos);
     }
 }
 
+
+AP_HAL::ServoStatus RCOutput_Ocius::read_status(uint8_t chan) {
+    // TODO: RCOutput_Ocius::read_status(uint8_t chan)
+    return pwm_status[chan];
+}
+
+void RCOutput_Ocius::read_status(AP_HAL::ServoStatus* status, uint8_t len) {
+    // TODO: RCOutput_Ocius::read_status(AP_HAL::ServoStatus* status, uint8_t len)
+}
+
 void RCOutput_Ocius::home_sail() {
-    if (rover.g.sail_comm_serial == VESSEL_NEMO) {
-        // Nemo has been retired
-    } else if (rover.g.sail_comm_serial == VESSEL_STINGER) {
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
         printf("RCOutput_Ocius::home_sail() - Homing sail on Stinger.\n");
         // Home sail on stinger
         thread_flags = thread_flags | HomeSail;
@@ -205,53 +213,41 @@ void RCOutput_Ocius::home_sail() {
 #define GPIO_PIN 18
 
 void RCOutput_Ocius::motor_status_check(void) {
-    if (rover.g.sail_comm_serial == VESSEL_NEMO) {
-        // Nemo has been retired
-    } else if (rover.g.sail_comm_serial == VESSEL_STINGER) {
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
         // disable relay signal for mast
-//		printf("Checking if mast signal to be disabled. (%u, %u)\n", rover.sail_status.timeMastSignalStarted, millis());
-        if (rover.sail_status.timeMastSignalStarted != 0 &&
-                (millis() - rover.sail_status.timeMastSignalStarted) > STINGER_MAST_RELAY_DURATION) {
+//		printf("Checking if mast signal to be disabled. (%u, %u)\n", timeMastSignalStarted, millis());
+        if (timeMastSignalStarted != 0 &&
+                (millis() - timeMastSignalStarted) > BLUEBOTTLE_MAST_RELAY_DURATION) {
             // Signal has passed desired time / kill it
             printf("RCO_Ocius: Time up. Mast homed.\n");
             gcs().send_text(MAV_SEVERITY_NOTICE, "Mast homed (%s)",
-		pwm_last[rover.g.sail_chann_mast-1] > 1800 ? "up":"down");
-            SRV_Channels::set_output_pwm_chan(STINGER_MAST_LOWER_CHANN, 1100);
-            SRV_Channels::set_output_pwm_chan(STINGER_MAST_RAISE_CHANN, 1100);
-            rover.sail_status.mast.flag = MOTOR_HOMED;
-            rover.sail_status.mast.moving = false;
-            rover.sail_status.mast.position = pwm_last[rover.g.sail_chann_mast-1];
-            rover.sail_status.timeMastSignalStarted = 0;
+		pwm_last[BLUEBOTTLE_MAST_CHANN] > 1800 ? "up":"down");
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
+            mast_status.homed = AP_HAL::SERVO_HOMED;
+            mast_status.moving = false;
+            mast_status.pwm = pwm_last[BLUEBOTTLE_MAST_CHANN];
+            timeMastSignalStarted = 0;
         }
-
-    }
-
-//    int bilge_pump_status = hal.gpio->read(GPIO_PIN);
-//
-//    if (bilge_pump_status == 1) {
-//        gcs_send_text_fmt(MAV_SEVERITY_CRITICAL, "Bilge Pump Has Been Activated");
-//    }
-}
-
-void RCOutput_Ocius::motor_status_read(void){
-//  DEBUGV("Reading motor status.\n");
-    if (rover.g.sail_comm_serial == VESSEL_NEMO) {
-        // Nemo has been retired
     }
 }
 
-#define STINGER_THREAD_PERIOD_WAIT      200000
-#define STINGER_MOTOR_OFFSET            (rover.g.sail_epos_zero) // TODO: Switch to using a parameter
-#define STINGER_MOTOR_TICKS_PER_90      41000
-#define WINCH_ENC_1_MAX		(rover.g.winch_encoder_1_max)
-#define WINCH_ENC_1_ZERO    (rover.g.winch_encoder_1_zero)
-#define WINCH_ENC_1_RANGE   (rover.g.winch_encoder_1_max - rover.g.winch_encoder_1_zero)
+//void RCOutput_Ocius::motor_status_read(void){
+////  DEBUGV("Reading motor status.\n");
+//}
+
+#define BLUEBOTTLE_THREAD_PERIOD_WAIT      200000
+#define BLUEBOTTLE_MOTOR_OFFSET            (rover.g2.sailboat.sail_epos_zero) // TODO: Switch to using a parameter
+#define BLUEBOTTLE_MOTOR_TICKS_PER_90      41000
+#define WINCH_ENCODER_DEPLOY		(rover.g2.winch.encoder_out)
+#define WINCH_ENCODER_RETRACT       (rover.g2.winch.encoder_in)
+#define WINCH_ENCODER_RANGE   (WINCH_ENCODER_DEPLOY - WINCH_ENCODER_RETRACT)
 
 bool bridge_initialised = false;
 uint32_t last_initialise_fail_message = 0;
 void RCOutput_Ocius::stinger_sail_comm_thread() {
     while (!closing) {
-        if (rover.g.sail_comm_serial != VESSEL_STINGER) {
+        if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
             // Not talking to Stinger so sleep and try again.
             goto THREAD_LOOP_SLEEP;
         }
@@ -272,27 +268,27 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
             bridge_initialised = true;
             gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Epos bridge initialised.\n");
             last_initialise_fail_message = 0;
-            rover.sail_status.sail.flag = MOTOR_UNHOMED;
-            rover.sail_status.winch.flag = MOTOR_UNHOMED;
+            sail_status.homed = AP_HAL::SERVO_UNHOMED;
+            winch_status.homed = AP_HAL::SERVO_UNHOMED;
         }
 
 
-        if (motor_enabled[STINGER_SAIL_CHANN] && rover.sail_status.mast.flag == MOTOR_HOMED && rover.sail_status.mast.position <= 1200) {
+        if (motor_enabled[BLUEBOTTLE_SAIL_CHANN] && mast_status.homed == AP_HAL::SERVO_HOMED && mast_status.pwm <= 1200) {
             // mast is homed & down, sail enabled, so disable
             printf("Stinger: disabling sail motor.\n");
             if (!disableMotor(1)) {
                 // Motor successfully disabled.
-                motor_enabled[STINGER_SAIL_CHANN] = false;
+                motor_enabled[BLUEBOTTLE_SAIL_CHANN] = false;
             }
 //            goto THREAD_LOOP_SLEEP;
         }
 
-        stinger_sail_update_epos(&(rover.sail_status.sail), STINGER_SAIL_CHANN, 1);
-        if (rover.g.winch_encoder_1_max != rover.g.winch_encoder_1_zero) {
-            stinger_sail_update_epos(&(rover.sail_status.winch), STINGER_WINCH_CHANN, 2);
+        stinger_sail_update_epos(sail_status, BLUEBOTTLE_SAIL_CHANN, 1);
+        if (rover.g2.winch.enable && WINCH_ENCODER_DEPLOY != WINCH_ENCODER_RETRACT) {
+            stinger_sail_update_epos(winch_status, BLUEBOTTLE_WINCH_CHANN, 2);
         }
 THREAD_LOOP_SLEEP:
-        usleep(STINGER_THREAD_PERIOD_WAIT);
+        usleep(BLUEBOTTLE_THREAD_PERIOD_WAIT);
     }
 }
 
@@ -312,12 +308,11 @@ bool RCOutput_Ocius_stinger_epos_all_broken(int* consecutive_failures, int chann
 
 #define MOTOR_NAME (nodeid == 2?"Winch":"Sail")
 
-void RCOutput_Ocius::stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t nodeid) {
+void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_t ch, uint8_t nodeid) {
     if (!bridge_initialised) {
         return;
     }
 
-    Rover::sail_motor_status_t* motor = (Rover::sail_motor_status_t*)motor_v;
     uint8_t homed;
     int32_t position;
     uint16_t position_pwm;
@@ -329,10 +324,10 @@ void RCOutput_Ocius::stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t
         consecutive_failures[ch]++;
         if (consecutive_failures[ch] >= MAX_CONSEQ_FAILS) {
             consecutive_failures[ch] = MAX_CONSEQ_FAILS;
-            if (motor->flag != MOTOR_UNHOMED) {
+            if (motor.homed != AP_HAL::SERVO_UNHOMED) {
                 gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
             }
-            motor->flag = MOTOR_UNHOMED;
+            motor.homed = AP_HAL::SERVO_UNHOMED;
 
             if (RCOutput_Ocius_stinger_epos_all_broken(consecutive_failures, (int)_channel_count)) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Too many consecutive read failures. Resetting bridge connection.");
@@ -356,21 +351,21 @@ void RCOutput_Ocius::stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t
     consecutive_failures[ch] = 0;
 
     position_pwm = 0;
-    if (ch == STINGER_SAIL_CHANN) {
-        position_pwm = ((position - STINGER_MOTOR_OFFSET) * 400 / STINGER_MOTOR_TICKS_PER_90) + 1500;  // Sail motor
-    } else if (ch == STINGER_WINCH_CHANN) {
-        position_pwm = 1900 - (((position - WINCH_ENC_1_ZERO)/ (float)WINCH_ENC_1_RANGE) * 800);
+    if (ch == BLUEBOTTLE_SAIL_CHANN) {
+        position_pwm = ((position - BLUEBOTTLE_MOTOR_OFFSET) * 400 / BLUEBOTTLE_MOTOR_TICKS_PER_90) + 1500;  // Sail motor
+    } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
+        position_pwm = 1900 - (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
     }
-    motor->moving = abs(motor->position_raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
-    motor->position_raw = position;
-    motor->position = position_pwm;
+    motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
+    motor.raw = position;
+    motor.pwm = position_pwm;
 	//printf("EPOS %d is at position %d(%d)\n", nodeid, position, position_pwm);
 
-    if (!(motor->moving)) {
+    if (!(motor.moving)) {
         // Check motor is homed
         homed = false;
-//        if (motor->flag != MOTOR_HOMED)
-//            gcs().send_text(MAV_SEVERITY_WARNING, "Stinger: Checking home status of motor %d( %d )", ch, (int)motor->flag);
+//        if (motor.homed != AP_HAL::SERVO_HOMED)
+//            gcs().send_text(MAV_SEVERITY_WARNING, "Stinger: Checking home status of motor %d( %d )", ch, (int)motor.homed);
         if (isHomed(nodeid, &homed, NULL)) {
             // Error checking motor homed status
 //            goto THREAD_LOOP_SLEEP;
@@ -380,37 +375,37 @@ void RCOutput_Ocius::stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t
         //printf("Epos(%d) status is %s\n", nodeid, (homed?"homed":"UNhomed"));
         if (homed) {
             // Sail is homed
-            if (motor->flag != MOTOR_HOMED) {
+            if (motor.homed != AP_HAL::SERVO_HOMED) {
                 printf("%s is homed.\n", MOTOR_NAME);
                 gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: %s is homed.", MOTOR_NAME);
             }
-            motor->flag = MOTOR_HOMED;
+            motor.homed = AP_HAL::SERVO_HOMED;
             RCOutput_Ocius::thread_flags = RCOutput_Ocius::thread_flags & !HomeSail; // FIXME: only for sail
         } else {
-            if (motor->flag == MOTOR_HOMED)
+            if (motor.homed == AP_HAL::SERVO_HOMED)
                 gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: %s has LOST its homing.", MOTOR_NAME);
 
             // Motor not homed
-            motor->flag = MOTOR_UNHOMED;
+            motor.homed = AP_HAL::SERVO_UNHOMED;
         }
     }
  //            printf("Stinger: motor_enabled: %d, mast_flag: %d, mast_pos: %d\n",
-//      motor_enabled, rover.sail_status.mast.flag, rover.sail_status.mast.position);
+//      motor_enabled, mast_status.flag, mast_status.position);
 
-    if (motor->flag != MOTOR_HOMED || (ch == STINGER_SAIL_CHANN && (thread_flags & HomeSail))) {
-        if (motor->flag != MOTOR_HOMING) {
+    if (motor.homed != AP_HAL::SERVO_HOMED || (ch == BLUEBOTTLE_SAIL_CHANN && (thread_flags & HomeSail))) {
+        if (motor.homed != AP_HAL::SERVO_HOMING) {
             gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: homing %s.", MOTOR_NAME);
             printf("RCOut: homing %s.\n", MOTOR_NAME);
         }
         motor_enabled[ch] = true;
         homeMotor(nodeid);
-        motor->flag = MOTOR_HOMING;
+        motor.homed = AP_HAL::SERVO_HOMING;
 //        goto THREAD_LOOP_SLEEP;
         return;
     }
 
     if (!rover.arming.is_armed()) {
-        if (ch == STINGER_SAIL_CHANN && pwm_last[ch] == 1500) {
+        if (ch == BLUEBOTTLE_SAIL_CHANN && pwm_last[ch] == 1500) {
             // Sail can be centered even when disarmed.
         } else {
             // Not armed so wait and check again
@@ -419,19 +414,19 @@ void RCOutput_Ocius::stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t
         }
     }
 
-    if (motor->flag != MOTOR_HOMED) {
+    if (motor.homed != AP_HAL::SERVO_HOMED) {
         // Sail/Winch not homed so not safe to move.
 //        goto THREAD_LOOP_SLEEP;
         return;
     }
 
-//    if (rover.sail_status.mast.position < 1800) {
+//    if (mast_status.position < 1800) {
 //        // The mast is not up. FIXME
 //        goto THREAD_LOOP_SLEEP;
 //        return;
 //    }
 
-    if (ch == STINGER_WINCH_CHANN && pwm_last[ch] == 0) {
+    if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
         // have emergency stop
         if (motor_enabled[ch]) {
             printf("RCOut: Emergency stop called on winch.\n");
@@ -450,18 +445,18 @@ void RCOutput_Ocius::stinger_sail_update_epos(void* motor_v, uint8_t ch, uint8_t
         //printf("Comparing desired position with actual.\n");
         int now = millis();
         int desiredPosition = position;  // Default to prevent movement as desired is current position
-        if (ch == STINGER_SAIL_CHANN) {
-            if (rover.sail_status.mast.flag != MOTOR_HOMED || rover.sail_status.mast.position < 1800) {
+        if (ch == BLUEBOTTLE_SAIL_CHANN) {
+            if (mast_status.homed != AP_HAL::SERVO_HOMED || mast_status.pwm < 1800) {
                 // If mast not homed or not up don't move sail
             } else {
-                desiredPosition = (pwm_last[ch] - 1500) * STINGER_MOTOR_TICKS_PER_90 / 400 + STINGER_MOTOR_OFFSET;  // FIXME
+                desiredPosition = (pwm_last[ch] - 1500) * BLUEBOTTLE_MOTOR_TICKS_PER_90 / 400 + BLUEBOTTLE_MOTOR_OFFSET;  // FIXME
             }
-            if (!rover.sail_is_safe() && desiredPosition != STINGER_MOTOR_OFFSET) {
+            if (!rover.g2.sailboat.sail_is_safe() && desiredPosition != BLUEBOTTLE_MOTOR_OFFSET) {
                 // if the sail is not safe it can only be centered, in preparation for stowing
                 desiredPosition = position;
             }
-        } else if (ch == STINGER_WINCH_CHANN) {
-            desiredPosition = ((1900 - pwm_last[ch]) / 800.0) * WINCH_ENC_1_RANGE + WINCH_ENC_1_ZERO;
+        } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
+            desiredPosition = ((1900 - pwm_last[ch]) / 800.0) * WINCH_ENCODER_RANGE + WINCH_ENCODER_RETRACT;
 //            printf("Desired winch position is %d.\n", desiredPosition);
         }
         if (abs(desiredPosition - position) > 100) {

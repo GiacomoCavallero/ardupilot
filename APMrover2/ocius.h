@@ -46,11 +46,11 @@ enum SAIL_HOLD_MODE {
     HOLD_FIGURE8    = 2,
 };
 
-enum VESSEL_TYPE {
-    VESSEL_UNKNOWN      = 0,
-    VESSEL_NEMO         = 1,
-    VESSEL_STINGER      = 2,
-};
+//enum VESSEL_TYPE {
+//    VESSEL_UNKNOWN      = 0,
+//    VESSEL_NEMO         = 1,
+//    VESSEL_STINGER      = 2,
+//};
 
 enum SAIL_FLAGS {
     SAIL_NO_FLAGS = 0,

@@ -392,6 +392,9 @@ public:
     // Sailboat functions
     Sailboat sailboat;
 
+    // Winch functions
+    Winch winch;
+
     // object avoidance path planning
     AP_OAPathPlanner oa;
 

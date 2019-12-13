@@ -122,6 +122,7 @@ public:
     friend class RC_Channels_Rover;
 
     friend class Sailboat;
+    friend class RCOutput_Ocius;
 
     Rover(void);
 

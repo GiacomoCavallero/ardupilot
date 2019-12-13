@@ -129,7 +129,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("WNDSPD_MAX", 60, Sailboat, sail_windspeed_max, 15),
 
-    // @Param: WNDSPD_MAX
+    // @Param: FLAGS
     // @DisplayName: Sailboat bit flags to activate/deactivate skills
 //     @Description: Sailboat bit flags (1: Jibe only, 2: Ignore X-Track, 4: Always Set heading to WP)
     // @Units: bits
@@ -137,6 +137,15 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("FLAGS", 11, Sailboat, sail_flags, 0),
+
+    // @Param: EPOS_ZERO
+    // @DisplayName: Sail encoder 0 point
+//     @Description: Encoder position of sail at PWM 1500
+    // @Units: ticks
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("EPOS_ZERO", 12, Sailboat, sail_epos_zero, 0),
 
     AP_GROUPEND
 };
@@ -912,7 +921,7 @@ void Sailboat::check_wind() {
 }
 
 void Sailboat::sail_guard() {
-    // TODO: determine wind strength
+    // determine wind strength
     check_wind();
 
     if (!rover.arming.is_armed() || !enable) {
@@ -1013,3 +1022,33 @@ void Sailboat::sail_guard() {
         }
     }
 }
+
+const AP_Param::GroupInfo Winch::var_info[] = {
+    // @Param: ENABLE
+    // @DisplayName: Enable Winch
+    // @Description: This enables Winch functionality
+    // @Values: 0:Disable,1:Enable
+    // @User: Standard
+    // @RebootRequired: True
+    AP_GROUPINFO_FLAGS("ENABLE", 1, Winch, enable, 0, AP_PARAM_FLAG_ENABLE),
+
+    // @Param: ENCODER_IN
+    // @DisplayName: Winch encoder (retracted)
+    // @Description: Winch encoder reading when the cable is fully retracted
+    // @Units: ticks
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("ENCODE_IN", 2, Winch, encoder_in, 0),
+
+    // @Param: ENCODER_OUT
+    // @DisplayName: Winch encoder (deployed)
+    // @Description: Winch encoder reading when the cable is fully deployed
+    // @Units: ticks
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("ENCODE_OUT", 3, Winch, encoder_out, 0),
+
+    AP_GROUPEND
+};

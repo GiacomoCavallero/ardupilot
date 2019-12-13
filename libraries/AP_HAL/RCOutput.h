@@ -44,7 +44,9 @@ struct ServoStatus {
     bool moving;
     ServoHoming homed;
 
-    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED) {}
+    int32_t raw;
+
+    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED), raw(0) {}
 };
 
 }

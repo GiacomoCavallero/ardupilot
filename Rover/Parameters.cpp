@@ -650,6 +650,10 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("FS_OPTIONS", 48, ParametersG2, fs_options, 0),
 
+    // @Group: WINCH_
+    // @Path: sailboat.cpp
+    AP_SUBGROUPINFO(winch, "WINCH_", 49, ParametersG2, Winch),
+
     AP_GROUPEND
 };
 
