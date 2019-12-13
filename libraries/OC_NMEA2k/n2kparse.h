@@ -1,15 +1,17 @@
 #ifndef __N2KPARSE_H
 #define __N2KPARSE_H
 
-#include "pgn.h"
+#ifndef WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
+#include <stdint.h>
 #include <string.h>
+#include "pgn.h"
 //////////////////////////////////////////////////////////////////////////////////////
 //NGT specific
-static const unsigned char NGT_STARTUP_SEQ[] =
-{ 0x11   /* msg byte 1, meaning ? */
-, 0x02   /* msg byte 2, meaning ? */
-, 0x00   /* msg byte 3, meaning ? */
-};
+extern const unsigned char NGT_STARTUP_SEQ[3];
 
 /*
 * Defines to interface with an Actisense NGT-1
@@ -46,7 +48,8 @@ enum ValType {
 	ValType_Double,
 	ValType_Lookup,
 	ValType_Date,
-	ValType_Time
+	ValType_Time,
+	ValType_ASCII
 };
 
 struct FieldValue
@@ -113,7 +116,7 @@ struct MsgVals
 		for (i = 0; i < count; i++)
 			if (!strcmp(pVals[i].name, name))
 				return pVals[i].lookup;
-		return "";
+		return (char *)"";
 	}
 	double getDouble(const char *name)
 	{
@@ -128,7 +131,7 @@ struct MsgVals
 		int i;
 		for (i = 0; i < count; i++)
 			if (!strcmp(pVals[i].name, name))
-				return pVals[i].val;
+				return (int)pVals[i].val;
 		return 0;
 	}
 	const char *getDateOrTime(const char *name)
@@ -150,4 +153,9 @@ struct MsgVals
 };
 
 unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *&pmv);
+
+#ifndef WIN32
+#pragma GCC diagnostic pop
+#endif
+
 #endif

@@ -27,11 +27,14 @@
 #define min(a,b) (a < b ? a : b)
 #endif
 
+Pgn* pgnListFirst() { return pgnList + 0; }
+Pgn* pgnListEnd() { return pgnList + pgnListSize; }
+
 Pgn *searchForPgn(int pgn)
 {
-  int start = 0;
-  int end = pgnListSize;
-  int mid;
+  size_t start = 0;
+  size_t end = pgnListSize;
+  size_t mid;
 
   while (start <= end)
   {
@@ -82,8 +85,8 @@ static Pgn *searchForUnknownPgn(int pgnId)
 Pgn* getMatchingPgn(int pgnId, uint8_t *dataStart, int length)
 {
   Pgn *pgn = searchForPgn(pgnId);
-  int prn;
-  uint8_t i;
+  uint32_t prn;
+  int i;
 
   if (!pgn)
   {
@@ -92,13 +95,13 @@ Pgn* getMatchingPgn(int pgnId, uint8_t *dataStart, int length)
 
   prn = pgn->pgn;
 
-  if (pgn == pgnListEnd() - 1 || (int)pgn[1].pgn != prn)
+  if (pgn == pgnListEnd() - 1 || pgn[1].pgn != prn)
   {
     // Don't bother complex search if there is only one PGN with this PRN.
     return pgn;
   }
 
-  for (; (int)pgn->pgn == prn; pgn++) // we never get here for the last pgn, so no need to check for end of list
+  for (; pgn->pgn == prn; pgn++) // we never get here for the last pgn, so no need to check for end of list
   {
     int startBit = 0;
     uint8_t *data = dataStart;
@@ -120,7 +123,7 @@ Pgn* getMatchingPgn(int pgnId, uint8_t *dataStart, int length)
     }
 
     // Iterate over fields
-    for (i = 0, startBit = 0, data = dataStart; i < pgn->fieldCount; i++)
+    for (i = 0, startBit = 0, data = dataStart; i < (int)pgn->fieldCount; i++)
     {
       const Field *field = &pgn->fieldList[i];
       int bits = field->size;
@@ -158,19 +161,19 @@ Pgn* getMatchingPgn(int pgnId, uint8_t *dataStart, int length)
 
 void checkPgnList(void)
 {
-  int i;
-  int prn = 0;
+  size_t i;
+  uint32_t prn = 0;
 
-  for (i = 0; i < (int)pgnListSize; i++)
+  for (i = 0; i < pgnListSize; i++)
   {
     Pgn * pgn;
 
-    if ((int)pgnList[i].pgn < prn)
+    if (pgnList[i].pgn < prn)
     {
       //logError("Internal error: PGN %d is not sorted correctly\n", pgnList[i].pgn);
       exit(2);
     }
-    if ((int)pgnList[i].pgn == prn)
+    if (pgnList[i].pgn == prn)
     {
       continue;
     }
@@ -186,10 +189,23 @@ void checkPgnList(void)
 
 Field * getField(uint32_t pgnId, uint32_t field)
 {
+
   Pgn* pgn = searchForPgn(pgnId);
-  if (pgn && field < pgn->fieldCount)
+
+  if (!pgn)
+  {
+    return 0;
+  }
+  if (field < pgn->fieldCount)
   {
     return pgn->fieldList + field;
+  }
+  if (pgn->repeatingFields)
+  {
+    uint32_t startOfRepeatingFields = pgn->fieldCount - pgn->repeatingFields;
+    uint32_t index = startOfRepeatingFields + ((field - startOfRepeatingFields) % pgn->repeatingFields);
+
+    return pgn->fieldList + index;
   }
   return 0;
 }
@@ -239,20 +255,21 @@ Field * getField(uint32_t pgnId, uint32_t field)
  *
  */
 
-void extractNumber(const Field * field, uint8_t * data, uint32_t startBit, uint32_t bits, int64_t * value, int64_t * maxValue)
+void extractNumber(const Field * field, uint8_t * data, size_t startBit, size_t bits, int64_t * value, int64_t * maxValue)
 {
   bool hasSign = field->hasSign;
 
-  uint32_t firstBit = startBit;
-  uint32_t bitsRemaining = bits;
-  uint32_t magnitude = 0;
-  uint32_t bitsInThisByte;
+  size_t firstBit = startBit;
+  size_t bitsRemaining = bits;
+  size_t magnitude = 0;
+  size_t bitsInThisByte;
   uint64_t bitMask;
   uint64_t allOnes;
   uint64_t valueInThisByte;
+  uint64_t maxv;
 
   *value = 0;
-  *maxValue = 0;
+  maxv = 0;
 
   while (bitsRemaining)
   {
@@ -266,7 +283,7 @@ void extractNumber(const Field * field, uint8_t * data, uint32_t startBit, uint3
     valueInThisByte = (*data & bitMask) >> firstBit;
 
     *value |= valueInThisByte << magnitude;
-    *maxValue |= (int64_t) allOnes << magnitude;
+    maxv |= allOnes << magnitude;
 
     magnitude += bitsInThisByte;
     bitsRemaining -= bitsInThisByte;
@@ -280,7 +297,7 @@ void extractNumber(const Field * field, uint8_t * data, uint32_t startBit, uint3
 
   if (hasSign)
   {
-    *maxValue >>= 1;
+    maxv >>= 1;
 
     if (field->offset) /* J1939 Excess-K notation */
     {
@@ -297,10 +314,12 @@ void extractNumber(const Field * field, uint8_t * data, uint32_t startBit, uint3
         /* 0000.0000.0000.0000.0111.1111.1111.1101 value    */
         /* 0000.0000.0000.0000.0111.1111.1111.1111 maxvalue */
         /* 1111.1111.1111.1111.1000.0000.0000.0000 ~maxvalue */
-        *value |= ~*maxValue;
+        *value |= ~maxv;
       }
     }
   }
+
+  *maxValue = (int64_t) maxv;
 }
 
 #ifndef ARRAY_SIZE
@@ -341,56 +360,4 @@ void fillFieldCounts(void)
 		pgnList[i].fieldCount = j;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

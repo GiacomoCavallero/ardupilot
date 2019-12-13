@@ -6,13 +6,16 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
-#include <math.h>
-#include <float.h>
-#include <inttypes.h>
 
 #ifndef min
 #define min(a,b) (a < b ? a : b)
 #endif
+
+const unsigned char NGT_STARTUP_SEQ[3] =
+{ 0x11   /* msg byte 1, meaning ? */
+, 0x02   /* msg byte 2, meaning ? */
+, 0x00   /* msg byte 3, meaning ? */
+};
 
 /**
 * Handle a byte coming in from the NGT1.
@@ -104,6 +107,8 @@ void ngtMessageReceived(const unsigned char * msg, size_t msgLen)
 }
 
 static bool pgn_init = false;
+extern void fillManufacturers(void);
+extern void fillFieldCounts(void);
 
 void InitPGN()
 {
@@ -115,7 +120,30 @@ void InitPGN()
 	pgn_init = true;
 }
 
-#define HAVE_RESOLUTION(RES) (fabs(field->resolution - (RES)) < DBL_EPSILON)
+bool isASCII(char c)
+{
+	if (c >= 0x20 && c <= 0x7E)
+		return true;
+	else
+		return false;
+}
+
+void
+LookupShipType(int val, char *buf)
+{
+	char lookfor[20];
+	char *s, *e;
+	*buf = 0;
+	sprintf(lookfor, ",%d=", val);
+	s = (char *)strstr(LOOKUP_SHIP_TYPE, (const char *)lookfor);
+	if (s)
+	{
+		s += strlen(lookfor);
+		e = strchr(s, ',');
+		e = e ? e : s + strlen(s);
+		sprintf(buf, "%.*s",(int)(e - s), s);
+	}
+}
 
 unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *&pmv)
 {
@@ -171,19 +199,19 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 				pmv->dst = dst;
 				if (field->units && field->units[0] == '=')
 				{
-#if 0
+//#if 0
 					int64_t value, desiredValue;
 					int64_t maxValue;
 
-					hasFixedField = true;
+					//hasFixedField = true;
 					extractNumber(field, data, startBit, field->size, &value, &maxValue);
 					desiredValue = strtol(field->units + 1, 0, 10);
 					if (value != desiredValue)
 					{
-						matchedFixedField = false;
+						//matchedFixedField = false;
 						break;
 					}
-#endif
+//#endif
 				}
 				else
 				{
@@ -191,28 +219,37 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 					int64_t maxValue;
 
 					extractNumber(field, data, startBit, field->size, &value, &maxValue);
-					if (value != maxValue)
+					if (maxValue == -1 || value <= maxValue)
 					{
-						if (HAVE_RESOLUTION(RES_LOOKUP) && field->units)
+						if (field->resolution == RES_LOOKUP && field->units)
 						{
 							char lookfor[20];
 							char * s, *e;
 
-							sprintf(lookfor, ",%" PRId64 "d=", value);
+							sprintf(lookfor, ",%lld=", (long long)value);
 							s = strstr(field->units, lookfor);
 							if (s)
 							{
 								s += strlen(lookfor);
 								e = strchr(s, ',');
 								e = e ? e : s + strlen(s);
-								char buf[64];
+								char buf[128];
 								sprintf(buf, "%.*s",(int)(e - s), s);
 								pmv->pVals[i].type = ValType_Lookup;
 								pmv->pVals[i].val = value;
 								strncpy(pmv->pVals[i].lookup, buf, sizeof(pmv->pVals[i].lookup));
 							}
+							else
+							{
+								//lookup value not found so convert to double type
+								pmv->pVals[i].type = ValType_Lookup;
+								pmv->pVals[i].val = value;
+								char buf[32];
+								sprintf(buf, "%lld", (long long)value);
+								strncpy(pmv->pVals[i].lookup, buf, sizeof(pmv->pVals[i].lookup));
+							}
 						}
-						else if (HAVE_RESOLUTION(RES_LATITUDE) || HAVE_RESOLUTION(RES_LONGITUDE))
+						else if (field->resolution == RES_LATITUDE || field->resolution == RES_LONGITUDE)
 						{
 							//uint64_t absVal;
 							int64_t value_;
@@ -247,7 +284,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].precision = 7;
 							strncpy(pmv->pVals[i].units, "", sizeof(pmv->pVals[i].units));
 						}
-						else if (HAVE_RESOLUTION(RES_DATE))
+						else if (field->resolution == RES_DATE)
 						{
 							char buf[sizeof("2008.03.10") + 1];
 							time_t t;
@@ -275,7 +312,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].type = ValType_Date;
 							strncpy(pmv->pVals[i].data, buf, sizeof(pmv->pVals[i].data));
 						}
-						else if (HAVE_RESOLUTION(RES_TIME))
+						else if (field->resolution == RES_TIME)
 						{
 							uint32_t hours;
 							uint32_t minutes;
@@ -306,7 +343,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 								buf[0] = 0;
 							strncpy(pmv->pVals[i].data, buf, sizeof(pmv->pVals[i].data));
 						}
-						else if (HAVE_RESOLUTION(RES_PRESSURE))
+						else if (field->resolution == RES_PRESSURE)
 						{
 							int32_t pressure;
 							double bar;
@@ -354,7 +391,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].precision = 3;
 							strncpy(pmv->pVals[i].units, "bar", sizeof(pmv->pVals[i].units));
 						}
-						else if (HAVE_RESOLUTION(RES_TEMPERATURE))
+						else if (field->resolution == RES_TEMPERATURE)
 						{
 							if (value >= 0xfffd)
 							{
@@ -369,10 +406,35 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].dVal = pmv->pVals[i].valid ? c : 0;
 							strncpy(pmv->pVals[i].units, "C", sizeof(pmv->pVals[i].units));
 						}
-						else if (HAVE_RESOLUTION(RES_INTEGER))
+						else if (field->resolution == RES_INTEGER)
 						{
 							pmv->pVals[i].type = ValType_Integer;
 							pmv->pVals[i].val = value;
+							pmv->pVals[i].dVal = (double)value;
+						}
+						else if (field->resolution == RES_BINARY)
+						{
+							pmv->pVals[i].type = ValType_Integer;
+							pmv->pVals[i].val = value;
+							pmv->pVals[i].dVal = (double)value;
+						}
+						else if (field->resolution == RES_ASCII)
+						{
+							pmv->pVals[i].type = ValType_ASCII;
+							int bits_ = field->size;
+							int bytes = (bits_ + 7) / 8;
+							uint8_t * dataEnd = dataStart + len;
+							bytes = min(bytes, (dataEnd - data));
+							strncpy(pmv->pVals[i].lookup, (char *)data, bytes);
+							int x;
+							for (x = 0; x < bytes; x++)
+							{
+								if (!isASCII(pmv->pVals[i].lookup[x]))
+								{
+									pmv->pVals[i].lookup[x] = 0;
+								}
+							}
+							pmv->pVals[i].lookup[x] = 0;
 						}
 						else if (field->resolution > 0.0 && field->resolution < 1.0)
 						{
@@ -388,11 +450,11 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 								precision++;
 							}
 
-							if (HAVE_RESOLUTION(RES_RADIANS))
+							if (field->resolution == RES_RADIANS)
 							{
 								units = "rad";
 							}
-							else if (HAVE_RESOLUTION(RES_ROTATION) || HAVE_RESOLUTION(RES_HIRES_ROTATION))
+							else if (field->resolution == RES_ROTATION || field->resolution == RES_HIRES_ROTATION)
 							{
 								units = "rad/s";
 							}
@@ -474,7 +536,7 @@ bool isFile = false;
 int readNGT1Byte(unsigned char c, unsigned char *msg)
 {
 	static enum MSG_State state = MSG_START;
-//	static bool startEscape = false;
+	//static bool startEscape = false;
 	static bool noEscape = false;
 	static unsigned char buf[500];
 	static unsigned char * head = buf;
