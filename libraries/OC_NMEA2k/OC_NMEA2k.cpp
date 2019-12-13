@@ -129,7 +129,7 @@ static void nmea2k_make_gps_time(uint32_t bcd_date, uint32_t bcd_milliseconds, N
 // Returns true if new sentence has just passed checksum test and is validated
 bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 {
-    printf("Have complete term: %u\n", pgn);
+    //printf("Have complete term: %u\n", pgn);
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
     uint32_t gps_primary_id = rover.g2.nmea2k.gps_1,
             gps_secondary_id = rover.g2.nmea2k.gps_2,
@@ -190,7 +190,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 compass.heading = CLIP_360(ToDeg(mag));
             }
 #endif
-            compass.last_update = AP_HAL::micros64();
+            compass.last_update = AP_HAL::millis64();
             break;
 
         case  129025:
@@ -245,7 +245,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 //                        gps_state->cog  = gps_state->average.speed;
 //                        gps_state->sog = gps_state->average.direction;
 
-                        gps_state->last_update = AP_HAL::micros64();
+                        gps_state->last_update = AP_HAL::millis64();
                     }
                 }
             }
@@ -271,7 +271,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                     gps_state->location.alt     = pmv->getDouble("Altitude") * 100;
                     gps_state->hdop             = pmv->getDouble("HDOP") * 100;
                     nmea2k_make_gps_time(getBSDDate(pmv->getDateOrTime("Date")), getHMSInMillis(pmv->getDateOrTime("Time")), *gps_state);
-                    gps_state->last_update = AP_HAL::millis64();
+                    gps_state->last_update = gps_state->time_last_update = AP_HAL::millis64();
                     gps_state->num_sats     = pmv->getInteger("Number of SVs");
                   }
             }
@@ -280,7 +280,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 129033: // Time and Date
             if (gps_state != NULL && gps_state->have_fix) {
                 nmea2k_make_gps_time(getBSDDate(pmv->getDateOrTime("Date")), getHMSInMillis(pmv->getDateOrTime("Time")), *gps_state);
-                gps_state->last_update = AP_HAL::millis64();
+                gps_state->time_last_update = AP_HAL::millis64();
             }
             break;
 
@@ -424,8 +424,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 
     //Check GPS Status here
     {
-        uint32_t tnow = AP_HAL::millis64();
-        uint32_t tdiff = tnow - primary_gps.last_update;
+        uint64_t tnow = AP_HAL::millis64();
+        uint64_t tdiff = tnow - primary_gps.last_update;
         if (tdiff > 5000) {
             //we have not had an airmar message for 5 seconds, it may be powered off
             //they should come every 2 seconds from the GME ais unit
@@ -436,7 +436,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         }
         tdiff = tnow - secondary_gps.last_update;
         if (tdiff > 5000) {
-            //we have not had an airmar message for 5 seconds, it may be powered off
+            //we have not had a secondary GPS message for 5 seconds, it may be powered off
             //they should come every 2 seconds from the GME ais unit
             if (secondary_gps.have_fix) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Secondary) TIMEOUT, no GPS update in 5s");
@@ -445,7 +445,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         }
         tdiff = tnow - tertiary_gps.last_update;
         if (tdiff > 5000) {
-            //we have not had an airmar message for 5 seconds, it may be powered off
+            //we have not had an tertiary GPS message for 5 seconds, it may be powered off
             //they should come every 2 seconds from the GME ais unit
             if (tertiary_gps.have_fix) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Tertiary) TIMEOUT, no GPS update in 5s");
