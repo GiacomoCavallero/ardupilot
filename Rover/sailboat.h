@@ -162,6 +162,7 @@ private:
 
     friend class GCS_MAVLINK_Rover;
     friend class Rover;
+    friend class RCOutput_Ocius;
 };
 
 class Winch {

@@ -26,7 +26,7 @@ public:
     void cork(void) override;
     void push(void) override;
 
-private:
+protected:
     const uint8_t _chip;
     const uint8_t _channel_base;
     const uint8_t _channel_count;

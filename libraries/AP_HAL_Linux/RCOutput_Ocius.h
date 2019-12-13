@@ -49,9 +49,9 @@ public:
         return static_cast<RCOutput_Ocius *>(rcoutput);
     }
 
-    void init();
-    void write(uint8_t ch, uint16_t period_us);
-    uint16_t read(uint8_t ch);
+    void init() override;
+    void write(uint8_t ch, uint16_t period_us) override;
+    uint16_t read(uint8_t ch) override;
 //    uint16_t read_pos(uint8_t ch);
 
     /* On servos that have a potentiometer or other sensor, this returns
