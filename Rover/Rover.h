@@ -433,6 +433,10 @@ public:
 
     // frame type
     uint8_t get_frame_type() const { return g2.frame_type.get(); }
+
+    // frame class
+    uint8_t get_frame_class() const { return g2.frame_class.get(); }
+
     AP_WheelRateControl& get_wheel_rate_control() { return g2.wheel_rate_control; }
 
     // Simple mode

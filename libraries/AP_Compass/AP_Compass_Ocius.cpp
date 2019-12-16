@@ -11,21 +11,24 @@
 #include <../APMrover2/Rover.h>
 #endif
 
-AP_Compass_Ocius::AP_Compass_Ocius() : compass_instance(0), last_plublished_ms(0) {
+AP_Compass_Ocius::AP_Compass_Ocius() : 
+    AP_Compass_Backend(),
+    compass_instance(0), last_plublished_ms(0)
+{
+    _compass._setup_earth_field();
 }
 
 AP_Compass_Backend *AP_Compass_Ocius::probe() {
     AP_Compass_Ocius* driver = nullptr;
-
+	
 #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2
 
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
 #include <../APMrover2/Rover.h>
-    if (rover.get_frame_type() == FRAME_BLUEBOTTLE || rover.get_frame_type() == FRAME_WAMV) {
+    if (rover.get_frame_class() == FRAME_BLUEBOTTLE || rover.get_frame_class() == FRAME_WAMV) {
         driver = new AP_Compass_Ocius();
         driver->init();
     }
-
 #endif
 
 #endif
@@ -36,8 +39,18 @@ AP_Compass_Backend *AP_Compass_Ocius::probe() {
 bool AP_Compass_Ocius::init(void) {
     compass_instance = register_compass();
     set_dev_id(compass_instance, DEVTYPE_OCIUS);
+    nmea2k_sensors.init();
 
-    return true;
+    uint64_t tstart = AP_HAL::millis64(), tdiff = 0;
+    bool have_reading = false;
+    while (!have_reading && tdiff <= 1000) {
+        usleep(1000);
+        //nmea2k_sensors.read();
+        have_reading = nmea2k_sensors.primary_gps.last_update != 0 && nmea2k_sensors.compass.last_update != 0;
+        tdiff = AP_HAL::millis64() - tstart;
+    }
+    read();
+    return have_reading;
 }
 
 void AP_Compass_Ocius::read()
@@ -54,12 +67,12 @@ void AP_Compass_Ocius::read()
      *
      * All those functions expect the mag field to be in milligauss.
      */
-    Location location;
 
-    if (!AP::ahrs().get_position(location)) {
+    if (nmea2k_sensors.primary_gps.last_update == 0) {
         // Need a GPS position 1st.
         return;
     }
+    Location location = nmea2k_sensors.primary_gps.location;
 
     if (last_plublished_ms >= nmea2k_sensors.compass.last_update) {
         // Only publish new readings.
@@ -76,12 +89,19 @@ void AP_Compass_Ocius::read()
     // create a field vector and rotate to the required orientation
     Vector3f mag_ef(1e3f * intensity, 0.0f, 0.0f);
     Matrix3f R;
+//    printf("mag intensity: %.3f, inclination: %.3f, devlination: %.3f\n",
+//           intensity, inclination, declination);
     R.from_euler(0.0f, -ToRad(inclination), ToRad(declination));
     mag_ef = R * mag_ef;
 
-    Matrix3f dcm;
-    dcm.from_euler(nmea2k_sensors.compass.roll, nmea2k_sensors.compass.pitch, nmea2k_sensors.compass.yaw);
+    float roll  = nmea2k_sensors.compass.roll,
+          pitch = nmea2k_sensors.compass.pitch,
+          //yaw   = nmea2k_sensors.compass.yaw,
+          heading = nmea2k_sensors.compass.heading;
 
+    Matrix3f dcm;
+    dcm.from_euler(roll, pitch, wrap_PI(radians(heading)));
+    
     // Rotate into body frame
     Vector3f mag_bf = dcm.transposed() * mag_ef;
     publish_raw_field(mag_bf, compass_instance);
