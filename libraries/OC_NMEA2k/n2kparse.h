@@ -5,7 +5,7 @@
 #include <string.h>
 //////////////////////////////////////////////////////////////////////////////////////
 //NGT specific
-static unsigned char NGT_STARTUP_SEQ[] =
+unsigned char NGT_STARTUP_SEQ[] =
 { 0x11   /* msg byte 1, meaning ? */
 , 0x02   /* msg byte 2, meaning ? */
 , 0x00   /* msg byte 3, meaning ? */
