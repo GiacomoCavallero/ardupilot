@@ -156,7 +156,7 @@ private:
     UseMotor motor_state;           // current state of motor output
 
     bool stowing_sail;
-    NMEA2K nmea2k_sensors;
+//    NMEA2K nmea2k_sensors;
 //    EncodedServo rudder, sail, mast, winch;
     WindStrength wind_strength;
 
