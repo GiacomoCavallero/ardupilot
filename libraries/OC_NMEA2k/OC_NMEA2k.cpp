@@ -10,6 +10,7 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_HAL/UARTDriver.h>
+#include <AP_HAL/Scheduler.h>
 #include <GCS_MAVLink/GCS.h>
 #include "n2kparse.h"
 #include <stdio.h>
@@ -518,7 +519,12 @@ void NMEA2K::init() {
             return;
         }
         nmea2k_writeMessage(*_port, NGT_MSG_SEND, NGT_STARTUP_SEQ, sizeof(NGT_STARTUP_SEQ));
+        hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &NMEA2K::timer, void));
     }
+}
+
+void NMEA2K::timer() {
+    read();
 }
 
 bool NMEA2K::read() {

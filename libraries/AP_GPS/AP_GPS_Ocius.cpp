@@ -55,7 +55,7 @@ AP_GPS_Ocius::AP_GPS_Ocius(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UART
 
 bool AP_GPS_Ocius::read(void)
 {
-    bool rval = nmea2k_sensors.read();
+    //bool rval = nmea2k_sensors.read();
 
     // copy data into state
     NMEA2K::GPS *nmea_gps = &nmea2k_sensors.primary_gps;
@@ -85,7 +85,7 @@ bool AP_GPS_Ocius::read(void)
 
     fill_3d_velocity();
 
-    return rval;
+    return true;
 }
 
 /*

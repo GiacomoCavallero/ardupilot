@@ -120,6 +120,7 @@ public:
 
     void init();
     bool read();
+    void timer();
 
 private:
     AP_HAL::UARTDriver* _port;
