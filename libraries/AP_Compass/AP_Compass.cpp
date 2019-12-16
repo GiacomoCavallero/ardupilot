@@ -1213,6 +1213,11 @@ void Compass::_detect_backends(void)
     }
 #endif
     
+#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2
+    // FIXME: we want a more accurate configuration for this
+    ADD_BACKEND(DRIVER_OCIUS, AP_Compass_Ocius::probe());
+#endif
+
 #if AP_FEATURE_BOARD_DETECT
     if (AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PIXHAWK2) {
         // default to disabling LIS3MDL on pixhawk2 due to hardware issue
@@ -1424,11 +1429,6 @@ void Compass::_detect_backends(void)
         }
 #endif
     }
-#endif
-
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2
-    // FIXME: we want a more accurate configuration for this
-    ADD_BACKEND(DRIVER_OCIUS, AP_Compass_Ocius::probe());
 #endif
 
     if (_backend_count == 0 ||
