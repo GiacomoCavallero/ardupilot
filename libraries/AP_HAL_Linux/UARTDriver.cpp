@@ -21,6 +21,7 @@
 
 #include "ConsoleDevice.h"
 #include "TCPServerDevice.h"
+#include "TCPClientDevice.h"
 #include "UARTDevice.h"
 #include "UDPDevice.h"
 
@@ -143,6 +144,7 @@ AP_HAL::OwnPtr<SerialDevice> UARTDriver::_parseDevicePath(const char *arg)
     if (stat(arg, &st) == 0 && S_ISCHR(st.st_mode)) {
         return AP_HAL::OwnPtr<SerialDevice>(new UARTDevice(arg));
     } else if (strncmp(arg, "tcp:", 4) != 0 &&
+               strncmp(arg, "tcc:", 4) != 0 &&
                strncmp(arg, "udp:", 4) != 0 &&
                strncmp(arg, "udpin:", 6)) {
         return nullptr;
@@ -199,6 +201,8 @@ AP_HAL::OwnPtr<SerialDevice> UARTDriver::_parseDevicePath(const char *arg)
             device = new UDPDevice(_ip, _base_port, false, true);
 
         }
+    } else if (strcmp(protocol, "tcc") == 0) {
+        device = new TCPClientDevice(_ip, _base_port);
     } else {
         bool wait = (_flag && strcmp(_flag, "wait") == 0);
         device = new TCPServerDevice(_ip, _base_port, wait);
