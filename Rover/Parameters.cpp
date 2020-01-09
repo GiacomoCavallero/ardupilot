@@ -654,6 +654,18 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: sailboat.cpp
     AP_SUBGROUPINFO(winch, "WINCH_", 49, ParametersG2, Winch),
 
+    // @Group: WINCH_
+    // @Path: sailboat.cpp
+    AP_SUBGROUPINFO(nmea2k, "NMEA2K_", 50, ParametersG2, NMEA2k_Params),
+
+    // @Param: MAGNETIC_OFFSET
+    // @DisplayName: Frame Type
+    // @Description: Frame Type
+    // @Values: 0:Undefined,1:Omni3,2:OmniX,3:OmniPlus
+    // @User: Standard
+    // @RebootRequired: True
+    AP_GROUPINFO("MAGNETIC_OFFSET", 51, ParametersG2, magnetic_offset, 0),
+
     AP_GROUPEND
 };
 

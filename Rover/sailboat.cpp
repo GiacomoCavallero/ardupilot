@@ -1052,3 +1052,34 @@ const AP_Param::GroupInfo Winch::var_info[] = {
 
     AP_GROUPEND
 };
+
+const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
+    // @Param: GPS_1
+    // @DisplayName: Primary GPS ID
+    // @Description: The NMEA2k ID of the primary GPS device.
+    // @Units:
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("GPS_1", 1, NMEA2k_Params, gps_1, 0),
+
+    // @Param: GPS_2
+    // @DisplayName: Secondary GPS ID
+    // @Description: The NMEA2k ID of the secondary GPS device.
+    // @Units:
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("GPS_2", 2, NMEA2k_Params, gps_2, 0),
+
+    // @Param: GPS_3
+    // @DisplayName: Tertiary GPS ID
+    // @Description: The NMEA2k ID of the tertiary GPS device.
+    // @Units:
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("GPS_3", 3, NMEA2k_Params, gps_3, 0),
+
+    AP_GROUPEND
+};

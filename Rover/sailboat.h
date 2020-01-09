@@ -175,3 +175,14 @@ public:
     AP_Int32 encoder_in;
     AP_Int32 encoder_out;
 };
+
+class NMEA2k_Params {
+public:
+    // var_info for holding Parameter information
+    static const struct AP_Param::GroupInfo var_info[];
+
+    // parameters
+    AP_Int32 gps_1;
+    AP_Int32 gps_2;
+    AP_Int32 gps_3;
+};

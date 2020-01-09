@@ -123,6 +123,10 @@ public:
 
     friend class Sailboat;
     friend class RCOutput_Ocius;
+    friend class NMEA2K;
+    friend class AP_WindVane_Ocius;
+
+    // TODO: add friends for gps, compass, windvane
 
     Rover(void);
 

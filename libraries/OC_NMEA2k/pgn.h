@@ -4158,8 +4158,8 @@ extern Pgn pgnList[];
 extern uint32_t pgnListSize;
 #endif
 
-Pgn* pgnListFirst() { return pgnList + 0; }
-Pgn* pgnListEnd() { return pgnList + pgnListSize; }
+inline Pgn* pgnListFirst() { return pgnList + 0; }
+inline Pgn* pgnListEnd() { return pgnList + pgnListSize; }
 
 typedef struct
 {
@@ -4168,7 +4168,7 @@ typedef struct
 } Company;
 
 /* http://www.nmea.org/Assets/20140409%20nmea%202000%20registration%20list.pdf */
-Company companyList[] =
+static const Company companyList[] =
 { { "Volvo Penta", 174 }
 , { "Actia Corporation", 199 }
 , { "Actisense", 273 }

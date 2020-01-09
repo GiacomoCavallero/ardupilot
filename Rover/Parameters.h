@@ -395,6 +395,12 @@ public:
     // Winch functions
     Winch winch;
 
+    // Winch functions
+    NMEA2k_Params nmea2k;
+
+    // magnetic offset for the airmar
+    AP_Float magnetic_offset;
+
     // object avoidance path planning
     AP_OAPathPlanner oa;
 
