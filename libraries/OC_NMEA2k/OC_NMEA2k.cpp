@@ -456,19 +456,31 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     return false;
 }
 
-void NMEA2K::init(AP_HAL::UARTDriver& port) {
-    nmea2k_writeMessage(port, NGT_MSG_SEND, NGT_STARTUP_SEQ, sizeof(NGT_STARTUP_SEQ));
+void NMEA2K::init() {
+    if (_port == nullptr) {
+#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+        _port = rover.serial_manager.find_serial(AP_SerialManager::SerialProtocol_NMEA2K, 0);
+#endif
+        if (_port == nullptr) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: No NMEA2K serial device located.");
+            return;
+        }
+        nmea2k_writeMessage(*_port, NGT_MSG_SEND, NGT_STARTUP_SEQ, sizeof(NGT_STARTUP_SEQ));
+    }
 }
 
-bool NMEA2K::read(AP_HAL::UARTDriver& port) {
+bool NMEA2K::read() {
+    if (_port == nullptr) {
+        return false;
+    }
     bool parsed = false;
-    int16_t numc = port.available();
+    int16_t numc = _port->available();
     if (numc == 0) {
         return false;
     }
 
     while (numc) {
-        unsigned char c = port.read();
+        unsigned char c = _port->read();
         int len = readNGT1Byte(c, msg);
         if (len)
         {

@@ -77,14 +77,17 @@ public:
     WeatherStation weather;
     Compass compass;
 
-    void init(AP_HAL::UARTDriver& port);
-    bool read(AP_HAL::UARTDriver& port);
+    void init();
+    bool read();
 
 private:
-
+    AP_HAL::UARTDriver* _port;
     unsigned char msg[512];
 //    NMEA2K() {}
     bool term_complete(unsigned int pgn, MsgVals *pmv);
+
+public:
+    NMEA2K() : _port(nullptr) {}
 };
 
 extern NMEA2K nmea2k_sensors;

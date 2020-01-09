@@ -46,7 +46,7 @@ extern const AP_HAL::HAL& hal;
 AP_GPS_Ocius::AP_GPS_Ocius(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDriver *_port) :
     AP_GPS_Backend(_gps, _state, _port)
 {
-    nmea2k_sensors.init(*port);
+    nmea2k_sensors.init();
 
     gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K GPS Driver Rebooted.");
 
@@ -55,7 +55,7 @@ AP_GPS_Ocius::AP_GPS_Ocius(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UART
 
 bool AP_GPS_Ocius::read(void)
 {
-    nmea2k_sensors.read(*port);
+    nmea2k_sensors.read();
 
     // copy data into state
     NMEA2K::GPS *nmea_gps = &nmea2k_sensors.primary_gps;
