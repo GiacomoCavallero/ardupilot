@@ -163,6 +163,7 @@ private:
         WINDVANE_NMEA           = 4,
         WINDVANE_SITL_TRUE      = 10,
         WINDVANE_SITL_APPARENT  = 11,
+        WINDVANE_OCIUS          = 21,
     };
 
     enum Speed_type {
@@ -173,6 +174,7 @@ private:
         WINDSPEED_NMEA               = 4,
         WINDSPEED_SITL_TRUE          = 10,
         WINDSPEED_SITL_APPARENT      = 11,
+        WINDSPEED_OCIUS              = 21,
     };
 
     static AP_WindVane *_singleton;

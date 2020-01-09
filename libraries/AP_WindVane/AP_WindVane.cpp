@@ -22,6 +22,7 @@
 #include "AP_WindVane_RPM.h"
 #include "AP_WindVane_SITL.h"
 #include "AP_WindVane_NMEA.h"
+#include "AP_WindVane_Ocius.h"
 
 #include <AP_Logger/AP_Logger.h>
 
@@ -213,6 +214,9 @@ void AP_WindVane::init(const AP_SerialManager& serial_manager)
             _direction_driver = new AP_WindVane_NMEA(*this);
             _direction_driver->init(serial_manager);
             break;
+        case WindVaneType::WINDVANE_OCIUS:
+            _direction_driver = new AP_WindVane_Ocius(*this);
+            break;
     }
 
     // wind speed
@@ -247,6 +251,9 @@ void AP_WindVane::init(const AP_SerialManager& serial_manager)
             break;
         case Speed_type::WINDSPEED_RPM:
             _speed_driver = new AP_WindVane_RPM(*this);
+            break;
+        case Speed_type::WINDSPEED_OCIUS:
+            _speed_driver = new AP_WindVane_Ocius(*this);
             break;
     }
 }

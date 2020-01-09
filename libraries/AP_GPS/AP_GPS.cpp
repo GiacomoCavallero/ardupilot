@@ -37,6 +37,7 @@
 #include "AP_GPS_MAV.h"
 #include "AP_GPS_MSP.h"
 #include "AP_GPS_ExternalAHRS.h"
+#include "AP_GPS_Ocius.h"
 #include "GPS_Backend.h"
 
 #if HAL_ENABLE_LIBUAVCAN_DRIVERS
@@ -730,6 +731,8 @@ void AP_GPS::detect_instance(uint8_t instance)
                     _type[instance] == GPS_TYPE_ALLYSTAR) &&
                    AP_GPS_NMEA::_detect(dstate->nmea_detect_state, data)) {
             new_gps = new AP_GPS_NMEA(*this, state[instance], _port[instance]);
+        } else if (_type[instance] == GPS_TYPE_OCIUS) {
+            new_gps = new AP_GPS_Ocius(*this, state[instance], _port[instance]);
         }
 #endif // HAL_BUILD_AP_PERIPH
         if (new_gps) {
