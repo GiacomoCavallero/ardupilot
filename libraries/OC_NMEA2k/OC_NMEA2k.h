@@ -10,6 +10,39 @@
 #include <AP_Common/Location.h>
 #include <AP_HAL/UARTDriver.h>
 
+struct vector_average_t {
+    //static const uint32_t MAX_READINGS = 5*5;
+    uint32_t MAX_READINGS;
+    float direction;    // degrees
+    float speed;        // mps
+
+    // The latest measurements
+    //float directions[MAX_READINGS];
+    //float speeds[MAX_READINGS];
+    float *directions;
+    float *speeds;
+    uint32_t idx;
+
+
+    vector_average_t(uint32_t mr);
+
+    ~vector_average_t()
+    {
+        delete [] directions;
+        delete [] speeds;
+        delete [] sind;
+        delete [] cosd;
+    }
+
+    // vectors for the measurements
+    //float sind[MAX_READINGS];
+    //float cosd[MAX_READINGS];
+    float *sind;
+    float *cosd;
+
+    void push_reading(float dir_deg, float spd_mps);
+};
+
 class MsgVals;
 class NMEA2K {
 public:
@@ -54,7 +87,12 @@ public:
         float humidity;
         uint64_t last_update;
 
-        WeatherStation() : wind_speed_true(0), wind_dir_true(0), air_pressure(0), air_temp(0), humidity(0), last_update(0) {}
+        vector_average_t wind_average;
+
+        WeatherStation() : wind_speed_true(0), wind_dir_true(0),
+                air_pressure(0), air_temp(0), humidity(0),
+                last_update(0),
+                wind_average(25) {}
     };
 
     class Compass {
