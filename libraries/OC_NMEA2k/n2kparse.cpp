@@ -6,6 +6,8 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <math.h>
+#include <float.h>
 
 #ifndef min
 #define min(a,b) (a < b ? a : b)
@@ -145,6 +147,8 @@ LookupShipType(int val, char *buf)
 	}
 }
 
+#define HAVE_RESOLUTION(RES) (fabs(field->resolution - (RES)) < DBL_EPSILON)
+
 unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *&pmv)
 {
 	InitPGN();
@@ -221,7 +225,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 					extractNumber(field, data, startBit, field->size, &value, &maxValue);
 					if (maxValue == -1 || value <= maxValue)
 					{
-						if (field->resolution == RES_LOOKUP && field->units)
+						if (HAVE_RESOLUTION(RES_LOOKUP) && field->units)
 						{
 							char lookfor[20];
 							char * s, *e;
@@ -249,7 +253,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 								strncpy(pmv->pVals[i].lookup, buf, sizeof(pmv->pVals[i].lookup));
 							}
 						}
-						else if (field->resolution == RES_LATITUDE || field->resolution == RES_LONGITUDE)
+						else if (HAVE_RESOLUTION(RES_LATITUDE) || HAVE_RESOLUTION(RES_LONGITUDE))
 						{
 							//uint64_t absVal;
 							int64_t value_;
@@ -284,7 +288,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].precision = 7;
 							strncpy(pmv->pVals[i].units, "", sizeof(pmv->pVals[i].units));
 						}
-						else if (field->resolution == RES_DATE)
+						else if (HAVE_RESOLUTION(RES_DATE))
 						{
 							char buf[sizeof("2008.03.10") + 1];
 							time_t t;
@@ -312,7 +316,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].type = ValType_Date;
 							strncpy(pmv->pVals[i].data, buf, sizeof(pmv->pVals[i].data));
 						}
-						else if (field->resolution == RES_TIME)
+						else if (HAVE_RESOLUTION(RES_TIME))
 						{
 							uint32_t hours;
 							uint32_t minutes;
@@ -343,7 +347,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 								buf[0] = 0;
 							strncpy(pmv->pVals[i].data, buf, sizeof(pmv->pVals[i].data));
 						}
-						else if (field->resolution == RES_PRESSURE)
+						else if (HAVE_RESOLUTION(RES_PRESSURE))
 						{
 							int32_t pressure;
 							double bar;
@@ -391,7 +395,7 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].precision = 3;
 							strncpy(pmv->pVals[i].units, "bar", sizeof(pmv->pVals[i].units));
 						}
-						else if (field->resolution == RES_TEMPERATURE)
+						else if (HAVE_RESOLUTION(RES_TEMPERATURE))
 						{
 							if (value >= 0xfffd)
 							{
@@ -406,19 +410,19 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 							pmv->pVals[i].dVal = pmv->pVals[i].valid ? c : 0;
 							strncpy(pmv->pVals[i].units, "C", sizeof(pmv->pVals[i].units));
 						}
-						else if (field->resolution == RES_INTEGER)
+						else if (HAVE_RESOLUTION(RES_INTEGER))
 						{
 							pmv->pVals[i].type = ValType_Integer;
 							pmv->pVals[i].val = value;
 							pmv->pVals[i].dVal = (double)value;
 						}
-						else if (field->resolution == RES_BINARY)
+						else if (HAVE_RESOLUTION(RES_BINARY))
 						{
 							pmv->pVals[i].type = ValType_Integer;
 							pmv->pVals[i].val = value;
 							pmv->pVals[i].dVal = (double)value;
 						}
-						else if (field->resolution == RES_ASCII)
+						else if (HAVE_RESOLUTION(RES_ASCII))
 						{
 							pmv->pVals[i].type = ValType_ASCII;
 							int bits_ = field->size;
@@ -450,11 +454,11 @@ unsigned int n2kMessageReceived(const unsigned char * msg, int msgLen, MsgVals *
 								precision++;
 							}
 
-							if (field->resolution == RES_RADIANS)
+							if (HAVE_RESOLUTION(RES_RADIANS))
 							{
 								units = "rad";
 							}
-							else if (field->resolution == RES_ROTATION || field->resolution == RES_HIRES_ROTATION)
+							else if (HAVE_RESOLUTION(RES_ROTATION) || HAVE_RESOLUTION(RES_HIRES_ROTATION))
 							{
 								units = "rad/s";
 							}
