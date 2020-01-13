@@ -446,14 +446,15 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 129038: // AIS Class A Position Report
         case 129794: // AIS Class A Static and Voyage Related Data
 
-    case 129809: // AIS Class B static data (msg 24 Part A)
-    case 129810: // AIS Class B static data (msg 24 Part B)
-    case 130934:
-    case 130935:
-    case 130578: //new water speed sensor
+        case 129809: // AIS Class B static data (msg 24 Part A)
+        case 129810: // AIS Class B static data (msg 24 Part B)
+        case 130578: // Vessel Speed Components
+        case 130934:
+        case 130935:
             break;
+
         default:
-                gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K received pgn %d(0x%x)", pgn, pgn);
+                gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K received pgn %d(0x%x) from source %u.", pgn, pgn, pmv->src);
             break;
     }
 
