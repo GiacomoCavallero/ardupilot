@@ -65,6 +65,7 @@ void AP_Compass_Ocius::read()
         // Only publish new readings.
         return;
     }
+    last_plublished_ms = nmea2k_sensors.compass.last_update;
 
     // get the magnetic field intensity and orientation
     float intensity;
