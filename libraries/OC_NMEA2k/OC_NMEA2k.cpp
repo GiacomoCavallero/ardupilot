@@ -202,28 +202,45 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             break;
 
         case 127250: // Vessel Heading
-            // TODO: check heading reference before adding
-            mag = pmv->getDouble("Heading");
-            declination = pmv->getDouble("Variation");
-//            compass.heading = ToDeg(mag);
-            compass.reference = pmv->getInteger("Reference");
-            compass.variation = ToDeg(declination);
+            if (pmv->src == gps_primary_id) {
+                // We only want the compass readings from the primary(Airmar) GPS.
+                mag = pmv->getDouble("Heading");
+                declination = pmv->getDouble("Variation");
+    //            compass.heading = ToDeg(mag);
+                int compass_reference = pmv->getInteger("Reference");
+                compass.reference = 0;
+                compass.variation = ToDeg(declination);
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-            compass.offset = rover.g2.magnetic_offset;
-            if (compass.reference) {
-                compass.heading = CLIP_360(ToDeg(mag + declination) + rover.g2.magnetic_offset);
-            } else {
-                compass.heading = CLIP_360(ToDeg(mag) + rover.g2.magnetic_offset);
+//    #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+//                compass.offset = rover.g2.magnetic_offset;
+//                if (compass.reference) {
+//                    // Magnetic
+//                    compass.heading = CLIP_360(ToDeg(mag + declination) + rover.g2.magnetic_offset);
+//                } else {
+//                    // True
+//                    compass.heading = CLIP_360(ToDeg(mag) + rover.g2.magnetic_offset);
+//                }
+//    #else
+                if (compass_reference) {
+                    // Magnetic
+                    compass.heading = CLIP_360(ToDeg(mag + declination));
+                } else {
+                    // True
+                    compass.heading = CLIP_360(ToDeg(mag));
+                }
+
+//    #endif
+                compass.last_update = AP_HAL::millis64();
             }
-#else
-            if (compass.reference) {
-                compass.heading = CLIP_360(ToDeg(mag + declination));
-            } else {
-                compass.heading = CLIP_360(ToDeg(mag));
+            break;
+
+        case 127257: // Attitude
+            if (pmv->src == gps_primary_id) {
+                // We only want the attitude readings from the primary(Airmar) GPS.
+                compass.yaw = pmv->getDouble("Yaw");
+                compass.pitch = pmv->getDouble("Pitch");
+                compass.roll = pmv->getDouble("Roll");
             }
-#endif
-            compass.last_update = AP_HAL::millis64();
             break;
 
         case  129025:
@@ -428,7 +445,6 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 60928:  // ISO Address Claim
         case 65410:  // Airmar: Device Information
         case 127251: // Rate of Turn
-        case 127257: // Attitude
         case 127258: // Magnetic Variation
         case 129044: // Datum
         //case 130311: // Environmental Parameters

@@ -73,7 +73,7 @@ public:
         float water_depth;      // m
         float water_temp;       // celcius
         float speed_thru_water; // m/s
-        uint64_t last_update;
+        uint64_t last_update;   // System time of last update (millis)
 
         Triducer() : water_depth(0), water_temp(0), speed_thru_water(0), last_update(0) {}
     };
@@ -83,9 +83,9 @@ public:
         float wind_speed_true;       // m/s
         float wind_dir_true;         // deg[0..360]
         float air_pressure;
-        float air_temp;         // celcius
+        float air_temp;             // celcius
         float humidity;
-        uint64_t last_update;
+        uint64_t last_update;       // System time of last update (millis)
 
         vector_average_t wind_average;
 
@@ -97,15 +97,18 @@ public:
 
     class Compass {
     public:
-        float heading; /*< Magnetic heading (degrees)*/
-        float variation; /*< Variation to true north (degrees)*/
-        float deviation; /*< Deviation whatever that means.(degrees)*/
-        float offset; /*< MAG_OFFSET parameter value (degrees)*/
-        uint8_t reference; /*< Magnetic or true*/
+        float heading;          /*< Magnetic heading (degrees)*/
+        float variation;        /*< Variation to true north (degrees)*/
+        float deviation;        /*< Deviation whatever that means.(degrees)*/
+        float offset;           /*< MAG_OFFSET parameter value (degrees)*/
+        uint8_t reference;      /*< Magnetic or true*/
 
-        uint64_t last_update;
+        uint64_t last_update;   // System time of last update (millis)
 
-        Compass() : heading(0), variation(0), deviation(0), offset(0), reference(0), last_update(0) {}
+        float roll, pitch, yaw;  // Attitude reported from the compass/Airmar (radians)
+
+        Compass() : heading(0), variation(0), deviation(0), offset(0), reference(0), last_update(0),
+                roll(0), pitch(0), yaw(0) {}
     };
 
     GPS primary_gps;            // Airmar

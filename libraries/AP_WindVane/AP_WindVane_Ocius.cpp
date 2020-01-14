@@ -35,14 +35,12 @@ void AP_WindVane_Ocius::update_direction()
     // convert true wind speed and direction into a 2D vector
     Vector2f wind_vector_ef(cosf(wind_dir_rad) * wind_speed, sinf(wind_dir_rad) * wind_speed);
 
-//#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
     Vector3f ground_speed;
     if(AP::ahrs().get_velocity_NED(ground_speed)) {
         // add vehicle speed to get apparent wind vector
         wind_vector_ef.x += ground_speed.x;
         wind_vector_ef.y += ground_speed.y;
     }
-//#endif
 
     direction_update_frontend(atan2f(wind_vector_ef.y, wind_vector_ef.x));
 }

@@ -33,6 +33,7 @@
 #if HAL_EXTERNAL_AHRS_ENABLED
 #include "AP_Compass_ExternalAHRS.h"
 #endif
+#include "AP_Compass_Ocius.h"
 #include "AP_Compass.h"
 #include "Compass_learn.h"
 #include <stdio.h>
@@ -1423,6 +1424,11 @@ void Compass::_detect_backends(void)
         }
 #endif
     }
+#endif
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2
+    // FIXME: we want a more accurate configuration for this
+    ADD_BACKEND(DRIVER_OCIUS, AP_Compass_Ocius::probe());
 #endif
 
     if (_backend_count == 0 ||
