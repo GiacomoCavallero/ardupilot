@@ -9,6 +9,13 @@ void ModeManual::_exit()
 
 void ModeManual::update()
 {
+    if (!rover.arming.is_armed()) {
+        // Vehicle is disarmed, do nothing.
+        g2.motors.set_throttle(0.0f);
+        g2.motors.set_steering(0.0f);
+        return;
+    }
+    
     float desired_steering, desired_throttle, desired_lateral;
     get_pilot_desired_steering_and_throttle(desired_steering, desired_throttle);
     get_pilot_desired_lateral(desired_lateral);
