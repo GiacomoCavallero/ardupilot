@@ -15,7 +15,14 @@ void ModeManual::update()
         g2.motors.set_steering(0.0f);
         return;
     }
-    
+
+    if (channel_throttle->get_radio_in() == 0 ||
+            channel_steer->get_radio_in() == 0 ||
+            channel_lateral->get_radio_in() == 0) {
+        // Receiver has not seen the remote yet. Do nothing.
+        return;
+    }
+
     float desired_steering, desired_throttle, desired_lateral;
     get_pilot_desired_steering_and_throttle(desired_steering, desired_throttle);
     get_pilot_desired_lateral(desired_lateral);
