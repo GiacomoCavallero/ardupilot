@@ -252,6 +252,8 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
             goto THREAD_LOOP_SLEEP;
         }
 
+	motor_status_check();
+
         // initialise bridge
         if (!bridge_initialised) {
             std::string bridgeAddr = "10.42." + std::to_string(rover.g.sysid_this_mav) + ".104:20001";
