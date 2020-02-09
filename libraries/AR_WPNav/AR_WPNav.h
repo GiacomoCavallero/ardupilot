@@ -40,6 +40,10 @@ public:
     // next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
     bool set_desired_location(const struct Location& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN)  WARN_IF_UNUSED;
 
+    // set desired location, and the origin to the destination
+    // next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
+    bool set_desired_location(const struct Location& destination, const struct Location& origin, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN)  WARN_IF_UNUSED;
+
     // set desired location to a reasonable stopping point, return true on success
     bool set_desired_location_to_stopping_location()  WARN_IF_UNUSED;
 

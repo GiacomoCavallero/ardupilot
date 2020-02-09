@@ -235,6 +235,40 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
     return true;
 }
 
+// set desired location
+bool AR_WPNav::set_desired_location(const struct Location& destination, const struct Location& origin, float next_leg_bearing_cd)
+{
+    // initialise some variables
+    _oa_origin = _origin = origin;
+    _oa_destination = _destination = destination;
+    _orig_and_dest_valid = true;
+    _reached_destination = false;
+    update_distance_and_bearing_to_destination();
+
+    // set final desired speed
+    _desired_speed_final = 0.0f;
+    if (!is_equal(next_leg_bearing_cd, AR_WPNAV_HEADING_UNKNOWN)) {
+        const float curr_leg_bearing_cd = _origin.get_bearing_to(_destination);
+        const float turn_angle_cd = wrap_180_cd(next_leg_bearing_cd - curr_leg_bearing_cd);
+        if (fabsf(turn_angle_cd) < 10.0f) {
+            // if turning less than 0.1 degrees vehicle can continue at full speed
+            // we use 0.1 degrees instead of zero to avoid divide by zero in calcs below
+            _desired_speed_final = _desired_speed;
+        } else if (use_pivot_steering_at_next_WP(turn_angle_cd)) {
+            // pivoting so we will stop
+            _desired_speed_final = 0.0f;
+        } else {
+            // calculate maximum speed that keeps overshoot within bounds
+            const float radius_m = fabsf(_overshoot / (cosf(radians(turn_angle_cd * 0.01f)) - 1.0f));
+            _desired_speed_final = MIN(_desired_speed, safe_sqrt(_turn_max_mss * radius_m));
+            // ensure speed does not fall below minimum
+            apply_speed_min(_desired_speed_final);
+        }
+    }
+
+    return true;
+}
+
 // set desired location to a reasonable stopping point, return true on success
 bool AR_WPNav::set_desired_location_to_stopping_location()
 {

@@ -146,6 +146,9 @@ private:
     AP_Int16 sail_flags;
     AP_Int32 sail_epos_zero;
 
+    AP_Int8 hold_mode;
+    AP_Float hold_radius;
+
     RC_Channel *channel_mainsail;   // rc input channel for controlling mainsail
     bool currently_tacking;         // true when sailboat is in the process of tacking to a new heading
     float tack_heading_rad;         // target heading in radians while tacking in either acro or autonomous modes
@@ -163,6 +166,7 @@ private:
     friend class GCS_MAVLINK_Rover;
     friend class Rover;
     friend class RCOutput_Ocius;
+    friend class ModeHold;
 };
 
 class Winch {

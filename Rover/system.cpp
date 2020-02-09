@@ -205,7 +205,7 @@ bool Rover::set_mode(Mode &new_mode, ModeReason reason)
     }
 
     Mode &old_mode = *control_mode;
-    if (!new_mode.enter()) {
+    if (!new_mode.enter(reason)) {
         // Log error that we failed to enter desired flight mode
         AP::logger().Write_Error(LogErrorSubsystem::FLIGHT_MODE,
                                  LogErrorCode(new_mode.mode_number()));
@@ -224,7 +224,7 @@ bool Rover::set_mode(Mode &new_mode, ModeReason reason)
     camera.set_is_auto_mode(control_mode->mode_number() == Mode::Number::AUTO);
 #endif
 
-    old_mode.exit();
+    old_mode.exit(reason);
 
     control_mode_reason = reason;
     logger.Write_Mode(control_mode->mode_number(), control_mode_reason);

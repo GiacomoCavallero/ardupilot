@@ -14,13 +14,13 @@ Mode::Mode() :
     attitude_control(rover.g2.attitude_control)
 { }
 
-void Mode::exit()
+void Mode::exit(mode_reason_t reason)
 {
     // call sub-classes exit
-    _exit();
+    _exit(reason);
 }
 
-bool Mode::enter()
+bool Mode::enter(mode_reason_t reason)
 {
     const bool ignore_checks = !hal.util->get_soft_armed();   // allow switching to any mode if disarmed.  We rely on the arming check to perform
     if (!ignore_checks) {
@@ -41,7 +41,7 @@ bool Mode::enter()
         }
     }
 
-    bool ret = _enter();
+    bool ret = _enter(reason);
 
     // initialisation common to all modes
     if (ret) {

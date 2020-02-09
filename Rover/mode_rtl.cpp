@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeRTL::_enter()
+bool ModeRTL::_enter(mode_reason_t reason)
 {
     // refuse RTL if home has not been set
     if (!AP::ahrs().home_is_set()) {
@@ -52,7 +52,7 @@ void ModeRTL::update()
         } else {
             // if not loitering yet, start loitering
             if (!_loitering) {
-                _loitering = rover.mode_loiter.enter();
+                _loitering = rover.mode_loiter.enter(MODE_REASON_MISSION_END);
             }
             // update stop or loiter
             if (_loitering) {

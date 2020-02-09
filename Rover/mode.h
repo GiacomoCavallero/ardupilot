@@ -9,6 +9,8 @@
 
 #include "defines.h"
 
+#include <vector>
+
 // pre-define ModeRTL so Auto can appear higher in this file
 class ModeRTL;
 
@@ -41,10 +43,10 @@ public:
     Mode &operator=(const Mode&) = delete;
 
     // enter this mode, returns false if we failed to enter
-    bool enter();
+    bool enter(mode_reason_t reason);
 
     // perform any cleanups required:
-    void exit();
+    void exit(mode_reason_t reason);
 
     // returns a unique number specific to this mode
     virtual uint32_t mode_number() const = 0;
@@ -134,10 +136,10 @@ public:
 protected:
 
     // subclasses override this to perform checks before entering the mode
-    virtual bool _enter() { return true; }
+    virtual bool _enter(mode_reason_t reason) { return true; }
 
     // subclasses override this to perform any required cleanup when exiting the mode
-    virtual void _exit() { return; }
+    virtual void _exit(mode_reason_t reason) { return; }
 
     // decode pilot steering and throttle inputs and return in steer_out and throttle_out arguments
     // steering_out is in the range -4500 ~ +4500 with positive numbers meaning rotate clockwise
@@ -278,8 +280,8 @@ public:
 
 protected:
 
-    bool _enter() override;
-    void _exit() override;
+    bool _enter(mode_reason_t reason) override;
+    void _exit(mode_reason_t reason) override;
 
     enum AutoSubMode {
         Auto_WP,                // drive to a given location
@@ -422,7 +424,7 @@ protected:
         Guided_SteeringAndThrottle
     };
 
-    bool _enter() override;
+    bool _enter(mode_reason_t reason) override;
 
     GuidedMode _guided_mode;    // stores which GUIDED mode the vehicle is in
 
@@ -456,6 +458,32 @@ public:
     uint32_t mode_number() const override { return HOLD; }
     const char *name4() const override { return "HOLD"; }
 
+    // enter this mode, returns false if we failed to enter
+    bool _enter(mode_reason_t reason) override;
+
+    // attributes of the mode
+    bool is_autopilot_mode() const override { return true; }
+
+    // return heading (in degrees) and cross track error (in meters) for reporting to ground station (NAV_CONTROLLER_OUTPUT message)
+    float wp_bearing() const override;
+    float nav_bearing() const override;
+    float crosstrack_error() const override {return 0.0; };
+
+    //
+    // navigation methods
+    //
+
+    // return distance (in meters) to destination
+    float get_distance_to_destination() const override;
+
+    // return desired location (used in Guided, Auto, RTL, etc)
+    // return true on success, false if there is no valid destination
+    bool get_desired_location(Location& destination) const override;
+
+    // set desired location (used in Guided, Auto)
+    //   next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
+    bool set_desired_location(const struct Location& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN) override;
+
     // methods that affect movement of the vehicle in this mode
     void update() override;
 
@@ -465,6 +493,20 @@ public:
     // hold mode does not require position or velocity estimate
     bool requires_position() const override { return false; }
     bool requires_velocity() const override { return false; }
+
+protected:
+    enum HoldMode {
+        Hold_Drift,
+        Hold_Active,
+        Hold_Figure8,
+    };
+
+    Location hold_wp;
+    std::vector< Location > figure8;
+    ssize_t figure8_idx;
+
+    std::vector< Location > generateFigure8(const Location& centre, int num_points, float true_wind, float hold_radius, float wp_radius);
+    ssize_t get_preferred_leaf_idx(float true_wind);
 };
 
 class ModeLoiter : public Mode
@@ -493,7 +535,7 @@ public:
 
 protected:
 
-    bool _enter() override;
+    bool _enter(mode_reason_t reason) override;
 
     Location _destination;      // target location to hold position around
     float _desired_speed;       // desired speed (ramped down from initial speed to zero)
@@ -519,7 +561,7 @@ public:
 
 protected:
 
-    void _exit() override;
+    void _exit(mode_reason_t reason) override;
 };
 
 
@@ -551,7 +593,7 @@ public:
 
 protected:
 
-    bool _enter() override;
+    bool _enter(mode_reason_t reason) override;
 
     bool send_notification; // used to send one time notification to ground station
     bool _loitering;        // true if loitering at end of RTL
@@ -597,7 +639,7 @@ protected:
         SmartRTL_Failure
     } smart_rtl_state;
 
-    bool _enter() override;
+    bool _enter(mode_reason_t reason) override;
     bool _load_point;
     bool _loitering;        // true if loitering at end of SRTL
 };
@@ -677,9 +719,8 @@ public:
     bool set_desired_speed(float speed) override;
 
 protected:
-
-    bool _enter() override;
-    void _exit() override;
+    bool _enter(mode_reason_t reason) override;
+    void _exit(mode_reason_t reason) override;
 
     float _desired_speed;       // desired speed in m/s
 };

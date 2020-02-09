@@ -147,6 +147,24 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("EPOS_ZERO", 12, Sailboat, sail_epos_zero, 0),
 
+    // @Param: HOLD_MODE
+    // @DisplayName: Sail hold mode
+//     @Description: Sail hold mode, 0: drift return, 1 active station hold, 2 figure 8
+    // @Units: enumeration
+    // @Range: 0..2
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("HOLD_MODE", 13, Sailboat, hold_mode, 0),
+
+    // @Param: HOLD_RADIUS
+    // @DisplayName: Sail hold radius
+//     @Description: Radius around the hold waypoint within we wish to remain
+    // @Units: metres
+    // @Range: >=0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("HOLD_RADIUS", 14, Sailboat, hold_radius, 0),
+
     AP_GROUPEND
 };
 

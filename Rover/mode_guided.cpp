@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeGuided::_enter()
+bool ModeGuided::_enter(mode_reason_t reason)
 {
     // set desired location to reasonable stopping point
     if (!g2.wp_nav.set_desired_location_to_stopping_location()) {
@@ -33,9 +33,9 @@ void ModeGuided::update()
                     rover.gcs().send_mission_item_reached_message(0);
                 }
 
-                // we have reached the destination so stay here
+                // we have reached the destination so hold here
                 if (rover.is_boat()) {
-                    if (!start_loiter()) {
+                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END)) {
                         stop_vehicle();
                     }
                 } else {
@@ -89,9 +89,7 @@ void ModeGuided::update()
             } else {
                 // we have reached the destination so stay here
                 if (rover.is_boat()) {
-                    if (!start_loiter()) {
-                        stop_vehicle();
-                    }
+                    rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END);
                 } else {
                     stop_vehicle();
                 }
@@ -291,7 +289,7 @@ void ModeGuided::set_steering_and_throttle(float steering, float throttle)
 
 bool ModeGuided::start_loiter()
 {
-    if (rover.mode_loiter.enter()) {
+    if (rover.mode_loiter.enter(MODE_REASON_MISSION_END)) {
         _guided_mode = Guided_Loiter;
         return true;
     }

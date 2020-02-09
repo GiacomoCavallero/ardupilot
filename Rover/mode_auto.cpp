@@ -3,7 +3,7 @@
 
 #define AUTO_GUIDED_SEND_TARGET_MS 1000
 
-bool ModeAuto::_enter()
+bool ModeAuto::_enter(mode_reason_t reason)
 {
     // fail to enter auto if no mission commands
     if (mission.num_commands() <= 1) {
@@ -30,7 +30,7 @@ bool ModeAuto::_enter()
     return true;
 }
 
-void ModeAuto::_exit()
+void ModeAuto::_exit(mode_reason_t reason)
 {
     // stop running the mission
     if (mission.state() == AP_Mission::MISSION_RUNNING) {
@@ -229,7 +229,7 @@ bool ModeAuto::set_desired_speed(float speed)
 // start RTL (within auto)
 void ModeAuto::start_RTL()
 {
-    if (rover.mode_rtl.enter()) {
+    if (rover.mode_rtl.enter(MODE_REASON_MISSION_COMMAND)) {
         _submode = Auto_RTL;
     }
 }
@@ -279,7 +279,7 @@ bool ModeAuto::check_trigger(void)
 
 bool ModeAuto::start_loiter()
 {
-    if (rover.mode_loiter.enter()) {
+    if (rover.mode_loiter.enter(MODE_REASON_MISSION_COMMAND)) {
         _submode = Auto_Loiter;
         return true;
     }
@@ -289,7 +289,7 @@ bool ModeAuto::start_loiter()
 // hand over control to external navigation controller in AUTO mode
 void ModeAuto::start_guided(const Location& loc)
 {
-    if (rover.mode_guided.enter()) {
+    if (rover.mode_guided.enter(MODE_REASON_MISSION_COMMAND)) {
         _submode = Auto_Guided;
 
         // initialise guided start time and position as reference for limit checking
@@ -452,6 +452,11 @@ void ModeAuto::exit_mission()
     if (g2.mis_done_behave == MIS_DONE_BEHAVE_MANUAL && rover.set_mode(rover.mode_manual, ModeReason::MISSION_END)) {
         return;
     }
+
+    if (g2.mis_done_behave == MIS_DONE_BEHAVE_HOLD && rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END)) {
+        return;
+    }
+
 
     start_stop();
 }
