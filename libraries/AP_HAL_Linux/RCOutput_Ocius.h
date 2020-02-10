@@ -59,8 +59,14 @@ public:
     AP_HAL::ServoStatus read_status(uint8_t chan) override;
     void read_status(AP_HAL::ServoStatus* status, uint8_t len) override;
 
-    void home_mast();
-    void home_sail();
+
+    /*
+     * Home a single servo.
+     * cork() has been called before.
+     */
+    void     home(uint8_t chan) override;
+//    void home_mast();
+//    void home_sail();
     void motor_status_check(void);
 //    void motor_status_read(void);
 

@@ -118,7 +118,10 @@ public:
      * the PWM of the current position. */
     virtual ServoStatus read_status(uint8_t chan) { return ServoStatus(); }
     virtual void     read_status(ServoStatus* status, uint8_t len) {
-        memset(status, 0, sizeof(ServoStatus)*len);
+//        memset(status, 0, sizeof(ServoStatus)*len);
+        for (uint8_t i = 0; i < len; ++i) {
+            status[i] = ServoStatus();
+        }
     }
 
     /* Read the current input state. This returns the last value that was written. */

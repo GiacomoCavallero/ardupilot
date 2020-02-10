@@ -174,24 +174,59 @@ uint16_t RCOutput_Ocius::read(uint8_t ch) {
 //    return 0;
 //}
 
-void RCOutput_Ocius::home_mast() {
+//void RCOutput_Ocius::home_mast() {
+//    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+//            // Home mast on stinger
+//        if (mast_status.homed == AP_HAL::SERVO_HOMING) {
+//            // Wait for current homing to complete.
+//            return;
+//        }
+////        printf("RCOutput_Ocius::home_mast() - Homing mast on Stinger.\n");
+////        gcs().send_text(MAV_SEVERITY_NOTICE, "Homing mast on Stinger.\n");
+//        uint16_t home_pos = 1900;
+//        if (pwm_last[BLUEBOTTLE_MAST_CHANN] == 1900) {
+//            home_pos = 1899;
+//        }
+//        mast_status.homed = AP_HAL::SERVO_HOMING;
+//        SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, home_pos);
+//    }
+//}
+//
+//void RCOutput_Ocius::home_sail() {
+//    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+//        printf("RCOutput_Ocius::home_sail() - Homing sail on Stinger.\n");
+//        // Home sail on stinger
+//        thread_flags = thread_flags | HomeSail;
+//    }
+//}
+
+void RCOutput_Ocius::home(uint8_t chan) {
     if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
-            // Home mast on stinger
-        if (mast_status.homed == AP_HAL::SERVO_HOMING) {
-            // Wait for current homing to complete.
-            return;
+        switch (chan) {
+        case BLUEBOTTLE_SAIL_CHANN:
+        case BLUEBOTTLE_WINCH_CHANN:
+            printf("RCOutput_Ocius::home_sail() - Homing sail on Stinger.\n");
+            thread_flags = thread_flags | HomeSail;
+            break;
+        case BLUEBOTTLE_MAST_CHANN:
+        {{
+            if (mast_status.homed == AP_HAL::SERVO_HOMING) {
+                // Wait for current homing to complete.
+                return;
+            }
+    //        printf("RCOutput_Ocius::home_mast() - Homing mast on Stinger.\n");
+    //        gcs().send_text(MAV_SEVERITY_NOTICE, "Homing mast on Stinger.\n");
+            uint16_t home_pos = 1900;
+            if (pwm_last[BLUEBOTTLE_MAST_CHANN] == 1900) {
+                home_pos = 1899;
+            }
+            mast_status.homed = AP_HAL::SERVO_HOMING;
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, home_pos);
+        }}
+            break;
         }
-//        printf("RCOutput_Ocius::home_mast() - Homing mast on Stinger.\n");
-//        gcs().send_text(MAV_SEVERITY_NOTICE, "Homing mast on Stinger.\n");
-        uint16_t home_pos = 1900;
-        if (pwm_last[BLUEBOTTLE_MAST_CHANN] == 1900) {
-            home_pos = 1899;
-        }
-        mast_status.homed = AP_HAL::SERVO_HOMING;
-        SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, home_pos);
     }
 }
-
 
 AP_HAL::ServoStatus RCOutput_Ocius::read_status(uint8_t chan) {
     // TODO: RCOutput_Ocius::read_status(uint8_t chan)
@@ -200,14 +235,6 @@ AP_HAL::ServoStatus RCOutput_Ocius::read_status(uint8_t chan) {
 
 void RCOutput_Ocius::read_status(AP_HAL::ServoStatus* status, uint8_t len) {
     // TODO: RCOutput_Ocius::read_status(AP_HAL::ServoStatus* status, uint8_t len)
-}
-
-void RCOutput_Ocius::home_sail() {
-    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
-        printf("RCOutput_Ocius::home_sail() - Homing sail on Stinger.\n");
-        // Home sail on stinger
-        thread_flags = thread_flags | HomeSail;
-    }
 }
 
 #define GPIO_PIN 18
