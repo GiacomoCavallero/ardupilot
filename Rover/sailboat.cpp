@@ -1031,12 +1031,14 @@ void Sailboat::sail_guard() {
         if (mast_status.pwm < (1900 - 10)) {
 //            DEBUGV("Rover::sail_guard() - Raising the sail.\n");
             // We are in a mode that uses the sail, so raise it
-            if (mast_set_pos < 1900 || stowing_sail) {
+            if (mast_set_pos < (1900 - 10) || !mast_status.moving || stowing_sail) {
+                // If the mast isn't moving or the mast set position is not UP, then we raise the sail
+                // Also raise the sail if it is being stowed
                 gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Raising the mast for sailing. (%d)",
                         (int)mast_set_pos);
+                stowing_sail = false;
+                set_mast_position(1900);
             }
-            stowing_sail = false;
-            set_mast_position(1900);
         }
     }
 }
