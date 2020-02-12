@@ -723,9 +723,10 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
     uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
+    int32_t diff = mast_set_pos;
+    diff = abs(diff - (int32_t)pwm);
     if (mast_set_pos == pwm) {
-        if (mast_status.moving ||
-                abs(mast_status.pwm - mast_set_pos) < 100) {
+        if (mast_status.moving || diff < 100) {
             // If we're already in position or still moving to the position no need to do anything.
             return MAV_RESULT_ACCEPTED;
         }
@@ -754,9 +755,10 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
 MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
     uint16_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
+    int32_t diff = sail_set_pos;
+    diff = abs(diff - (int32_t)pwm);
     if (sail_set_pos == pwm) {
-        if (sail_status.moving ||
-                abs(sail_status.pwm - sail_set_pos) < 100) {
+        if (sail_status.moving || diff < 100) {
             // If we're already in position or still moving to the position no need to do anything.
             return MAV_RESULT_ACCEPTED;
         }
