@@ -432,6 +432,10 @@ void Mode::navigate_to_waypoint()
         // use pivot turn rate for tacks
         const float turn_rate = g2.sailboat.tacking() ? g2.wp_nav.get_pivot_rate() : 0.0f;
         calc_steering_to_heading(desired_heading_cd, turn_rate);
+    } else if (g2.sailboat.sail_flags & SAIL_HEADING_TO_WP) {
+        // use pivot turn rate for tacks
+        const float turn_rate = g2.sailboat.tacking() ? g2.wp_nav.get_pivot_rate() : 0.0f;
+        calc_steering_to_heading(desired_heading_cd, turn_rate);
     } else {
         // retrieve turn rate from waypoint controller
         float desired_turn_rate_rads = g2.wp_nav.get_turn_rate_rads();

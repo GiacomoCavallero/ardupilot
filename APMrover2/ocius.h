@@ -52,6 +52,6 @@ enum SAIL_HOLD_MODE {
 enum SAIL_FLAGS {
     SAIL_NO_FLAGS = 0,
     SAIL_JIBE_ONLY = 1,
-    SAIL_IGNORE_XTRACK = 2,
+//    SAIL_IGNORE_XTRACK = 2,     // Replaced with NAVL1_IGN_XTRACK
     SAIL_HEADING_TO_WP = 4,
 };

@@ -166,6 +166,7 @@ private:
     friend class GCS_MAVLINK_Rover;
     friend class Rover;
     friend class RCOutput_Ocius;
+    friend class Mode;
     friend class ModeHold;
 };
 

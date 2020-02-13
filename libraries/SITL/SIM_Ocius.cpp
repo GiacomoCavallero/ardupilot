@@ -335,7 +335,7 @@ void SimOcius::update(const struct sitl_input &input)
 
     // tide calcs
     Vector3f tide_velocity_ef;
-     if (hal.util->get_soft_armed() && !is_zero(sitl->tide.speed) ) {
+     if (!is_zero(sitl->tide.speed) ) {
         tide_velocity_ef.x = -cosf(radians(sitl->tide.direction)) * sitl->tide.speed;
         tide_velocity_ef.y = -sinf(radians(sitl->tide.direction)) * sitl->tide.speed;
         tide_velocity_ef.z = 0.0f;
