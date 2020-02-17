@@ -127,6 +127,7 @@ private:
     unsigned char msg[512];
 //    NMEA2K() {}
     bool term_complete(unsigned int pgn, MsgVals *pmv);
+    void update_status();
 
 public:
     NMEA2K() : _port(nullptr) {}

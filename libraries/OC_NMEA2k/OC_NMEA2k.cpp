@@ -475,38 +475,41 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             break;
     }
 
+    update_status();
+
+    return false;
+}
+
+void NMEA2K::update_status() {
     //Check GPS Status here
-    {
-        uint64_t tnow = AP_HAL::millis64();
-        uint64_t tdiff = tnow - primary_gps.last_update;
-        if (tdiff > 5000) {
-            //we have not had an airmar message for 5 seconds, it may be powered off
-            //they should come every 2 seconds from the GME ais unit
-            if (primary_gps.have_fix) {
-                gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Primary) TIMEOUT, no GPS update in 5s");
-                primary_gps.have_fix = false;
-            }
-        }
-        tdiff = tnow - secondary_gps.last_update;
-        if (tdiff > 5000) {
-            //we have not had a secondary GPS message for 5 seconds, it may be powered off
-            //they should come every 2 seconds from the GME ais unit
-            if (secondary_gps.have_fix) {
-                gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Secondary) TIMEOUT, no GPS update in 5s");
-                secondary_gps.have_fix = false;
-            }
-        }
-        tdiff = tnow - tertiary_gps.last_update;
-        if (tdiff > 5000) {
-            //we have not had an tertiary GPS message for 5 seconds, it may be powered off
-            //they should come every 2 seconds from the GME ais unit
-            if (tertiary_gps.have_fix) {
-                gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Tertiary) TIMEOUT, no GPS update in 5s");
-                tertiary_gps.have_fix = false;
-            }
+    uint64_t tnow = AP_HAL::millis64();
+    uint64_t tdiff = tnow - primary_gps.last_update;
+    if (tdiff > 5000) {
+        //we have not had an airmar message for 5 seconds, it may be powered off
+        //they should come every 2 seconds from the GME ais unit
+        if (primary_gps.have_fix) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Primary) TIMEOUT, no GPS update in 5s");
+            primary_gps.have_fix = false;
         }
     }
-    return false;
+    tdiff = tnow - secondary_gps.last_update;
+    if (tdiff > 5000) {
+        //we have not had a secondary GPS message for 5 seconds, it may be powered off
+        //they should come every 2 seconds from the GME ais unit
+        if (secondary_gps.have_fix) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Secondary) TIMEOUT, no GPS update in 5s");
+            secondary_gps.have_fix = false;
+        }
+    }
+    tdiff = tnow - tertiary_gps.last_update;
+    if (tdiff > 5000) {
+        //we have not had an tertiary GPS message for 5 seconds, it may be powered off
+        //they should come every 2 seconds from the GME ais unit
+        if (tertiary_gps.have_fix) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K: GPS(Tertiary) TIMEOUT, no GPS update in 5s");
+            tertiary_gps.have_fix = false;
+        }
+    }
 }
 
 void NMEA2K::init() {
@@ -529,11 +532,13 @@ void NMEA2K::timer() {
 
 bool NMEA2K::read() {
     if (_port == nullptr) {
+        update_status();
         return false;
     }
     bool parsed = false;
     int16_t numc = _port->available();
     if (numc == 0) {
+        update_status();
         return false;
     }
 
