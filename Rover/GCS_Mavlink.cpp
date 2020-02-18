@@ -121,7 +121,8 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
     bool have_wp = rover.control_mode->get_desired_location(wp);
     mavlink_msg_ocius_nav_controller_output_send(chan,
             MIN(control_mode->get_distance_to_destination(), UINT32_MAX),
-            (have_wp?wp.lat:0), (have_wp?wp.lng:0));
+            (have_wp?wp.lat:0), (have_wp?wp.lng:0),
+            rover.g2.wp_nav.get_default_speed());
 }
 
 #define RUDDER_CH   0
