@@ -1,5 +1,6 @@
 #include "mode.h"
 #include "Rover.h"
+#include <GCS_MAVLink/GCS.h>
 
 // enter this mode, returns false if we failed to enter
 bool ModeHold::_enter(mode_reason_t reason) {
@@ -12,6 +13,7 @@ bool ModeHold::_enter(mode_reason_t reason) {
         hold_wp = rover.current_loc;
     }
     figure8_idx = -1;
+    figure8.clear();
     _reached_destination = true;
     return true;
 }
@@ -54,6 +56,7 @@ void ModeHold::update()
 
         switch (g2.sailboat.hold_mode) {
         case Hold_Drift:
+            figure8.clear();
             if (dist_to_wp <= g2.wp_nav.get_radius()) {
                 _reached_destination = true;
             } else if (dist_to_wp > g2.sailboat.hold_radius) {
@@ -76,6 +79,7 @@ void ModeHold::update()
             }
             break;
         case Hold_Active:
+            figure8.clear();
             if (dist_to_wp <= g2.wp_nav.get_radius()) {
                 _reached_destination = true;
             } else if (dist_to_wp > rover.g2.sailboat.hold_radius) {
@@ -102,8 +106,8 @@ void ModeHold::update()
 
             // calculate the 4 points of the figure 8.
             float true_wind = g2.windvane.get_true_wind_direction_rad();
+            true_wind = wrap_360(degrees(true_wind));
             if ((rover.is_boat() && g2.sailboat.sail_enabled() && g2.sailboat.sail_is_safe()) || figure8.size() == 0) {
-                true_wind = wrap_180(degrees(true_wind));
                 bool regenFigure8 = true;
                 if (figure8_idx != -1) {
                     Location destination = figure8[figure8_idx];
@@ -125,8 +129,8 @@ void ModeHold::update()
                 // check if we've reached the destination
                 if (g2.wp_nav.reached_destination()) {
                     figure8_idx = (figure8_idx + 1) % figure8.size();
-                    printf("ModeHold::update() - Figure 8 - reached end of leaf, redirecting to idx %Zd.\n",
-                            figure8_idx);
+//                    printf("ModeHold::update() - Figure 8 - reached end of leaf, redirecting to idx %Zd.\n",
+//                            figure8_idx);
                 }
 
                 Location destination = figure8[figure8_idx];
@@ -136,9 +140,9 @@ void ModeHold::update()
                 float bearing_to_dest = rover.current_loc.get_bearing_to(destination) * 0.01f;
                 float angle_from_wind = wrap_180(bearing_to_dest - true_wind);
 
-                if (fabs(angle_from_wind) < g2.sailboat.sail_no_go) {
+                if (rover.is_boat() && g2.sailboat.sail_enabled() && fabs(angle_from_wind) < g2.sailboat.sail_no_go) {
                     // current WP too close to wind, need to reselect
-                    printf("ModeHold::update() - Figure 8 - WP too close to wind, clearing.\n");
+//                    printf("ModeHold::update() - Figure 8 - WP too close to wind, clearing.\n");
                     figure8_idx = -1;
                 }
             }
@@ -146,7 +150,6 @@ void ModeHold::update()
             // if no selected WP, find a WP on the figure 8 that is not upwind +/- 5 degrees
             if (figure8_idx == -1) {
                 figure8_idx = get_preferred_leaf_idx(true_wind);
-                printf("ModeHold::update() - Figure 8 - selected WP index %Zd.\n", figure8_idx);
             }
 
             if (figure8_idx != -1) {
@@ -161,7 +164,10 @@ void ModeHold::update()
             } else {
                 // We have drifted too far downwind, navigate to the WP
                 // TODO: should this only be done once??
-                printf("ModeHold::update() - Figure 8 - returning to hold location.\n");
+//                printf("ModeHold::update() - Figure 8 - returning to hold location.\n");
+                if (reached_destination()) {
+                    gcs().send_text(MAV_SEVERITY_INFO, "ModeHold - Drifted off waypoint returning to hold location.");
+                }
                 if (!g2.wp_nav.set_desired_location(hold_wp, rover.current_loc)) {
                     hal.console->printf("ModeHold: Unable to navigate to center of figure 8.\n");
                 }
@@ -191,7 +197,7 @@ void ModeHold::update()
 
 static float prev_true_wind = INFINITY;
 
-#define DIST_2_JIBE_WP      2   // TODO: make a parameter
+#define DIST_2_JIBE_WP      5   // TODO: make a parameter
 std::vector< Location > ModeHold::generateFigure8(const Location& centre, int num_points, float true_wind, float hold_radius, float wp_radius) {
     std::vector< Location > rval;
     if (true_wind == INFINITY) {
@@ -199,7 +205,7 @@ std::vector< Location > ModeHold::generateFigure8(const Location& centre, int nu
         true_wind = wrap_180(degrees(true_wind));
     }
     if (fabs(prev_true_wind - true_wind) > 1) {
-        printf("ModeHold::generateFigure8 - generating figure8 for true_wind %.2f\n", true_wind);
+//        printf("ModeHold::generateFigure8 - generating figure8 for true_wind %.2f\n", true_wind);
         prev_true_wind = true_wind;
     }
     if (num_points <= 5) {
@@ -219,7 +225,6 @@ std::vector< Location > ModeHold::generateFigure8(const Location& centre, int nu
         }
     } else {
         // TODO: change algorithm, find the ends then draw circle segments
-
         for (int i = 0; i < num_points; ++i) {
             float X = sin(M_PI * 2 * i / (num_points - 1));
             float Y = sin(M_PI * 4 * i / (num_points - 1)) / 4;
@@ -232,6 +237,12 @@ std::vector< Location > ModeHold::generateFigure8(const Location& centre, int nu
             rval.push_back(l);
         }
     }
+
+
+//    printf("ModeHold::generateFigure8() - generated for true_wind: %.1f\n", true_wind);
+//    for (size_t i = 0; i < rval.size(); ++i) {
+//        printf("\t%2Zu: %.7f, %.7f\n", i, rval[i].lat * 1e-7f, rval[i].lng * 1e-7f);
+//    }
     return rval;
 }
 
@@ -239,8 +250,7 @@ std::vector< Location > ModeHold::generateFigure8(const Location& centre, int nu
 ssize_t ModeHold::get_preferred_leaf_idx(float true_wind) {
     if (figure8.size() < 4) return -1;  // This should be unnecessary.
 
-    printf("ModeHold::get_preferred_leaf_idx() - Selecting preferred leaf WP.\n");
-    // TODO: Search order 0, 2, 1, 3.  Need downwind and closest to current heading.
+    // Search order 0, 2, 1, 3.  Need downwind and closest to current heading.
     ssize_t rval = -1;
     float turn_angle = INFINITY;
     float current_heading = ahrs.yaw_sensor * 0.01f;
@@ -249,27 +259,21 @@ ssize_t ModeHold::get_preferred_leaf_idx(float true_wind) {
     float bearing_to_dest = rover.current_loc.get_bearing_to(leaf_wp) * 0.01f;
     float angle_from_wind = wrap_180(bearing_to_dest - true_wind);
 
-    printf("ModeHold::get_preferred_leaf_idx() - 0: angle_from_wind %.1f\n", angle_from_wind);
-
     if (fabs(angle_from_wind) >= (g2.sailboat.sail_no_go + FIGURE8_SELECT_ERROR_MARGIN)) {
         // Leaf WP is downwind with an error margin.
         rval = 0;
         turn_angle = current_heading - bearing_to_dest;
         turn_angle = fabs(wrap_180(turn_angle));
-        printf("ModeHold::get_preferred_leaf_idx() - 0: turn_angle %.1f\n", turn_angle);
     }
 
     leaf_wp = figure8[2];
     bearing_to_dest = rover.current_loc.get_bearing_to(leaf_wp) * 0.01f;
     angle_from_wind = wrap_180(bearing_to_dest - true_wind);
 
-    printf("ModeHold::get_preferred_leaf_idx() - 2: angle_from_wind %.1f\n", angle_from_wind);
-
     if (fabs(angle_from_wind) >= (g2.sailboat.sail_no_go + FIGURE8_SELECT_ERROR_MARGIN)) {
         // Leaf WP is downwind with an error margin.
         float my_turn_angle = current_heading - bearing_to_dest;
         my_turn_angle = fabs(wrap_180(my_turn_angle));
-        printf("ModeHold::get_preferred_leaf_idx() - 2: my_turn_angle %.1f\n", my_turn_angle);
 
         if (my_turn_angle < turn_angle) {
             rval = 2;
@@ -285,26 +289,22 @@ ssize_t ModeHold::get_preferred_leaf_idx(float true_wind) {
     leaf_wp = figure8[1];
     bearing_to_dest = rover.current_loc.get_bearing_to(leaf_wp) * 0.01f;
     angle_from_wind = wrap_180(bearing_to_dest - true_wind);
-    printf("ModeHold::get_preferred_leaf_idx() - 1: angle_from_wind %.1f\n", angle_from_wind);
 
     if (fabs(angle_from_wind) >= (g2.sailboat.sail_no_go + FIGURE8_SELECT_ERROR_MARGIN)) {
         // Leaf WP is downwind with an error margin.
         rval = 1;
         turn_angle = current_heading - bearing_to_dest;
         turn_angle = fabs(wrap_180(turn_angle));
-        printf("ModeHold::get_preferred_leaf_idx() - 1: turn_angle %.1f\n", turn_angle);
     }
 
     leaf_wp = figure8[3];
     bearing_to_dest = rover.current_loc.get_bearing_to(leaf_wp) * 0.01f;
     angle_from_wind = wrap_180(bearing_to_dest - true_wind);
-    printf("ModeHold::get_preferred_leaf_idx() - 3: angle_from_wind %.1f\n", angle_from_wind);
 
     if (fabs(angle_from_wind) >= (g2.sailboat.sail_no_go + FIGURE8_SELECT_ERROR_MARGIN)) {
         // Leaf WP is downwind with an error margin.
         float my_turn_angle = current_heading - bearing_to_dest;
         my_turn_angle = fabs(wrap_180(my_turn_angle));
-        printf("ModeHold::get_preferred_leaf_idx() - 3: my_turn_angle %.1f\n", my_turn_angle);
 
         if (my_turn_angle < turn_angle) {
             rval = 3;
