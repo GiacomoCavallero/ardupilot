@@ -61,7 +61,31 @@ void ModeGuided::update()
             } else {
                 // we have reached the destination so stay here
                 if (rover.is_boat()) {
-                    if (!start_loiter()) {
+                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                        stop_vehicle();
+                    }
+                } else {
+                    stop_vehicle();
+                }
+            }
+            break;
+        }
+
+        case Guided_HeadingAndThrottle:
+        {
+            // stop vehicle if target not updated within 3 seconds
+            if (have_attitude_target && (millis() - _des_att_time_ms) > 3000) {
+                gcs().send_text(MAV_SEVERITY_WARNING, "target not received last 3secs, stopping");
+                have_attitude_target = false;
+            }
+            if (have_attitude_target) {
+                // run steering and throttle controllers
+                calc_steering_to_heading(_desired_yaw_cd);
+                g2.motors.set_throttle(_desired_throttle);
+            } else {
+                // we have reached the destination so stay here
+                if (rover.is_boat()) {
+                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
                         stop_vehicle();
                     }
                 } else {
@@ -89,7 +113,9 @@ void ModeGuided::update()
             } else {
                 // we have reached the destination so stay here
                 if (rover.is_boat()) {
-                    rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END);
+                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                        stop_vehicle();
+                    }
                 } else {
                     stop_vehicle();
                 }
@@ -141,6 +167,7 @@ float ModeGuided::get_distance_to_destination() const
         return _distance_to_destination;
     case Guided_HeadingAndSpeed:
     case Guided_TurnRateAndSpeed:
+    case Guided_HeadingAndThrottle:
         return 0.0f;
     case Guided_Loiter:
         return rover.mode_loiter.get_distance_to_destination();
@@ -160,6 +187,7 @@ bool ModeGuided::reached_destination() const
         return _reached_destination;
     case Guided_HeadingAndSpeed:
     case Guided_TurnRateAndSpeed:
+    case Guided_HeadingAndThrottle:
     case Guided_Loiter:
     case Guided_SteeringAndThrottle:
         return true;
@@ -204,6 +232,7 @@ bool ModeGuided::get_desired_location(Location& destination) const
         return false;
     case Guided_HeadingAndSpeed:
     case Guided_TurnRateAndSpeed:
+    case Guided_HeadingAndThrottle:
         // not supported in these submodes
         return false;
     case Guided_Loiter:
@@ -248,6 +277,28 @@ void ModeGuided::set_desired_heading_and_speed(float yaw_angle_cd, float target_
 
     // log new target
     rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(_desired_yaw_cd, 0.0f, 0.0f), Vector3f(_desired_speed, 0.0f, 0.0f));
+}
+
+// set desired attitude
+void ModeGuided::set_desired_heading_and_throttle(float yaw_angle_cd, float target_throttle)
+{
+    // handle initialisation
+    _reached_destination = false;
+
+    // record targets
+    _desired_yaw_cd = yaw_angle_cd;
+
+    // handle guided specific initialisation and logging
+    _guided_mode = ModeGuided::Guided_HeadingAndThrottle;
+    _des_att_time_ms = AP_HAL::millis();
+
+    // record targets
+    _desired_yaw_cd = yaw_angle_cd;
+    _desired_throttle = target_throttle;
+    have_attitude_target = true;
+
+    // log new target
+    rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(_desired_yaw_cd, 0.0f, 0.0f), Vector3f(target_throttle*g2.wp_nav.get_default_speed(), 0.0f, 0.0f));
 }
 
 void ModeGuided::set_desired_heading_delta_and_speed(float yaw_delta_cd, float target_speed)

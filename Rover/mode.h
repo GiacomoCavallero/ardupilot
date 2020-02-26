@@ -398,6 +398,9 @@ public:
     // set desired heading and speed
     void set_desired_heading_and_speed(float yaw_angle_cd, float target_speed);
 
+    // set desired heading and throttle(-100..100)
+    void set_desired_heading_and_throttle(float yaw_angle_cd, float target_throttle);
+
     // set desired heading-delta, turn-rate and speed
     void set_desired_heading_delta_and_speed(float yaw_delta_cd, float target_speed);
     void set_desired_turn_rate_and_speed(float turn_rate_cds, float target_speed);
@@ -421,7 +424,8 @@ protected:
         Guided_HeadingAndSpeed,
         Guided_TurnRateAndSpeed,
         Guided_Loiter,
-        Guided_SteeringAndThrottle
+        Guided_SteeringAndThrottle,
+        Guided_HeadingAndThrottle,
     };
 
     bool _enter(mode_reason_t reason) override;
@@ -440,6 +444,7 @@ protected:
     uint32_t _strthr_time_ms;   // system time last call to set_steering_and_throttle was made (used for timeout)
     float _strthr_steering;     // direct steering input in the range -1 to +1
     float _strthr_throttle;     // direct throttle input in the range -1 to +1
+    float _desired_throttle;
 
     // limits
     struct {
