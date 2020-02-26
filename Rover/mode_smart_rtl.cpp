@@ -28,7 +28,7 @@ bool ModeSmartRTL::_enter(mode_reason_t reason)
 
     // init state
     smart_rtl_state = SmartRTL_WaitForPathCleanup;
-    _loitering = false;
+    _holding = false;
 
     return true;
 }
@@ -82,11 +82,11 @@ void ModeSmartRTL::update()
                stop_vehicle();
             } else {
                 // if not loitering yet, start loitering
-                if (!_loitering) {
-                    _loitering = rover.mode_loiter.enter(MODE_REASON_MISSION_END);
+                if (!_holding) {
+                    _holding = rover.mode_hold.enter(smart_rtl_state == SmartRTL_StopAtHome?MODE_REASON_MISSION_END:MODE_REASON_FAILSAFE);
                 }
-                if (_loitering) {
-                    rover.mode_loiter.update();
+                if (_holding) {
+                    rover.mode_hold.update();
                 } else {
                     stop_vehicle();
                }

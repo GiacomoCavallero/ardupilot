@@ -74,7 +74,6 @@ void ModeHold::update()
                 if (g2.wp_nav.set_desired_location(hold_wp)) {
                     g2.wp_nav.set_reversed(false);
                     navigate_to_waypoint();
-                    return;
                 }
             }
             break;
@@ -85,21 +84,26 @@ void ModeHold::update()
             } else if (dist_to_wp > rover.g2.sailboat.hold_radius) {
                 _reached_destination = false;
             }
-            if (g2.wp_nav.set_desired_location(hold_wp)) {
-                g2.wp_nav.set_reversed(false);
-                if (_reached_destination) {
-                    // we've reached the destination. so maintain 0 velocity
-                    _desired_yaw_cd = wp_bearing();
+            if (_reached_destination) {
+                // we've reached the destination. so maintain 0 velocity
+                _desired_yaw_cd = wp_bearing() * 100;
 
-                    // run steering and throttle controllers
-                    calc_steering_to_heading(_desired_yaw_cd);
-                    calc_throttle(0, false);
+                // run steering and throttle controllers
+                calc_steering_to_heading(_desired_yaw_cd);
+
+                float desired_speed = 0;
+                if (dist_to_wp <= g2.wp_nav.get_radius()) {
+                    desired_speed = 0;
                 } else {
-                    // Need to return to the hold point.
-                    g2.wp_nav.set_desired_speed(g2.wp_nav.get_default_speed());
+                    float default_speed = g2.wp_nav.get_default_speed();
+                    desired_speed = (dist_to_wp / g2.sailboat.hold_radius) * default_speed;
+                    desired_speed = MAX(desired_speed, MIN(0.5/KNOTS_PER_METRE, default_speed));  // Want a minimum speed back to WP of 1 knot
+                    desired_speed = MIN(default_speed, desired_speed);
                 }
+                calc_throttle(desired_speed, false);
+            } else {
+                g2.wp_nav.set_desired_speed(g2.wp_nav.get_default_speed());
                 navigate_to_waypoint();
-                return;
             }
             break;
         case Hold_Figure8:
@@ -175,10 +179,9 @@ void ModeHold::update()
 //                printf("ModeHold::update() - Figure 8 - returning to hold location.\n");
             }
             navigate_to_waypoint();
-            return;
-
             break;
         }
+        return;
     }
 
     // if vehicle is balance bot, calculate actual throttle required for balancing

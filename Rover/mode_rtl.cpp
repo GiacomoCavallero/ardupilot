@@ -28,7 +28,7 @@ bool ModeRTL::_enter(mode_reason_t reason)
     }
 
     send_notification = true;
-    _loitering = false;
+    _holding = false;
     return true;
 }
 
@@ -46,17 +46,17 @@ void ModeRTL::update()
         }
 
         // we have reached the destination
-        // boats loiter, rovers stop
+        // boats hold, rovers stop
         if (!rover.is_boat()) {
             stop_vehicle();
         } else {
             // if not loitering yet, start loitering
-            if (!_loitering) {
-                _loitering = rover.mode_loiter.enter(MODE_REASON_MISSION_END);
+            if (!_holding) {
+                _holding = rover.mode_hold.enter(MODE_REASON_MISSION_END);
             }
             // update stop or loiter
-            if (_loitering) {
-                rover.mode_loiter.update();
+            if (_holding) {
+                rover.mode_hold.update();
             } else {
                 stop_vehicle();
             }
