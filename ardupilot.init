@@ -1,0 +1,60 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          ardupilot
+# Required-Start:    $local_fs $network $named $time $syslog
+# Required-Stop:     $local_fs $network $named $time $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Description:       Starts the autopilot
+### END INIT INFO
+
+
+SCRIPT=/etc/ardupilot/go_navio2-2019.sh
+#SCRIPT=/etc/ardupilot/go_sim-2019.sh
+LOGFILE=/var/lib/ardupilot//ardupilot.log
+#LOGFILE=/var/APM/ardupilot.log
+
+PIDFILE=/var/run/ardupilot.pid
+
+start() {
+  if [ -f /var/run/$PIDNAME ] && kill -0 $(cat /var/run/$PIDNAME); then
+    echo 'Service already running' >&2
+    return 1
+  fi
+  echo 'Starting service...' >&2
+  echo "------" >> $LOGFILE
+  date >> $LOGFILE
+  chgrp $RUNAS $LOGFILE
+  chmod g+w $LOGFILE
+  local CMD="$SCRIPT &>> \"$LOGFILE\" & echo \$!"
+  su -c "$CMD" $RUNAS > "$PIDFILE"
+  echo 'Service started' >&2
+}
+
+stop() {
+  if [ ! -f "$PIDFILE" ] || ! kill -0 $(cat "$PIDFILE"); then
+    echo 'Service not running' >&2
+    pkill -9 ardurover
+    return 1
+  fi
+  echo 'Stopping service...' >&2
+  # $PIDFILE will contain the PID of the script (go_navio.sh or go_sim.sh)
+  kill -15 $(cat "$PIDFILE") && rm -f "$PIDFILE"
+  pkill -9 ardurover
+  echo 'Service stopped' >&2
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  retart)
+    stop
+    start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+esac
