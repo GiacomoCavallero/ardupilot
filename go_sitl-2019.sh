@@ -30,7 +30,7 @@ echo SIM_DIR=$SIM_DIR
 mkdir -p $SIM_DIR
 
 # ensure the simulator has a default set of parameters
-DEFAULTS_FILE=$ETC_DIR/sim_defaults-2019.parm
+DEFAULTS_FILE=$ETC_DIR/sitl-2019_defaults.parm
 SIM_DEFAULTS=$SIM_DIR/sim_defaults.parm
 
 if [ ! -f $SIM_DEFAULTS ]

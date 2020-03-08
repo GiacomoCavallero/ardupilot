@@ -45,7 +45,7 @@ fi
 # config files
 ###############################################################################
 echo "copying config files"
-CONFIG_FILES='sim_defaults-2019.parm go_sim-2019.sh go_navio2-2019.sh'
+CONFIG_FILES='sitl-2019_defaults.parm go_sitl-2019.sh go_navio2-2019.sh'
 for config in $CONFIG_FILES ; do
   cp "$SRC_DIR/$config" $STAGE_ETC_ARDUPILOT
 done
