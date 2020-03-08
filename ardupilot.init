@@ -8,11 +8,10 @@
 # Description:       Starts the autopilot
 ### END INIT INFO
 
-
 SCRIPT=/etc/ardupilot/go_navio2-2019.sh
-#SCRIPT=/etc/ardupilot/go_sim-2019.sh
-LOGFILE=/var/lib/ardupilot//ardupilot.log
-#LOGFILE=/var/APM/ardupilot.log
+LOGFILE=/var/lib/ardupilot/ardupilot.log
+mkdir -p /var/lib/ardupilot
+RUNAS=root
 
 PIDFILE=/var/run/ardupilot.pid
 

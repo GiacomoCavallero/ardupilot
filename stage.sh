@@ -68,4 +68,5 @@ cp -f $SRC_DIR/uninstall.sh $STAGE_DIR
 cp -f $SRC_DIR/save.sh $STAGE_DIR
 cp -f $SRC_DIR/restore.sh $STAGE_DIR
 cp -f $SRC_DIR/uninstall_monit.sh $STAGE_DIR
+cp -f $SRC_DIR/makepkg.sh $STAGE_DIR
 

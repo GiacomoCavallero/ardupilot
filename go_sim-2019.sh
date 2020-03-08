@@ -37,7 +37,7 @@ if [ ! -f $SIM_DEFAULTS ]
 then
 	echo "Copying default parameters for new instance"
 	cp $DEFAULTS_FILE $SIM_DEFAULTS
-	sed -i -e "s/SYSID_THISMAV,0/SYSID_THISMAV,$SYS_ID/g" $SIM_DEFAULTS
+	sed -i -e "s/SYSID_THISMAV,.*/SYSID_THISMAV,$SYS_ID/g" $SIM_DEFAULTS
 fi
 
 #change to the sim directory
