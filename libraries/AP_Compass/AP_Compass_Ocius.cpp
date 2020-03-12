@@ -77,6 +77,9 @@ void AP_Compass_Ocius::read()
     if (last_plublished_ms >= nmea2k_sensors.compass.last_update) {
         // Only publish new readings.
         return;
+    } else if (fabs(nmea2k_sensors.compass.pitch) >= radians(45)) {
+        // Stop publishing compass readings when the comms mast is down, otherwise it will just report 0 degrees
+        return;
     }
     last_plublished_ms = nmea2k_sensors.compass.last_update;
 
