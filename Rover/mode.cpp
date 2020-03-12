@@ -327,6 +327,13 @@ void Mode::calc_throttle(float target_speed, bool avoidance_enabled)
         }
     }
 
+    if (g2.frame_class == FRAME_BLUEBOTTLE) {
+        // In autonomous modes we want to limit Blubottles to only +ve throttle
+        if (throttle_out <= 0)
+            throttle_out = 0;
+        g2.motors.limit.throttle_lower = throttle_out <= 0;
+    }
+
     // send to motor
     g2.motors.set_throttle(throttle_out);
 }
