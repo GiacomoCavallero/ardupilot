@@ -1,46 +1,46 @@
 #!/bin/bash
-### BEGIN INIT INFO
-# Provides:          ardupilot
-# Required-Start:    $local_fs $network $named $time $syslog
-# Required-Stop:     $local_fs $network $named $time $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Description:       Starts the autopilot
-### END INIT INFO
-
-SCRIPT=/etc/ardupilot/go_navio2-2019.sh
-LOGFILE=/var/lib/ardupilot/ardupilot.log
-mkdir -p /var/lib/ardupilot
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+SCRIPT=/etc/ardupilot/go_sitl-2019.sh
+NAME=ardupilot
+DAEMON=ardurover
+LOGDIR=/var/lib/$NAME
+LOGFILE=$LOGDIR/$NAME.log
+INITLOGFILE=$LOGDIR/init.log
 RUNAS=root
+PIDFILE=/var/run/$NAME.pid
 
-PIDFILE=/var/run/ardupilot.pid
+mkdir -p $LOGDIR
 
+date >> $INITLOGFILE
+echo $1 >> $INITLOGFILE
 start() {
-  if [ -f /var/run/$PIDNAME ] && kill -0 $(cat /var/run/$PIDNAME); then
-    echo 'Service already running' >&2
+  if [ -f $PIDFILE ] && kill -0 $(cat $PIDFILE); then
+    echo "$NAME:$(cat $PIDFILE) already running" >> $INITLOGFILE
     return 1
   fi
-  echo 'Starting service...' >&2
   echo "------" >> $LOGFILE
+  # TODO: the following has a bug and doesn't work
+  # test -x $SCRIPT || echo "$SCRIPT does not exist. Exiting." >> $INITLOGFILE ; return 1
+  echo "Starting $NAME..." $INITLOGFILE
   date >> $LOGFILE
   chgrp $RUNAS $LOGFILE
   chmod g+w $LOGFILE
   local CMD="$SCRIPT &>> \"$LOGFILE\" & echo \$!"
   su -c "$CMD" $RUNAS > "$PIDFILE"
-  echo 'Service started' >&2
+  echo "$NAME:$(cat $PIDFILE) started" >> $INITLOGFILE
 }
 
 stop() {
   if [ ! -f "$PIDFILE" ] || ! kill -0 $(cat "$PIDFILE"); then
-    echo 'Service not running' >&2
-    pkill -9 ardurover
+    echo "$NAME not running" >> $INITLOGFILE
+    pkill -9 $DAEMON
     return 1
   fi
-  echo 'Stopping service...' >&2
+  echo "Stopping $NAME:$(cat $PIDFILE)..." >> $INITLOGFILE
   # $PIDFILE will contain the PID of the script (go_navio.sh or go_sim.sh)
   kill -15 $(cat "$PIDFILE") && rm -f "$PIDFILE"
-  pkill -9 ardurover
-  echo 'Service stopped' >&2
+  pkill -9 $DAEMON
+  echo "$NAME:$(cat $PIDFILE) stopped" >> $INITLOGFILE
 }
 
 case "$1" in

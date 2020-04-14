@@ -40,7 +40,6 @@ if [ -e "$SRC_DIR/modules/epos2_bridge/libepos2_bridge.so" ]; then
   cp $SRC_DIR/modules/epos2_bridge/libepos2_bridge.so $STAGE_LIB
 fi
 
-
 ###############################################################################
 # config files
 ###############################################################################
@@ -54,8 +53,7 @@ done
 # monit oc_service
 ###############################################################################
 echo "copying config for oc_service monit service"
-mkdir -p $STAGE_ETC/init.d
-cp -f $SRC_DIR/ardupilot.init $STAGE_ETC/init.d
+cp -f $SRC_DIR/ardupilot.init $STAGE_ETC_ARDUPILOT
 mkdir -p $STAGE_MONIT/conf.d
 cp "$SRC_DIR/ardupilot.monit" $STAGE_ETC/monit/conf.d/
 

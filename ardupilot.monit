@@ -7,6 +7,6 @@ set httpd port 2812 and
 
 check process ardupilot with pidfile /var/run/ardupilot.pid
   group ardupilot
-  start program = "/etc/init.d/ardupilot.init start"
-  stop program = "/etc/init.d/ardupilot.init stop"
+  start program = "/etc/ardupilot/ardupilot.init start"
+  stop program = "/etc/ardupilot/ardupilot.init stop"
   set daemon 15  # over ride check services at 15 second intervals

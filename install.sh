@@ -26,14 +26,14 @@ fi
 
 if [ $# -ge 2 ]; then
 	SYS_ID=$2
-else
-    SYS_ID=1
+fi
+
+if [ $# -ge 3 ]; then
+	VARIANT=$3
 fi
 
 if [ $# -ge 4 ]; then
 	SIM_HOME=$4
-else
-    SIM_HOME=-12.394,130.763,1,90 
 fi
 
 STAGE_BIN=$STAGE_DIR/bin
@@ -75,26 +75,34 @@ echo "copying config files"
 CONFIG_FILES='sitl-2017_defaults.parm  sitl-2019_defaults.parm go_sitl-2017.sh go_navio2-2017.sh go_sitl-2019.sh go_navio2-2019.sh'
 for config in $CONFIG_FILES ; do
 	if [ ! -e "$INSTALL_ETC_ARDUPILOT/$config" ]; then
-		cp "$STAGE_ETC_ARDUPILOT/$config" $INSTALL_ETC_ARDUPILOT/$config
+        cp "$STAGE_ETC_ARDUPILOT/$config" $INSTALL_ETC_ARDUPILOT/$config
 	fi
 done
 
-sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh
-sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh
-sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh
-sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh
+if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh ]; then
+    sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh
+fi
+if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh ]; then
+    sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh
+fi
+if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh ]; then
+    sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh
+fi
+if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh ]; then
+    sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh
+fi
 
 
 ###############################################################################
 # monit oc_service
 ###############################################################################
 echo "copying config for oc_service monit service"
-mkdir -p $INSTALL_ETC/init.d
-if [ ! -e $INSTALL_ETC/init.d/ardupilot.init ]; then
-	cp $STAGE_ETC/init.d/ardupilot.init $INSTALL_ETC/init.d
+if [ ! -f $INSTALL_ETC_ARDUPILOT/ardupilot.init ]; then
+	cp $STAGE_ETC_ARDUPILOT/ardupilot.init $INSTALL_ETC_ARDUPILOT
 fi
-if [ $# -ge 3 ]; then
-    sed -i -e "s/^SCRIPT=\/etc\/ardupilot\/go_.*/SCRIPT=\/etc\/ardupilot\/go_$3.sh/" /etc/init.d/ardupilot.init
+
+if [ -n "$VARIANT" ]; then
+    sed -i -e "s/^SCRIPT=\/etc\/ardupilot\/go_.*/SCRIPT=\/etc\/ardupilot\/go_$VARIANT.sh/" $INSTALL_ETC_ARDUPILOT/ardupilot.init
 fi
 mkdir -p $INSTALL_MONIT/conf.d
 cp $STAGE_ETC/monit/conf.d/ardupilot.monit $INSTALL_ETC/monit/conf.d
