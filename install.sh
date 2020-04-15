@@ -106,5 +106,5 @@ if [ -n "$VARIANT" ]; then
 fi
 mkdir -p $INSTALL_MONIT/conf.d
 cp $STAGE_ETC/monit/conf.d/ardupilot.monit $INSTALL_ETC/monit/conf.d
-systemctl restart monit
+service monit restart
 echo "done"

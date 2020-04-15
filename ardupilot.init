@@ -21,7 +21,7 @@ start() {
   echo "------" >> $LOGFILE
   # TODO: the following has a bug and doesn't work
   # test -x $SCRIPT || echo "$SCRIPT does not exist. Exiting." >> $INITLOGFILE ; return 1
-  echo "Starting $NAME..." $INITLOGFILE
+  echo "Starting $NAME..." i>> $INITLOGFILE
   date >> $LOGFILE
   chgrp $RUNAS $LOGFILE
   chmod g+w $LOGFILE
@@ -36,11 +36,12 @@ stop() {
     pkill -9 $DAEMON
     return 1
   fi
-  echo "Stopping $NAME:$(cat $PIDFILE)..." >> $INITLOGFILE
+  PID=$(cat $PIDFILE)
+  echo "Stopping $NAME:$PID..." >> $INITLOGFILE
   # $PIDFILE will contain the PID of the script (go_navio.sh or go_sim.sh)
-  kill -15 $(cat "$PIDFILE") && rm -f "$PIDFILE"
-  pkill -9 $DAEMON
-  echo "$NAME:$(cat $PIDFILE) stopped" >> $INITLOGFILE
+  kill -15 $PID && rm -f "$PIDFILE" >> $INITLOGFILE
+  pkill -9 $DAEMON >> $INITLOGFILE
+  echo "$NAME:$PID stopped" >> $INITLOGFILE
 }
 
 case "$1" in
