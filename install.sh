@@ -21,15 +21,20 @@ else
 			exit 1
 		fi
 	fi
-	echo STAGE_DIR defaulting to $STAGE_DIR
+	echo "STAGE_DIR defaulting to $STAGE_DIR"
 fi
 
 if [ $# -ge 2 ]; then
-	SYS_ID=$2
+	VARIANT=$2
+else
+    VARIANT=navio2-2019
+fi
+if [[ $VARIANT =~ sitl.* ]]; then
+    SITL=1
 fi
 
 if [ $# -ge 3 ]; then
-	VARIANT=$3
+	SYS_ID=$3
 fi
 
 if [ $# -ge 4 ]; then
@@ -50,7 +55,7 @@ INSTALL_VAR=/var/APM
 
 if  ! ls $STAGE_BIN/ardu* > /dev/null 2>&1; then
   echo "Does't appear to be a valid install"
-  echo $STAGE_BIN/ardurover
+  echo "$STAGE_BIN/ardurover"
   exit 1
 fi
 
@@ -63,7 +68,6 @@ mkdir -p $INSTALL_VAR
 # binaries
 ###############################################################################
 echo "copying binaries"
-
 cp $STAGE_BIN/* $INSTALL_BIN
 cp $STAGE_LIB/* $INSTALL_LIB
 ldconfig
@@ -71,27 +75,24 @@ ldconfig
 ###############################################################################
 # config files
 ###############################################################################
-echo "copying config files"
-CONFIG_FILES='sitl-2017_defaults.parm  sitl-2019_defaults.parm go_sitl-2017.sh go_navio2-2017.sh go_sitl-2019.sh go_navio2-2019.sh'
-for config in $CONFIG_FILES ; do
-	if [ ! -e "$INSTALL_ETC_ARDUPILOT/$config" ]; then
-        cp "$STAGE_ETC_ARDUPILOT/$config" $INSTALL_ETC_ARDUPILOT/$config
-	fi
-done
-
-if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh ]; then
-    sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh
-fi
-if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh ]; then
-    sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh
-fi
-if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh ]; then
-    sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2017.sh
-fi
-if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh ]; then
-    sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_sitl-2019.sh
+echo "copying start script"
+RUN_SCRIPT="go_$VARIANT.sh"
+if [ ! -e "$INSTALL_ETC_ARDUPILOT/$RUN_SCRIPT" ]; then
+    cp "$STAGE_ETC_ARDUPILOT/$RUN_SCRIPT" $INSTALL_ETC_ARDUPILOT/$RUN_SCRIPT
 fi
 
+if [ -n "$SITL" ]; then
+    echo "set up sitl"
+    if [ ! -e "$INSTALL_ETC_ARDUPILOT/$VARIANT_defaults.parm" ]; then
+        cp "$STAGE_ETC_ARDUPILOT"/"$VARIANT"_defaults.parm $INSTALL_ETC_ARDUPILOT/$VARIANT_defaults.parm
+    fi
+    if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh ]; then
+        sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh
+    fi
+    if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh ]; then
+        sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh
+    fi
+fi
 
 ###############################################################################
 # monit oc_service
