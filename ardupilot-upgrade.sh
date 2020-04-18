@@ -6,5 +6,6 @@ fi
 
 scp $PKG_HOST:/pkg/ardupilot-$ARCH.tgz .
 sudo monit stop ardupilot
-sudo ./ardupilot-inst.sh
+./ardupilot-unpack.sh
+sudo ./ardupilot-install.sh
 sudo monit start ardupilot

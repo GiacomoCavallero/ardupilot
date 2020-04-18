@@ -59,12 +59,11 @@ cp $SRC_DIR/ardupilot.monit $STAGE_ETC/monit/conf.d/
 # install scripts
 ###############################################################################
 cp -f $SRC_DIR/install.sh $STAGE_DIR
-cp -f $SRC_DIR/upgrade.sh $STAGE_DIR
 cp -f $SRC_DIR/uninstall.sh $STAGE_DIR
-cp -f $SRC_DIR/save.sh $STAGE_DIR
-cp -f $SRC_DIR/restore.sh $STAGE_DIR
 cp -f $SRC_DIR/uninstall_monit.sh $STAGE_DIR
 cp -f $SRC_DIR/makepkg.sh $STAGE_DIR
+cp -f $SRC_DIR/save.sh $STAGE_DIR
+cp -f $SRC_DIR/restore.sh $STAGE_DIR
 
 echo "Done"
 exit
