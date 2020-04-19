@@ -1,4 +1,4 @@
 #!/bin/bash
-cd /tmp/install/ardupilot
+cd $HOME/install/ardupilot
 sudo ./install.sh
 cd --
