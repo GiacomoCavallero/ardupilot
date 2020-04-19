@@ -25,6 +25,9 @@ mkdir -p $STAGE_ETC_ARDUPILOT
 # executables
 ###############################################################################
 echo "copying executables"
+if [ -e "modules/epos2_bridge/motor_test" ]; then
+    cp modules/epos2_bridge/motor_test $STAGE_BIN
+fi
 if [ -e "$BUILD_DIR/navio2/bin/ardurover" ]; then
     cp $BUILD_DIR/navio2/bin/ardurover $STAGE_BIN/ardurover-$VERSION
 fi
