@@ -6,4 +6,10 @@ else
 	bundle_name=../ardupilot.tgz
 fi
 
-cd stage && tar -czvf $bundle_name . && cd ..
+if [ $# -ge 2 ]; then
+	STAGE_DIR=$2
+else
+	STAGE_DIR=stage
+fi
+
+cd $STAGE_DIR && tar -czvf $bundle_name . && cd -
