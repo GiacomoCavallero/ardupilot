@@ -11,5 +11,5 @@ monit stop ardupilot
 sleep 1
 sudo pkill -9 rover
 rm $ETC_MONIT/conf.d/ardupilot*
-systemctl restart monit
+service monit restart
 

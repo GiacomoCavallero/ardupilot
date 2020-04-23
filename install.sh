@@ -30,6 +30,7 @@ else
     VARIANT=navio2-2019
 fi
 if [[ $VARIANT =~ sitl.* ]]; then
+    echo Is SITL
     SITL=1
 fi
 
@@ -83,14 +84,16 @@ fi
 
 if [ -n "$SITL" ]; then
     echo "set up sitl"
-    if [ ! -e "$INSTALL_ETC_ARDUPILOT/$VARIANT_defaults.parm" ]; then
-        cp "$STAGE_ETC_ARDUPILOT"/"$VARIANT"_defaults.parm $INSTALL_ETC_ARDUPILOT/$VARIANT_defaults.parm
+    echo "$STAGE_ETC_ARDUPILOT"/"$VARIANT"_defaults.parm $INSTALL_ETC_ARDUPILOT/"$VARIANT"_defaults.parm
+
+    if [ ! -e $INSTALL_ETC_ARDUPILOT/"$VARIANT"_defaults.parm ]; then
+        cp "$STAGE_ETC_ARDUPILOT"/"$VARIANT"_defaults.parm $INSTALL_ETC_ARDUPILOT/"$VARIANT"_defaults.parm
     fi
-    if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh ]; then
-        sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh
+    if [ -n "$SYS_ID" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_"$VARIANT".sh ]; then
+        sed -i -e "s/SYS_ID=.*/SYS_ID=$SYS_ID/g" $INSTALL_ETC_ARDUPILOT/go_"$VARIANT".sh
     fi
-    if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh ]; then
-        sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_$VARIANT.sh
+    if [ -n "$SIM_HOME" ] && [ -e $INSTALL_ETC_ARDUPILOT/go_"$VARIANT".sh ]; then
+        sed -i -e "s/SIM_HOME=.*/SIM_HOME=$SIM_HOME/g" $INSTALL_ETC_ARDUPILOT/go_"$VARIANT".sh
     fi
 fi
 
