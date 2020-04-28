@@ -102,6 +102,10 @@ void AP_Compass_Ocius::read()
           //yaw   = nmea2k_sensors.compass.yaw,
           heading = nmea2k_sensors.compass.heading;
 
+#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+    heading += rover.g2.magnetic_offset;
+#endif
+
     Matrix3f dcm;
     dcm.from_euler(roll, pitch, wrap_PI(radians(heading)));
     
