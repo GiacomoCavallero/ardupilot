@@ -289,9 +289,33 @@ void Sailboat::get_throttle_and_mainsail_out(float desired_speed, float &throttl
             }
         }
 
+        bool tack_push_required = false;
+        if (sail_mode == SAIL_ONLY) {
+            // do we need push through a tack?
+            if (tacking()) {
+                tack_push_required = true;
+            } else {
+                // If not tacking, but nose gets too high, need to use throttle to help push nose down
+                float relative_wind = wrap_PI(rover.g2.windvane.get_true_wind_direction_rad() - AP::ahrs().get_yaw());
+                relative_wind = fabs(relative_wind);
+                float sail_no_go_rad = radians(sail_no_go);
+                if (relative_wind < sail_no_go_rad) {
+                    // Nose is higher than no_go
+                    tack_push_required = true;
+                    if (relative_wind > (sail_no_go_rad / 2)) {
+                        // nose is just a bit high, so we reduce the desired speed for the throttle
+                        desired_speed = desired_speed * MAX((sail_no_go_rad - relative_wind) * 2, 0);
+                        printf("reducing desired speed - rel wind:%.1f, speed: %.2f\n",
+                                degrees(relative_wind), desired_speed);
+                    }
+                }
+            }
+        }
+
         // TODO: Throttle up in MOTOR_SAIL while tacking.
         if (sail_mode == MOTOR_ONLY || sail_mode == MOTOR_SAIL ||
                 sail_mode == MOTOR_SOLAR ||
+                (sail_mode == SAIL_ONLY && tack_push_required) ||
                 (sail_mode == WAVE_POWER &&
                         desired_speed > KNOTS_PER_METRE * (0.5*1.1)))
         {
