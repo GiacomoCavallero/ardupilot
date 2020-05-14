@@ -32,7 +32,9 @@ public:
         RTL          = 11,
         SMART_RTL    = 12,
         GUIDED       = 15,
-        INITIALISING = 16
+        INITIALISING = 16,
+
+        IVP          = 21
     };
 
     // Constructor
@@ -751,5 +753,36 @@ private:
 
     float _initial_heading_cd;  // vehicle heading (in centi-degrees) at moment vehicle was armed
     float _desired_heading_cd;  // latest desired heading (in centi-degrees) from pilot
+};
+
+class ModeIVP : public Mode
+{
+public:
+    uint32_t mode_number() const override { return IVP; }
+    const char *name4() const override { return "IVP"; }
+
+    // set desired heading and speed
+    void set_desired_heading_and_speed(float yaw_angle_cd, float target_speed) override;
+    // set desired heading and throttle(-100..100)
+    void set_desired_heading_and_throttle(float yaw_angle_cd, float target_throttle);
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+    // attributes of the mode
+    bool is_autopilot_mode() const override { return true; }
+
+    // return if external control is allowed in this mode (Guided or Guided-within-Auto)
+    bool in_guided_mode() const override { return true; }
+
+protected:
+    bool _enter(mode_reason_t reason) override;
+
+private:
+    float _desired_heading_cd;  // latest desired heading (in centi-degrees) from pilot
+    float _desired_speed;       // latest desired speed in m/s
+    bool _target_is_throttle;
+    bool have_attitude_target;  // true if we have a valid attitude target
+    uint32_t _des_att_time_ms;  // system time last call to set_desired_attitude was made (used for timeout)
 };
 
