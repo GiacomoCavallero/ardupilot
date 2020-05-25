@@ -821,13 +821,14 @@ MAV_RESULT Sailboat::set_winch_position(uint16_t pwm, bool gcs_command) {
 bool Sailboat::sail_is_safe() const {
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
+    uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
     if (mast_status.homed != AP_HAL::SERVO_HOMED)   // Mast(D) isn't homed.
         return false;
     if (sail_status.homed != AP_HAL::SERVO_HOMED)   // Sail(A) isn't homed.
         return false;
     if (mast_status.moving)                         // Mast is moving
         return false;
-    if (mast_status.pwm < (1900 - 10))              // Mast is not upright.
+    if (mast_status.pwm < (1900 - 10) || mast_set_pos < (1900 - 10))              // Mast is not upright or has been told to lower
             return false;
     if (stowing_sail)    // Sail in the process of stowing
         return false;
@@ -1066,7 +1067,7 @@ void Sailboat::sail_guard() {
         return;
     } else if (sail_mode == MOTOR_SOLAR ||
             (wind_strength > WIND_LOW && (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY))) {
-        if (mast_status.pwm < (1900 - 10)) {
+        if (mast_status.pwm < (1900 - 10) || mast_set_pos < (1900 - 10)) {
 //            DEBUGV("Rover::sail_guard() - Raising the sail.\n");
             // We are in a mode that uses the sail, so raise it
             if (mast_set_pos < (1900 - 10) || !mast_status.moving || stowing_sail) {
@@ -1077,6 +1078,10 @@ void Sailboat::sail_guard() {
                 stowing_sail = false;
                 set_mast_position(1900);
             }
+        } else if (stowing_sail) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Stopping stowing of mast, no longer required. (%d)",
+                    (int)mast_set_pos);
+            stowing_sail = false;
         }
     }
 }
