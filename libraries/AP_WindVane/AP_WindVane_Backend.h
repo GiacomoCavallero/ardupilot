@@ -39,6 +39,16 @@ public:
 
 protected:
 
+    // update frontend
+    // m/s
+    void speed_update_frontend(float apparent_speed_in);
+    //radians [-Pi..Pi]
+    void direction_update_frontend(float apparent_angle_ef);
+    // m/s
+    void speed_true_update_frontend(float apparent_speed_in);
+    // radians [0..2*Pi]
+    void direction_true_update_frontend(float apparent_angle_ef);
+
     AP_WindVane &_frontend;
 
 };

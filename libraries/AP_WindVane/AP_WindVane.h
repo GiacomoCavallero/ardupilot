@@ -128,6 +128,9 @@ private:
     // assume true wind has not changed and calculate apparent wind
     void update_apparent_wind_dir_from_true();
 
+    // calculate apaarent wind speed and direction from true wind
+    void update_apparent_wind_speed_and_direction();
+
     // wind direction variables
     float _direction_apparent_raw;                  // wind's apparent direction in radians (0 = ahead of vehicle) in body frame
     float _direction_apparent;                      // wind's apparent direction in radians (0 = ahead of vehicle) in body frame - filtered
@@ -148,6 +151,7 @@ private:
     float _speed_true;                              // wind's true estimated speed in m/s - filtered
     LowPassFilterFloat _speed_apparent_filt{2.0f};
     LowPassFilterFloat _speed_true_filt{2.0f};
+    bool  _have_true_wind;                          // backend is reporting the true wind
 
     // current tack
     Sailboat_Tack _current_tack;

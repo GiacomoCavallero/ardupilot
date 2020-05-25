@@ -153,7 +153,8 @@ const AP_Param::GroupInfo AP_WindVane::var_info[] = {
 };
 
 // constructor
-AP_WindVane::AP_WindVane()
+AP_WindVane::AP_WindVane() :
+        _have_true_wind(false)
 {
     AP_Param::setup_object_defaults(this, var_info);
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -294,13 +295,12 @@ void AP_WindVane::update()
         _direction_driver->update_direction();
     }
 
-    if (have_speed && have_direction) {
-        if (_speed_apparent >= _dir_speed_cutoff) {
-            // calculate true wind speed and direction from apparent wind
-            update_true_wind_speed_and_direction();
+    // calculate true wind speed and direction from apparent wind
+    if (have_speed && have_direciton) {
+        if (_have_true_wind) {
+            update_apparent_wind_speed_and_direction();
         } else {
-            // assume true wind has not changed, calculate the apparent wind direction and speed
-            update_apparent_wind_dir_from_true();
+            update_true_wind_speed_and_direction();
         }
     } else {
         // only have direction, can't do true wind calcs, set true direction to apparent + heading
@@ -463,6 +463,36 @@ void AP_WindVane::update_apparent_wind_dir_from_true()
     // calculate apartment speed and direction
     _direction_apparent_raw = wrap_PI(atan2f(wind_apparent_vec.y, wind_apparent_vec.x) - radians(180) - AP::ahrs().yaw);
     _speed_apparent_raw = wind_apparent_vec.length();
+}
+
+// calculate true wind speed and direction from apparent wind
+// https://en.wikipedia.org/wiki/Apparent_wind
+void AP_WindVane::update_apparent_wind_speed_and_direction()
+{
+    // if no vehicle speed, can't do calcs
+    Vector3f veh_velocity;
+    if (!AP::ahrs().get_velocity_NED(veh_velocity)) {
+        // if no vehicle speed use apparent speed and direction directly
+        _direction_apparent_ef = _direction_true;
+        _speed_apparent = _speed_true;
+        return;
+    }
+
+    // Note that the SITL wind direction is defined as the direction the wind is traveling to
+    // This is accounted for in these calculations
+
+    // convert true wind speed and direction into a 2D vector
+    Vector2f wind_vector_ef(cosf(_direction_true) * _speed_true, sinf(_direction_true) * _speed_true);
+
+    Vector3f ground_speed;
+    if(AP::ahrs().get_velocity_NED(ground_speed)) {
+        // add vehicle speed to get apparent wind vector
+        wind_vector_ef.x += ground_speed.x;
+        wind_vector_ef.y += ground_speed.y;
+    }
+
+    _speed_apparent = wind_vector_ef.length();
+    _direction_apparent_ef = atan2f(wind_vector_ef.y, wind_vector_ef.x);
 }
 
 AP_WindVane *AP_WindVane::_singleton = nullptr;
