@@ -639,7 +639,8 @@ float Sailboat::calc_heading(float desired_heading_cd)
             if ((motor_state == UseMotor::USE_MOTOR_ASSIST) && (now - auto_tack_start_ms) < (3.0f * SAILBOAT_AUTO_TACKING_TIMEOUT_MS)) {
                 // if we have throttle available use it for another two time periods to get the tack done
                 tack_assist = true;
-            } else {
+            } else if ((now - auto_tack_start_ms) < (3.0f * SAILBOAT_AUTO_TACKING_TIMEOUT_MS)) {
+                // Assisted or not, tacks should have same timeout length
                 gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Tacking timed out");
                 clear_tack();
             }
