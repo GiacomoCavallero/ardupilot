@@ -393,7 +393,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             break;
 
         case 130306: // Wind Data
-            if (primary_gps.have_fix)
+            if (pmv->src == gps_primary_id && primary_gps.have_fix)  // Ignore wind data when AIRMAR has no GPS fix
             {
                 switch (pmv->getInteger("Reference"))
                 {
@@ -461,6 +461,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 128275: // Distance Log
             break;
         case 129038: // AIS Class A Position Report
+        case 129041: // AIS Aids to Navigation (AtoN) Report
         case 129794: // AIS Class A Static and Voyage Related Data
 
         case 129809: // AIS Class B static data (msg 24 Part A)
