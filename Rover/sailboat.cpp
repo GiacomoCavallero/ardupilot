@@ -964,9 +964,21 @@ void Sailboat::check_wind() {
     }
 }
 
+static bool compass_is_enabled = true;
+
 void Sailboat::sail_guard() {
     // determine wind strength
     check_wind();
+
+    if (AP::compass().enabled() && !compass_is_enabled) {
+        gcs().send_text(MAV_SEVERITY_ERROR, "Sailboat: (sail_guard) Compass has been disabled.");
+        hal.console->printf("Sailboat: (sail_guard) Compass has been disabled.\n");
+        compass_is_enabled = true;
+    } else if (!AP::compass().enabled() && compass_is_enabled) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "Sailboat: (sail_guard) Compass has been enabled.");
+        hal.console->printf("Sailboat: (sail_guard) Compass has been enabled.\n");
+        compass_is_enabled = false;
+    }
 
     if (!rover.arming.is_armed() || !enable) {
         // Cannot automatically home/stow/raise sail/mast if disarmed or sail not enabled in params.
