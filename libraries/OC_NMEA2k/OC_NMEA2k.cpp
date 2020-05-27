@@ -287,16 +287,20 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                         //state.ground_course = ToDeg(pmv->getDouble("COG"));
                         double gs = pmv->getDouble("SOG");
                         double gc = ToDeg(pmv->getDouble("COG"));
-                        gps_state->cog = static_cast<float>(gc);
-                        gps_state->sog = static_cast<float>(gs);
+                        if (gs > 655.34) {
+                            // INVALID ground speed
+                        } else {
+                            gps_state->cog = static_cast<float>(gc);
+                            gps_state->sog = static_cast<float>(gs);
 
-                        // TODO: Do we want to average the cog/sog again?
+                            // TODO: Do we want to average the cog/sog again?
 
-//                        gps_state->average.push_reading(gc, gs);
-//                        gps_state->cog  = gps_state->average.speed;
-//                        gps_state->sog = gps_state->average.direction;
+    //                        gps_state->average.push_reading(gc, gs);
+    //                        gps_state->cog  = gps_state->average.speed;
+    //                        gps_state->sog = gps_state->average.direction;
 
-                        gps_state->last_update = AP_HAL::millis64();
+                            gps_state->last_update = AP_HAL::millis64();
+                        }
                     }
                 }
             }
@@ -395,24 +399,29 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 130306: // Wind Data
             if (pmv->src == gps_primary_id && primary_gps.have_fix)  // Ignore wind data when AIRMAR has no GPS fix
             {
-                switch (pmv->getInteger("Reference"))
-                {
-                    case 0: // True wind
-                        weather.wind_dir_true = ToDeg(pmv->getDouble("Wind Angle"));
-                        weather.wind_speed_true = pmv->getDouble("Wind Speed");
+                double wind_speed = pmv->getDouble("Wind Speed");
+                double wind_angle = ToDeg(pmv->getDouble("Wind Angle"));
+                if (wind_speed > 655.34 || wind_speed < 0 || wind_angle < -180 || wind_angle > 360) {
+                    // INVALID readings ignore
+                } else {
+                    switch (pmv->getInteger("Reference"))
+                    {
+                        case 0: // True wind
+                            weather.wind_dir_true = wrap_360(wind_angle);
+                            weather.wind_speed_true = wind_speed;
 
-                        weather.wind_average.push_reading(weather.wind_dir_true, weather.wind_speed_true);
-                        break;
-                    case 1: // Magnetic
-                    case 2: // Apparent
-                    case 3: // True (boat referenced)
-                    case 4: // True (water referenced)
-                        // TODO: consider use of other readings
-                    default:
-                        break;
+                            // TODO: Do we wish to average the wind speed/direction?
+                            weather.wind_average.push_reading(weather.wind_dir_true, weather.wind_speed_true);
+                            break;
+                        case 1: // Magnetic
+                        case 2: // Apparent
+                        case 3: // True (boat referenced)
+                        case 4: // True (water referenced)
+                            // TODO: consider use of other readings
+                        default:
+                            break;
+                    }
                 }
-
-                // TODO: Do we wish to average the wind speed/direction?
             }
             else
             {

@@ -1066,7 +1066,7 @@ void Sailboat::sail_guard() {
             set_sail_position(1500);
         }
         return;
-    } else if (sail_mode == MOTOR_SOLAR ||
+    } else if (sail_mode == MOTOR_SOLAR || // TODO: in motor solar only raise sail if sun is up
             (wind_strength > WIND_LOW && (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY))) {
         if (mast_status.pwm < (1900 - 10) || mast_set_pos < (1900 - 10)) {
 //            DEBUGV("Rover::sail_guard() - Raising the sail.\n");

@@ -30,7 +30,7 @@ void AP_WindVane_Ocius::update_direction()
 //    const float wind_speed = nmea2k_sensors.weather.wind_average.speed;
 //    const float wind_dir_rad = radians(nmea2k_sensors.weather.wind_average.direction);
 
-    direction_true_update_frontend(radians(nmea2k_sensors.weather.wind_average.direction));
+    direction_true_update_frontend(radians(nmea2k_sensors.weather.wind_dir_true));
 
 //    // Note than the SITL wind direction is defined as the direction the wind is traveling to
 //    // This is accounted for in these calculations
