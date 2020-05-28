@@ -169,14 +169,16 @@ void GCS_MAVLINK_Rover::send_water() {
 void GCS_MAVLINK_Rover::send_compass_raw() {
     mavlink_msg_compass_raw_send(chan,
             1,
-            rover.g2.sailboat.nmea2k_sensors.compass.reference,
-            rover.g2.sailboat.nmea2k_sensors.compass.last_update,
-            rover.g2.sailboat.nmea2k_sensors.compass.heading,
-            rover.g2.sailboat.nmea2k_sensors.compass.variation,
-            rover.g2.sailboat.nmea2k_sensors.compass.deviation,
-            0,
-//            rover.g.mag_offset,
-            0, 0, 0, 0  // TODO: get lat,lon,cog,sog
+            nmea2k_sensors.compass.reference,
+            nmea2k_sensors.compass.last_update,
+            nmea2k_sensors.compass.heading,
+            nmea2k_sensors.compass.variation,
+            nmea2k_sensors.compass.deviation,
+            rover.g2.magnetic_offset,
+            nmea2k_sensors.primary_gps.location.lat,
+            nmea2k_sensors.primary_gps.location.lng,
+            nmea2k_sensors.primary_gps.cog,
+            nmea2k_sensors.primary_gps.sog
         );
 }
 
