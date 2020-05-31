@@ -4,6 +4,7 @@ if ! [ $(id -u) = 0 ]; then
 	exit 1
 fi
 
+echo "Installing ardupilot"
 # if empty will use current dir
 if [ $# -ge 1 ]; then
 	STAGE_DIR=$1
@@ -102,12 +103,12 @@ fi
 ###############################################################################
 echo "copying config for oc_service monit service"
 if [ ! -f $INSTALL_ETC_ARDUPILOT/ardupilot.init ]; then
-	cp $STAGE_ETC_ARDUPILOT/ardupilot.init $INSTALL_ETC_ARDUPILOT
+    cp $STAGE_ETC_ARDUPILOT/ardupilot.init $INSTALL_ETC_ARDUPILOT
+    if [ -n "$VARIANT" ]; then
+        sed -i -e "s/^SCRIPT=\/etc\/ardupilot\/go_.*/SCRIPT=\/etc\/ardupilot\/go_$VARIANT.sh/" $INSTALL_ETC_ARDUPILOT/ardupilot.init
+    fi
 fi
 
-if [ -n "$VARIANT" ]; then
-    sed -i -e "s/^SCRIPT=\/etc\/ardupilot\/go_.*/SCRIPT=\/etc\/ardupilot\/go_$VARIANT.sh/" $INSTALL_ETC_ARDUPILOT/ardupilot.init
-fi
 mkdir -p $INSTALL_MONIT/conf.d
 cp $STAGE_ETC/monit/conf.d/ardupilot.monit $INSTALL_ETC/monit/conf.d
 service monit restart

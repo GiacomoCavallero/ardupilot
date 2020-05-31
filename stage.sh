@@ -2,6 +2,8 @@
 SRC_DIR=$PWD
 BUILD_DIR=$SRC_DIR/build
 
+echo "Staging ardupilot"
+
 VERSION=2019
 # if empty will use current dir
 if [ $# -ge 1 ]; then
