@@ -15,6 +15,7 @@
 
 #include <epos2_bridge.h>
 
+#define BLUEBOTTLE_HYDRAULIC_SPD_CHANN     ( 8 - 1)
 #define BLUEBOTTLE_MAST_CHANN              ( 9 - 1)
 #define BLUEBOTTLE_SAIL_CHANN              (10 - 1)
 #define BLUEBOTTLE_BATTERY_POWER_CHANN     (11 - 1)
@@ -23,6 +24,14 @@
 #define BLUEBOTTLE_WINCH_CHANN             (14 - 1)
 
 #define BLUEBOTTLE_MAST_RELAY_DURATION     7500
+
+#define BLUEBOTTLE_THREAD_PERIOD_WAIT      200000
+#define BLUEBOTTLE_MOTOR_OFFSET            (rover.g2.sailboat.sail_epos_zero) // TODO: Switch to using a parameter
+#define BLUEBOTTLE_MOTOR_TICKS_PER_90      41000
+
+#define WINCH_ENCODER_DEPLOY        (rover.g2.winch.encoder_out)
+#define WINCH_ENCODER_RETRACT       (rover.g2.winch.encoder_in)
+#define WINCH_ENCODER_RANGE   (WINCH_ENCODER_DEPLOY - WINCH_ENCODER_RETRACT)
 
 /* this function is run by the second thread */
 void* thread_init(void *thread_data) {
@@ -74,6 +83,7 @@ RCOutput_Ocius::~RCOutput_Ocius() {
 void RCOutput_Ocius::init() {
     RCOutput_Ocius_Parent::init();
     SRV_Channels::set_output_pwm_chan(0, 1500); // center the rudder
+    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_BATTERY_POWER_CHANN, 1100);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
@@ -119,6 +129,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
             } else if (period_us >= 1000 && period_us <= 1200) {
                 // lower mast
                 printf("RCO_Ocius: Pulling mast down. (%u)\n", period_us);
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1900);
                 mast_status.moving = true;
@@ -132,6 +143,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
             } else if (period_us >= 1800 && period_us <= 2000) {
                 // raise mast
                 printf("RCO_Ocius: Pushing mast up. (%u)\n", period_us);
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1900);
                 mast_status.moving = true;
@@ -146,6 +158,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
             } else {
                 // stop all signals / unhome mast
                 printf("RCO_Ocius: Killing mast hydraulics, unhoming motor. (%u)\n", period_us);
+                SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
                 timeMastSignalStarted = 0;
@@ -249,12 +262,25 @@ void RCOutput_Ocius::motor_status_check(void) {
             printf("RCO_Ocius: Time up. Mast homed.\n");
             gcs().send_text(MAV_SEVERITY_NOTICE, "Mast homed (%s)",
 		pwm_last[BLUEBOTTLE_MAST_CHANN] > 1800 ? "up":"down");
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
             mast_status.homed = AP_HAL::SERVO_HOMED;
             mast_status.moving = false;
             mast_status.pwm = pwm_last[BLUEBOTTLE_MAST_CHANN];
             timeMastSignalStarted = 0;
+        } else if (timeMastSignalStarted != 0) {
+            uint32_t ramp_spd = 1900 - 1500;
+            SRV_Channel* chan = SRV_Channels::srv_channel(BLUEBOTTLE_HYDRAULIC_SPD_CHANN);
+            if (chan != nullptr) {
+                ramp_spd = chan->get_output_max() - 1500;
+            }
+            double phase = (millis() - timeMastSignalStarted) / (double)BLUEBOTTLE_MAST_RELAY_DURATION;
+            phase = (phase < 0)? 0: (phase > 1)? 1: phase;
+            phase = sin(phase * M_PIl);
+            phase = (phase < 0)? 0: (phase > 1)? 1: phase;
+            ramp_spd = ramp_spd * phase;
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500 + ramp_spd);
         }
     }
 }
@@ -262,13 +288,6 @@ void RCOutput_Ocius::motor_status_check(void) {
 //void RCOutput_Ocius::motor_status_read(void){
 ////  DEBUGV("Reading motor status.\n");
 //}
-
-#define BLUEBOTTLE_THREAD_PERIOD_WAIT      200000
-#define BLUEBOTTLE_MOTOR_OFFSET            (rover.g2.sailboat.sail_epos_zero) // TODO: Switch to using a parameter
-#define BLUEBOTTLE_MOTOR_TICKS_PER_90      41000
-#define WINCH_ENCODER_DEPLOY		(rover.g2.winch.encoder_out)
-#define WINCH_ENCODER_RETRACT       (rover.g2.winch.encoder_in)
-#define WINCH_ENCODER_RANGE   (WINCH_ENCODER_DEPLOY - WINCH_ENCODER_RETRACT)
 
 bool bridge_initialised = false;
 uint32_t last_initialise_fail_message = 0;
