@@ -292,25 +292,34 @@ void RCOutput_Ocius::motor_status_check(void) {
 bool bridge_initialised = false;
 uint32_t last_initialise_fail_message = 0;
 void RCOutput_Ocius::stinger_sail_comm_thread() {
+    uint64_t last_bridge_try = 0;
+
+
     while (!closing) {
         if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
             // Not talking to Stinger so sleep and try again.
             goto THREAD_LOOP_SLEEP;
         }
 
-	motor_status_check();
+        uint64_t now = AP_HAL::millis64();
+        motor_status_check();
 
         // initialise bridge
         if (!bridge_initialised) {
             std::string bridgeAddr = "10.42." + std::to_string(rover.g.sysid_this_mav) + ".104:20001";
-            if (initializeBridge(0x04, bridgeAddr.c_str())) {
-                // Initialisation failed.  Wait 1s and try again.
-                uint32_t now = millis();
+
+            if (now - last_bridge_try < 1000) {
+                // Wait 1s between retries.
+                goto THREAD_LOOP_SLEEP;
+            }
+
+            last_bridge_try = now;
+            if (initializeBridge(0x04, bridgeAddr.c_str()) != 0) {
+                // Initialisation failed.
                 if (last_initialise_fail_message == 0 || (now - last_initialise_fail_message) > 10000) {
                     gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Unable to initialise bridge connection.\n");
                     last_initialise_fail_message = now;
                 }
-                usleep(1000000);
                 goto THREAD_LOOP_SLEEP;
             }
             bridge_initialised = true;
@@ -319,7 +328,6 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
             sail_status.homed = AP_HAL::SERVO_UNHOMED;
             winch_status.homed = AP_HAL::SERVO_UNHOMED;
         }
-
 
         if (motor_enabled[BLUEBOTTLE_SAIL_CHANN] && mast_status.homed == AP_HAL::SERVO_HOMED && mast_status.pwm <= 1200) {
             // mast is homed & down, sail enabled, so disable
