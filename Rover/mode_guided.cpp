@@ -252,7 +252,7 @@ bool ModeGuided::set_desired_location(const struct Location& destination,
                                       float next_leg_bearing_cd)
 {
     if (g2.wp_nav.set_desired_location(destination, next_leg_bearing_cd)) {
-
+        g2.wp_nav.set_desired_speed_to_default();
         // handle guided specific initialisation and logging
         _guided_mode = ModeGuided::Guided_WP;
         send_notification = true;
