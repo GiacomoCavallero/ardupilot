@@ -294,11 +294,12 @@ uint32_t last_initialise_fail_message = 0;
 void RCOutput_Ocius::stinger_sail_comm_thread() {
     uint64_t last_bridge_try = 0;
 
-
     while (!closing) {
+        usleep(BLUEBOTTLE_THREAD_PERIOD_WAIT);
+
         if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
             // Not talking to Stinger so sleep and try again.
-            goto THREAD_LOOP_SLEEP;
+            continue;
         }
 
         uint64_t now = AP_HAL::millis64();
@@ -310,7 +311,7 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
 
             if (now - last_bridge_try < 1000) {
                 // Wait 1s between retries.
-                goto THREAD_LOOP_SLEEP;
+                continue;
             }
 
             last_bridge_try = now;
@@ -320,7 +321,7 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
                     gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Unable to initialise bridge connection.\n");
                     last_initialise_fail_message = now;
                 }
-                goto THREAD_LOOP_SLEEP;
+                continue;
             }
             bridge_initialised = true;
             gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Epos bridge initialised.\n");
@@ -336,15 +337,13 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
                 // Motor successfully disabled.
                 motor_enabled[BLUEBOTTLE_SAIL_CHANN] = false;
             }
-//            goto THREAD_LOOP_SLEEP;
+//            continue;
         }
 
         stinger_sail_update_epos(sail_status, BLUEBOTTLE_SAIL_CHANN, 1);
         if (rover.g2.winch.enable && WINCH_ENCODER_DEPLOY != WINCH_ENCODER_RETRACT) {
             stinger_sail_update_epos(winch_status, BLUEBOTTLE_WINCH_CHANN, 2);
         }
-THREAD_LOOP_SLEEP:
-        usleep(BLUEBOTTLE_THREAD_PERIOD_WAIT);
     }
 }
 
