@@ -276,6 +276,9 @@ void RCOutput_Ocius::motor_status_check(void) {
             SRV_Channel* chan = SRV_Channels::srv_channel(BLUEBOTTLE_HYDRAULIC_SPD_CHANN);
             if (chan != nullptr) {
                 ramp_spd = chan->get_output_max() - 1500;
+                if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
+                    ramp_spd = ramp_spd * 0.8;
+                }
             }
             double phase = (millis() - timeMastSignalStarted) / (double)BLUEBOTTLE_MAST_RELAY_DURATION;
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;
