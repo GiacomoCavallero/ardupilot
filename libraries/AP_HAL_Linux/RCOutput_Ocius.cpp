@@ -23,7 +23,7 @@
 #define BLUEBOTTLE_MAST_RAISE_CHANN        (13 - 1)
 #define BLUEBOTTLE_WINCH_CHANN             (14 - 1)
 
-#define BLUEBOTTLE_MAST_RELAY_DURATION     7500
+//#define BLUEBOTTLE_MAST_RELAY_DURATION     7500
 
 #define BLUEBOTTLE_THREAD_PERIOD_WAIT      200000
 #define BLUEBOTTLE_MOTOR_OFFSET            (rover.g2.sailboat.sail_epos_zero) // TODO: Switch to using a parameter
@@ -258,8 +258,14 @@ void RCOutput_Ocius::motor_status_check(void) {
     if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
         // disable relay signal for mast
 //		printf("Checking if mast signal to be disabled. (%u, %u)\n", timeMastSignalStarted, millis());
+
+        double hydraulic_run_time = rover.g2.sailboat.mast_time_up;
+        if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
+            hydraulic_run_time = rover.g2.sailboat.mast_time_down;
+        }
+
         if (timeMastSignalStarted != 0 &&
-                (millis() - timeMastSignalStarted) > BLUEBOTTLE_MAST_RELAY_DURATION) {
+                (millis() - timeMastSignalStarted) > hydraulic_run_time) {
             // Signal has passed desired time / kill it
             printf("RCO_Ocius: Time up. Mast homed.\n");
             gcs().send_text(MAV_SEVERITY_NOTICE, "Mast homed (%s)",
@@ -280,7 +286,7 @@ void RCOutput_Ocius::motor_status_check(void) {
                     ramp_spd = ramp_spd * 0.8;
                 }
             }
-            double phase = (millis() - timeMastSignalStarted) / (double)BLUEBOTTLE_MAST_RELAY_DURATION;
+            double phase = (millis() - timeMastSignalStarted) / hydraulic_run_time;
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;
             phase = sin(phase * M_PIl);
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;

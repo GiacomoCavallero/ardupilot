@@ -165,6 +165,24 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("HOLD_RADIUS", 14, Sailboat, hold_radius, 0),
 
+    // @Param: MTIME_UP
+    // @DisplayName: Mast time up
+//     @Description: Time to run hydraulic pump to raise mast.
+    // @Units: milliseconds
+    // @Range: >0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MTIME_UP", 15, Sailboat, mast_time_up, 7500),
+
+    // @Param: MTIME_DOWN
+    // @DisplayName: Mast time down
+//     @Description: Time to run hydraulic pump to lower mast.
+    // @Units: milliseconds
+    // @Range: >0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MTIME_DOWN", 16, Sailboat, mast_time_down, 7500),
+
     AP_GROUPEND
 };
 
