@@ -87,6 +87,8 @@ void RCOutput_Ocius::init() {
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_BATTERY_POWER_CHANN, 1100);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
+
+    hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &RCOutput_Ocius::motor_status_check, void));
 }
 
 static uint32_t timeMastSignalStarted = 0;
@@ -303,7 +305,6 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
         }
 
         uint64_t now = AP_HAL::millis64();
-        motor_status_check();
 
         // initialise bridge
         if (!bridge_initialised) {
