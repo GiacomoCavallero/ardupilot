@@ -329,12 +329,14 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
                 // Initialisation failed.
                 if (last_initialise_fail_message == 0 || (now - last_initialise_fail_message) > 10000) {
                     gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Unable to initialise bridge connection.\n");
+                    printf("RCOut: Unable to initialise bridge connection.\n");
                     last_initialise_fail_message = now;
                 }
                 continue;
             }
             bridge_initialised = true;
             gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Epos bridge initialised.\n");
+            printf("RCOut: Epos bridge initialised.\n");
             last_initialise_fail_message = 0;
             sail_status.homed = AP_HAL::SERVO_UNHOMED;
             winch_status.homed = AP_HAL::SERVO_UNHOMED;
@@ -391,6 +393,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
             consecutive_failures[ch] = MAX_CONSEQ_FAILS;
             if (motor.homed != AP_HAL::SERVO_UNHOMED) {
                 gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
+                printf("RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
             }
             motor.homed = AP_HAL::SERVO_UNHOMED;
 
