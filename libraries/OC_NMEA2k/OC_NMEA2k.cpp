@@ -518,7 +518,7 @@ void NMEA2K::init() {
             return;
         }
         nmea2k_writeMessage(*_port, NGT_MSG_SEND, NGT_STARTUP_SEQ, sizeof(NGT_STARTUP_SEQ));
-        hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &NMEA2K::timer, void));
+        hal.scheduler->register_io_process(FUNCTOR_BIND(this, &NMEA2K::timer, void));
     }
 }
 
