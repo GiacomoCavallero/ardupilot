@@ -12,7 +12,9 @@ bool ModeGuided::_enter(mode_reason_t reason)
     // initialise waypoint speed
     g2.wp_nav.set_desired_speed_to_default();
 
+    have_attitude_target = false;
     send_notification = false;
+    _des_att_time_ms = AP_HAL::millis();
 
     return true;
 }
@@ -22,6 +24,18 @@ void ModeGuided::update()
     switch (_guided_mode) {
         case Guided_WP:
         {
+            if (!have_attitude_target) {
+                // Wait for the GUIDED target.
+                if (rover.is_boat() && (millis() - _des_att_time_ms) > 3000) {
+                    gcs().send_text(MAV_SEVERITY_WARNING, "waited 3 seconds for Guided WP, was not received, going to HOLD");
+                    if (rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                        return;
+                    }
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Unable to go to HOLD after Guided WP timeout");
+                }
+                stop_vehicle();
+                return;
+            }
             // check if we've reached the destination
             if (!g2.wp_nav.reached_destination()) {
                 // update navigation controller
@@ -254,6 +268,7 @@ bool ModeGuided::set_desired_location(const struct Location& destination,
     if (g2.wp_nav.set_desired_location(destination, next_leg_bearing_cd)) {
         g2.wp_nav.set_desired_speed_to_default();
         // handle guided specific initialisation and logging
+        have_attitude_target = true;
         _guided_mode = ModeGuided::Guided_WP;
         send_notification = true;
         rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(destination.lat, destination.lng, 0), Vector3f(g2.wp_nav.get_desired_speed(), 0.0f, 0.0f));
@@ -273,7 +288,11 @@ void ModeGuided::set_desired_heading_and_speed(float yaw_angle_cd, float target_
     // record targets
     _desired_yaw_cd = yaw_angle_cd;
     _desired_speed = target_speed;
+    g2.wp_nav.set_desired_speed(target_speed);
+
     have_attitude_target = true;
+    _des_att_time_ms = AP_HAL::millis();
+    _guided_mode = ModeGuided::Guided_HeadingAndSpeed;
 
     // log new target
     rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(_desired_yaw_cd, 0.0f, 0.0f), Vector3f(_desired_speed, 0.0f, 0.0f));
@@ -289,13 +308,13 @@ void ModeGuided::set_desired_heading_and_throttle(float yaw_angle_cd, float targ
     _desired_yaw_cd = yaw_angle_cd;
 
     // handle guided specific initialisation and logging
-    _guided_mode = ModeGuided::Guided_HeadingAndThrottle;
-    _des_att_time_ms = AP_HAL::millis();
 
     // record targets
     _desired_yaw_cd = yaw_angle_cd;
     _desired_throttle = target_throttle;
     have_attitude_target = true;
+    _des_att_time_ms = AP_HAL::millis();
+    _guided_mode = ModeGuided::Guided_HeadingAndThrottle;
 
     // log new target
     rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(_desired_yaw_cd, 0.0f, 0.0f), Vector3f(target_throttle*g2.wp_nav.get_default_speed(), 0.0f, 0.0f));
@@ -315,14 +334,14 @@ void ModeGuided::set_desired_heading_delta_and_speed(float yaw_delta_cd, float t
 void ModeGuided::set_desired_turn_rate_and_speed(float turn_rate_cds, float target_speed)
 {
     // handle initialisation
-    _guided_mode = ModeGuided::Guided_TurnRateAndSpeed;
-    _des_att_time_ms = AP_HAL::millis();
     _reached_destination = false;
 
     // record targets
     _desired_yaw_rate_cds = turn_rate_cds;
     _desired_speed = target_speed;
     have_attitude_target = true;
+    _des_att_time_ms = AP_HAL::millis();
+    _guided_mode = ModeGuided::Guided_TurnRateAndSpeed;
 
     // log new target
     rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(_desired_yaw_rate_cds, 0.0f, 0.0f), Vector3f(_desired_speed, 0.0f, 0.0f));
