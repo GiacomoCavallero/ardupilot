@@ -33,7 +33,7 @@ protected:
 
     void send_sail_status();
     void send_water();
-    void send_compass_raw();
+    void send_compass_airmar();
 
 private:
 

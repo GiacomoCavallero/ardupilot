@@ -166,14 +166,13 @@ void GCS_MAVLINK_Rover::send_water() {
             rover.g2.sailboat.nmea2k_sensors.triducer.water_depth);
 }
 
-void GCS_MAVLINK_Rover::send_compass_raw() {
-    mavlink_msg_compass_raw_send(chan,
+void GCS_MAVLINK_Rover::send_compass_airmar() {
+    mavlink_msg_compass_airmar_send(chan,
             1,
-            nmea2k_sensors.compass.reference,
             nmea2k_sensors.compass.last_update,
-            nmea2k_sensors.compass.heading,
+            nmea2k_sensors.compass.heading + rover.g2.magnetic_offset,
+            nmea2k_sensors.compass.magnetic,
             nmea2k_sensors.compass.variation,
-            nmea2k_sensors.compass.deviation,
             rover.g2.magnetic_offset,
             nmea2k_sensors.primary_gps.location.lat,
             nmea2k_sensors.primary_gps.location.lng,
@@ -414,9 +413,9 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
         CHECK_PAYLOAD_SIZE(WATER);
         send_water();
         break;
-    case MSG_COMPASS_RAW:
-        CHECK_PAYLOAD_SIZE(COMPASS_RAW);
-        send_compass_raw();
+    case MSG_COMPASS_AIRMAR:
+        CHECK_PAYLOAD_SIZE(COMPASS_AIRMAR);
+        send_compass_airmar();
         break;
     case MSG_AIS_VESSEL_STATUS:
     case MSG_RADIO_LINK_STATUS:
@@ -614,7 +613,7 @@ static const ap_message STREAM_OCIUS_msgs[] = {
     MSG_SAIL_STATUS,
     MSG_WATER,
     MSG_AIS_VESSEL_STATUS,
-    MSG_COMPASS_RAW,
+    MSG_COMPASS_AIRMAR,
     MSG_RADIO_LINK_STATUS,
 };
 

@@ -81,7 +81,7 @@ enum ap_message : uint8_t {
     MSG_SAIL_STATUS,
     MSG_WATER,
     MSG_AIS_VESSEL_STATUS,
-    MSG_COMPASS_RAW,
+    MSG_COMPASS_AIRMAR,
     MSG_RADIO_LINK_STATUS,
     MSG_OCIUS_NAV_CONTROLLER_OUTPUT,
     MSG_LAST // MSG_LAST must be the last entry in this enum

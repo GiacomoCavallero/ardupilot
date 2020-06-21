@@ -97,17 +97,15 @@ public:
 
     class Compass {
     public:
-        float heading;          /*< Magnetic heading (degrees)*/
+        float heading;          /*< True heading (degrees)*/
+        float magnetic;         /*< Magnetic heading (degrees)*/
         float variation;        /*< Variation to true north (degrees)*/
-        float deviation;        /*< Deviation whatever that means.(degrees)*/
-        float offset;           /*< MAG_OFFSET parameter value (degrees)*/
-        uint8_t reference;      /*< Magnetic or true*/
 
         uint64_t last_update;   // System time of last update (millis)
 
         float roll, pitch, yaw;  // Attitude reported from the compass/Airmar (radians)
 
-        Compass() : heading(0), variation(0), deviation(0), offset(0), reference(0), last_update(0),
+        Compass() : heading(0), magnetic(0), variation(0), last_update(0),
                 roll(0), pitch(0), yaw(0) {}
     };
 

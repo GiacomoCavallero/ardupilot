@@ -184,8 +184,6 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     }
 
     char method[64];
-    double mag;
-    double declination;
     char own_info[64];
 //    float windDir;
 
@@ -205,32 +203,20 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 127250: // Vessel Heading
             if (pmv->src == gps_primary_id) {
                 // We only want the compass readings from the primary(Airmar) GPS.
-                mag = pmv->getDouble("Heading");
-                declination = pmv->getDouble("Variation");
-    //            compass.heading = ToDeg(mag);
+                double heading = pmv->getDouble("Heading"); // can be magnetic or true, depending on reference
+                double declination = pmv->getDouble("Variation");
                 int compass_reference = pmv->getInteger("Reference");
-                compass.reference = 0;
                 compass.variation = ToDeg(declination);
 
-//    #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-//                compass.offset = rover.g2.magnetic_offset;
-//                if (compass.reference) {
-//                    // Magnetic
-//                    compass.heading = CLIP_360(ToDeg(mag + declination) + rover.g2.magnetic_offset);
-//                } else {
-//                    // True
-//                    compass.heading = CLIP_360(ToDeg(mag) + rover.g2.magnetic_offset);
-//                }
-//    #else
                 if (compass_reference) {
                     // Magnetic
-                    compass.heading = CLIP_360(ToDeg(mag + declination));
+                    compass.heading = CLIP_360(ToDeg(heading + declination));  // assuming declincation is correct
+                    compass.magnetic = CLIP_360(ToDeg(heading));
                 } else {
                     // True
-                    compass.heading = CLIP_360(ToDeg(mag));
+                    compass.heading = CLIP_360(ToDeg(heading));
+                    compass.magnetic = CLIP_360(ToDeg(heading - declination)); // assuming declincation is correct
                 }
-
-//    #endif
                 compass.last_update = AP_HAL::millis64();
             }
             break;
