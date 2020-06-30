@@ -1,6 +1,6 @@
 #include "Rover.h"
 
-#define SAILBOAT_AUTO_TACKING_TIMEOUT_MS 5000   // tacks in auto mode timeout if not successfully completed within this many milliseconds
+#define SAILBOAT_AUTO_TACKING_TIMEOUT_MS 15000   // tacks in auto mode timeout if not successfully completed within this many milliseconds
 #define SAILBOAT_TACKING_ACCURACY_DEG 10        // tack is considered complete when vehicle is within this many degrees of target tack angle
 #define SAILBOAT_NOGO_PAD 10                    // deg, the no go zone is padded by this much when deciding if we should use the Sailboat heading controller
 #define TACK_RETRY_TIME_MS 5000                 // Can only try another auto mode tack this many milliseconds after the last is cleared (either competed or timed-out)
@@ -222,6 +222,10 @@ bool Sailboat::tack_enabled() const
 
     // tacking disabled if motor is always on
     if (motor_state == UseMotor::USE_MOTOR_ALWAYS) {
+        return false;
+    }
+
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && !(sail_mode == SAIL_ONLY || sail_mode == MOTOR_SAIL)) {
         return false;
     }
 
