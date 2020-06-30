@@ -659,12 +659,19 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(nmea2k, "NMEA2K_", 50, ParametersG2, NMEA2k_Params),
 
     // @Param: MAGNETIC_OFFSET
-    // @DisplayName: Frame Type
-    // @Description: Frame Type
-    // @Values: 0:Undefined,1:Omni3,2:OmniX,3:OmniPlus
-    // @User: Standard
-    // @RebootRequired: True
+    // @DisplayName: Magnetic Offset
+    // @Description: Yaw rotational correction of the compass heading for the Airmar
+    // @Range: -180..180
+    // @Increment: 0.01
+    // @User: Advanced
     AP_GROUPINFO("MAGNETIC_OFFSET", 51, ParametersG2, magnetic_offset, 0),
+
+    // @Param: NUDGE_ENABLE
+    // @DisplayName: Nudge Enable
+    // @Description: Flag to enable/disable nudging the throttle in autonomous modes
+    // @Values: 0:Disabled, 1:Enabled
+    // @User: Standard
+    AP_GROUPINFO("NUDGE_ENABLE", 52, ParametersG2, nudge_enable, 0),
 
     AP_GROUPEND
 };

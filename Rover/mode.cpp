@@ -396,13 +396,15 @@ float Mode::calc_speed_max(float cruise_speed, float cruise_throttle) const
 //  reversed should be true if the vehicle is intentionally backing up which allows the pilot to increase the backing up speed by pulling the throttle stick down
 float Mode::calc_speed_nudge(float target_speed, bool reversed)
 {
+    // return immediately if nudge is disabled.
+    if (!g2.nudge_enable) {
+        return target_speed;
+    }
+
     // return immediately during RC/GCS failsafe
     if (rover.failsafe.bits & FAILSAFE_EVENT_THROTTLE) {
         return target_speed;
     }
-
-    // FIXME: Add a parameter to disable
-    return target_speed;
 
     // return immediately if pilot is not attempting to nudge speed
     // pilot can nudge up speed if throttle (in range -100 to +100) is above 50% of center in direction of travel

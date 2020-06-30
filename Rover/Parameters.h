@@ -401,6 +401,9 @@ public:
     // magnetic offset for the airmar
     AP_Float magnetic_offset;
 
+    // Bool to enable/disable the throttle nudge in autonomous modes
+    AP_Int8 nudge_enable;
+
     // object avoidance path planning
     AP_OAPathPlanner oa;
 
