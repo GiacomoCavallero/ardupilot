@@ -1078,11 +1078,16 @@ void Sailboat::sail_guard() {
         if (!stowing_sail) {
             gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: High winds, stowing sail.");
         }
-
         stowing_sail = true;
+
         if (!(sail_status.moving) && (abs(sail_status.pwm - 1500) <= sail_stow_error)) {
             // Sail centered and stopped, lower mast
-            set_mast_position(1100);
+
+            if (mast_set_pos > (1100 + 10) ||
+                    (!mast_status.moving && mast_status.pwm > (1100 + 10))) {
+                // mast has not been told to lower, or mast has stopped moving and is not down
+                set_mast_position(1100);
+            }
         } else {
             // Center the sail, before lowering
             set_sail_position(1500);
