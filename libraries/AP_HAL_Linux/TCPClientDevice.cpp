@@ -49,6 +49,7 @@ ssize_t TCPClientDevice::read(uint8_t *buf, uint16_t n)
         return -1;
     }
 
+    //FIXME: Why are we waiting 5 seconds after reopening the connection?
     if (_reopened) {
         if ((mnow - _reopened) < 5000)
             return -1;

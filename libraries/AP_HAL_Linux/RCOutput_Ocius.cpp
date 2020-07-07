@@ -15,6 +15,7 @@
 
 #include <epos2_bridge.h>
 
+#define BLUEBOTTLE_AIS_COVERT              ( 6 - 1)
 #define BLUEBOTTLE_ODROID_PWR_CUT          ( 7 - 1)
 #define BLUEBOTTLE_HYDRAULIC_SPD_CHANN     ( 8 - 1)
 #define BLUEBOTTLE_MAST_CHANN              ( 9 - 1)
@@ -89,6 +90,7 @@ void RCOutput_Ocius::init() {
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_ODROID_PWR_CUT, 1100);
+    SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_AIS_COVERT, 1100);
 
     hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &RCOutput_Ocius::motor_status_check, void));
 }
