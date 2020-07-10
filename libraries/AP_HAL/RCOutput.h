@@ -46,7 +46,9 @@ struct ServoStatus {
 
     int32_t raw;
 
-    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED), raw(0) {}
+    uint64_t _last_home_check;
+
+    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED), raw(0), _last_home_check(0) {}
 };
 
 }
