@@ -216,12 +216,13 @@ void RCOutput_Ocius::home(uint8_t chan) {
 }
 
 AP_HAL::ServoStatus RCOutput_Ocius::read_status(uint8_t chan) {
-    // TODO: RCOutput_Ocius::read_status(uint8_t chan)
     return pwm_status[chan];
 }
 
 void RCOutput_Ocius::read_status(AP_HAL::ServoStatus* status, uint8_t len) {
-    // TODO: RCOutput_Ocius::read_status(AP_HAL::ServoStatus* status, uint8_t len)
+    for (uint32_t i = 0; i < len && i < _channel_count; ++i) {
+        status[i] = pwm_status[i];
+    }
 }
 
 #define GPIO_PIN 18
@@ -250,7 +251,8 @@ void RCOutput_Ocius::motor_status_check(void) {
             mast_status.pwm = pwm_last[BLUEBOTTLE_MAST_CHANN];
             timeMastSignalStarted = 0;
             if (mast_status.pwm <= 1200) {
-                // TODO: Mast is down, disable the sail motor.
+                // Mast is down, disable the sail motor.
+                // This is performed in stinger_sail_comm_thread to avoid multiple threads talking to the EPOS
             }
         } else if (timeMastSignalStarted != 0) {
             uint32_t ramp_spd = 1900 - 1500;
@@ -467,12 +469,6 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         return;
     }
 
-//    if (mast_status.position < 1800) {
-//        // The mast is not up. FIXME
-//        goto THREAD_LOOP_SLEEP;
-//        return;
-//    }
-
     if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
         // have emergency stop
         if (motor_enabled[ch]) {
@@ -496,7 +492,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
             if (mast_status.homed != AP_HAL::SERVO_HOMED || mast_status.pwm < 1800) {
                 // If mast not homed or not up don't move sail
             } else {
-                desiredPosition = (pwm_last[ch] - 1500) * BLUEBOTTLE_MOTOR_TICKS_PER_90 / 400 + BLUEBOTTLE_MOTOR_OFFSET;  // FIXME
+                desiredPosition = (pwm_last[ch] - 1500) * BLUEBOTTLE_MOTOR_TICKS_PER_90 / 400 + BLUEBOTTLE_MOTOR_OFFSET;
             }
             if (!rover.g2.sailboat.sail_is_safe() && desiredPosition != BLUEBOTTLE_MOTOR_OFFSET) {
                 // if the sail is not safe it can only be centered, in preparation for stowing
