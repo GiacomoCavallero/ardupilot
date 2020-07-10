@@ -101,7 +101,7 @@ fi
 ###############################################################################
 # monit oc_service
 ###############################################################################
-echo "copying config for oc_service monit service"
+echo "copying config for ardupilot monit service"
 if [ ! -f $INSTALL_ETC_ARDUPILOT/ardupilot.init ]; then
     cp $STAGE_ETC_ARDUPILOT/ardupilot.init $INSTALL_ETC_ARDUPILOT
     if [ -n "$VARIANT" ]; then

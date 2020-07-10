@@ -407,7 +407,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 	//printf("EPOS %d is at position %d(%d)\n", nodeid, position, position_pwm);
 
     if (!(motor.moving)) {
-        uint64_t now = AP_Hal::millis64();
+        uint64_t now = AP_HAL::millis64();
         // We check the homed state of the motor every 10 seconds or when the motor is unhomed
         if (motor.homed != AP_HAL::SERVO_HOMED || (now - motor._last_home_check > 10000)) {
             // Check motor is homed
