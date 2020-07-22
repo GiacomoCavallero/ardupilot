@@ -170,7 +170,7 @@ void ModeHold::update()
                 // TODO: should this only be done once??
 //                printf("ModeHold::update() - Figure 8 - returning to hold location.\n");
                 if (_reached_destination) {
-                    gcs().send_text(MAV_SEVERITY_INFO, "ModeHold - Drifted off waypoint returning to hold location.");
+                    rover.gcs().send_text(MAV_SEVERITY_INFO, "ModeHold - Drifted off waypoint returning to hold location.");
                 }
                 if (!g2.wp_nav.set_desired_location(hold_wp, rover.current_loc)) {
                     hal.console->printf("ModeHold: Unable to navigate to center of figure 8.\n");

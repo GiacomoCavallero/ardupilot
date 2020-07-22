@@ -7,7 +7,7 @@ bool ModeAuto::_enter(mode_reason_t reason)
 {
     // fail to enter auto if no mission commands
     if (mission.num_commands() <= 1) {
-        gcs().send_text(MAV_SEVERITY_NOTICE, "No Mission. Can't set AUTO.");
+        rover.gcs().send_text(MAV_SEVERITY_NOTICE, "No Mission. Can't set AUTO.");
         return false;
     }
 
@@ -239,7 +239,7 @@ bool ModeAuto::check_trigger(void)
 {
     // check for user pressing the auto trigger to off
     if (auto_triggered && g.auto_trigger_pin != -1 && rover.check_digital_pin(g.auto_trigger_pin) == 1) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "AUTO triggered off");
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "AUTO triggered off");
         auto_triggered = false;
         return false;
     }
@@ -259,7 +259,7 @@ bool ModeAuto::check_trigger(void)
 
     // check if trigger pin has been pushed
     if (g.auto_trigger_pin != -1 && rover.check_digital_pin(g.auto_trigger_pin) == 0) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "Triggered AUTO with pin");
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "Triggered AUTO with pin");
         auto_triggered = true;
         return true;
     }
@@ -268,7 +268,7 @@ bool ModeAuto::check_trigger(void)
     if (!is_zero(g.auto_kickstart)) {
         const float xaccel = rover.ins.get_accel().x;
         if (xaccel >= g.auto_kickstart) {
-            gcs().send_text(MAV_SEVERITY_WARNING, "Triggered AUTO xaccel=%.1f", static_cast<double>(xaccel));
+            rover.gcs().send_text(MAV_SEVERITY_WARNING, "Triggered AUTO xaccel=%.1f", static_cast<double>(xaccel));
             auto_triggered = true;
             return true;
         }
@@ -329,7 +329,7 @@ void ModeAuto::send_guided_position_target()
         uint8_t compid;
         mavlink_channel_t chan;
         if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_ONBOARD_CONTROLLER, sysid, compid, chan)) {
-            gcs().chan(chan-MAVLINK_COMM_0)->send_set_position_target_global_int(sysid, compid, guided_target.loc);
+            rover.gcs().chan(chan-MAVLINK_COMM_0)->send_set_position_target_global_int(sysid, compid, guided_target.loc);
         }
     }
 
@@ -413,10 +413,10 @@ bool ModeAuto::start_command(const AP_Mission::Mission_Command& cmd)
     case MAV_CMD_DO_FENCE_ENABLE:
         if (cmd.p1 == 0) {  //disable
             g2.fence.enable(false);
-            gcs().send_text(MAV_SEVERITY_INFO, "Fence Disabled");
+            rover.gcs().send_text(MAV_SEVERITY_INFO, "Fence Disabled");
         } else {  //enable fence
             g2.fence.enable(true);
-            gcs().send_text(MAV_SEVERITY_INFO, "Fence Enabled");
+            rover.gcs().send_text(MAV_SEVERITY_INFO, "Fence Enabled");
         }
         break;
 
@@ -439,7 +439,7 @@ void ModeAuto::exit_mission()
     // play a tone
     AP_Notify::events.mission_complete = 1;
     // send message
-    gcs().send_text(MAV_SEVERITY_NOTICE, "Mission Complete");
+    rover.gcs().send_text(MAV_SEVERITY_NOTICE, "Mission Complete");
 
     if (g2.mis_done_behave == MIS_DONE_BEHAVE_LOITER && start_loiter()) {
         return;
@@ -469,7 +469,7 @@ bool ModeAuto::verify_command_callback(const AP_Mission::Mission_Command& cmd)
 
     // send message to GCS
     if (cmd_complete) {
-        gcs().send_mission_item_reached_message(cmd.index);
+        rover.gcs().send_mission_item_reached_message(cmd.index);
     }
 
     return cmd_complete;
@@ -527,7 +527,7 @@ bool ModeAuto::verify_command(const AP_Mission::Mission_Command& cmd)
 
     default:
         // error message
-        gcs().send_text(MAV_SEVERITY_WARNING, "Skipping invalid cmd #%i", cmd.id);
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "Skipping invalid cmd #%i", cmd.id);
         // return true if we do not recognize the command so that we move on to the next command
         return true;
     }
@@ -592,7 +592,7 @@ void ModeAuto::do_nav_delay(const AP_Mission::Mission_Command& cmd)
         // absolute delay to utc time
         nav_delay_time_max_ms = AP::rtc().get_time_utc(cmd.content.nav_delay.hour_utc, cmd.content.nav_delay.min_utc, cmd.content.nav_delay.sec_utc, 0);
     }
-    gcs().send_text(MAV_SEVERITY_INFO, "Delaying %u sec", (unsigned)(nav_delay_time_max_ms/1000));
+    rover.gcs().send_text(MAV_SEVERITY_INFO, "Delaying %u sec", (unsigned)(nav_delay_time_max_ms/1000));
 }
 
 // start guided within auto to allow external navigation system to control vehicle
@@ -643,14 +643,14 @@ bool ModeAuto::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         // check if we are loitering at this waypoint - the message sent to the GCS is different
         if (loiter_duration > 0) {
             // send message including loiter time
-            gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%u. Loiter for %u seconds",
+            rover.gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%u. Loiter for %u seconds",
                             (unsigned int)cmd.index,
                             (unsigned int)loiter_duration);
             // record the current time i.e. start timer
             loiter_start_time = millis();
         } else {
             // send simpler message to GCS
-            gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%u", (unsigned int)cmd.index);
+            rover.gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%u", (unsigned int)cmd.index);
         }
     }
 
@@ -689,7 +689,7 @@ bool ModeAuto::verify_loiter_time(const AP_Mission::Mission_Command& cmd)
 {
     const bool result = verify_nav_wp(cmd);
     if (result) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "Finished active loiter");
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "Finished active loiter");
     }
     return result;
 }
@@ -770,7 +770,7 @@ void ModeAuto::do_change_speed(const AP_Mission::Mission_Command& cmd)
 {
     // set speed for active mode
     if (set_desired_speed(cmd.content.speed.target_ms)) {
-        gcs().send_text(MAV_SEVERITY_INFO, "speed: %.1f m/s", static_cast<double>(cmd.content.speed.target_ms));
+        // gcs().send_text(MAV_SEVERITY_INFO, "speed: %.1f m/s", static_cast<double>(cmd.content.speed.target_ms));
     }
 }
 

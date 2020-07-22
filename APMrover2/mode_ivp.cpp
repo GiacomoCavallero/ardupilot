@@ -14,7 +14,7 @@ void ModeIVP::update()
 {
     // stop vehicle if target not updated within 3 seconds
     if (have_attitude_target && (millis() - _des_att_time_ms) > 3000) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "IVP Mode: target not received in last 3secs, stopping");
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "IVP Mode: target not received in last 3secs, stopping");
         have_attitude_target = false;
     }
     if (have_attitude_target) {

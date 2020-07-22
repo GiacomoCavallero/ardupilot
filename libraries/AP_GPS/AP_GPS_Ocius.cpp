@@ -95,6 +95,6 @@ bool AP_GPS_Ocius::read(void)
 bool
 AP_GPS_Ocius::_detect(struct NMEA_detect_state &state, uint8_t data)
 {
-    gcs().send_text(MAV_SEVERITY_WARNING, "Ocius N2K GPS detecting.");
+    gcs().send_text(MAV_SEVERITY_INFO, "Ocius N2K GPS detecting.");
     return false;
 }

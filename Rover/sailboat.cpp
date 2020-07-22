@@ -933,11 +933,11 @@ void Sailboat::check_wind() {
         if (wind_strength != WIND_HIGH) {
             if (wind_speed >= (1.2 * max_wind)) {
                 // If wind gusts are 20% above the max, wind is high
-                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Strong wind gusts.");
+                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Strong wind gusts. (%.1f kts)", wind_speed * KNOTS_PER_METRE);
                 wind_strength = WIND_HIGH;
             } else if (millis() - extremeWeatherStart >= 30000) {
                 // If sustained wind is above the max for 30 seconds, it is high
-                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Sustained high winds.");
+                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Sustained high winds. (%.1f kts)", wind_speed * KNOTS_PER_METRE);
                 wind_strength = WIND_HIGH;
             }
         }
@@ -953,7 +953,7 @@ void Sailboat::check_wind() {
 
     if (timeWeatherCleared != 0 && millis() - timeWeatherCleared > 30000) {
         // Weather has cleared, raise sail if in a sailing mode
-        gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Extreme weather cleared.");
+        gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Extreme weather cleared.");
         wind_strength = WIND_STRONG;
         calmWeatherStart = calmWeatherEnd = 0;
     } else if (wind_speed < min_wind) {
@@ -964,7 +964,7 @@ void Sailboat::check_wind() {
             // If wind is below the min for 10 seconds, it is low.
             if (wind_strength != WIND_LOW && sail_enabled() &&
                     (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY)) {
-                gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Wind has dropped, too low for sailing.");
+                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Wind has dropped, too low for sailing.");
             }
             wind_strength = WIND_LOW;
         }
@@ -977,7 +977,7 @@ void Sailboat::check_wind() {
                 // If wind is above min for 10 seconds, it is fair wind for sailing
                 wind_strength = WIND_FAIR;
                 if (sail_enabled() && (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY)) {
-                    gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Wind has risen, sailing can resume.");
+                    gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Wind has risen, sailing can resume.");
                 }
             }
         } else if (wind_speed < ((min_wind + max_wind) / 2.0)) {
@@ -1076,7 +1076,7 @@ void Sailboat::sail_guard() {
         // Have high winds, stow the sail
 //        DEBUGV("Rover::sail_guard() - Stow sail\n");
         if (!stowing_sail) {
-            gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: High winds, stowing sail.");
+            gcs().send_text(MAV_SEVERITY_WARNING, "Sailboat: High winds, stowing sail.");
         }
         stowing_sail = true;
 
@@ -1101,13 +1101,13 @@ void Sailboat::sail_guard() {
             if (mast_set_pos < (1900 - 10) || !mast_status.moving || stowing_sail) {
                 // If the mast isn't moving or the mast set position is not UP, then we raise the sail
                 // Also raise the sail if it is being stowed
-                gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Raising the mast for sailing. (%d)",
+                gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Raising the mast for sailing. (%d)",
                         (int)mast_set_pos);
                 stowing_sail = false;
                 set_mast_position(1900);
             }
         } else if (stowing_sail) {
-            gcs().send_text(MAV_SEVERITY_INFO, "Sailboat: Stopping stowing of mast, no longer required. (%d)",
+            gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Stopping stowing of mast, no longer required. (%d)",
                     (int)mast_set_pos);
             stowing_sail = false;
         }

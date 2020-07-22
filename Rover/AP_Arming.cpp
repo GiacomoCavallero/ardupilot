@@ -129,7 +129,7 @@ bool AP_Arming_Rover::arm(AP_Arming::Method method, const bool do_arming_checks)
 
     update_soft_armed();
 
-    gcs().send_text(MAV_SEVERITY_INFO, "Throttle armed");
+    gcs().send_text(MAV_SEVERITY_NOTICE, "Throttle armed");
 
     return true;
 }
@@ -149,7 +149,7 @@ bool AP_Arming_Rover::disarm(const AP_Arming::Method method, bool do_disarm_chec
 
     update_soft_armed();
 
-    gcs().send_text(MAV_SEVERITY_INFO, "Throttle disarmed");
+    gcs().send_text(MAV_SEVERITY_NOTICE, "Throttle disarmed");
 
     return true;
 }

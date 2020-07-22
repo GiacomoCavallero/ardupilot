@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include <GCS_MAVLink/GCS_MAVLink.h>
+#include <GCS_MAVLink/GCS.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_Mission/AP_Mission.h>
 #include <AR_WPNav/AR_WPNav.h>

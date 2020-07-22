@@ -119,7 +119,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
         return;
     } else if (period_us == 0  && pwm_last[ch] != 0) {
         printf("Recieved a PWM of 0 for the winch.\n");
-        gcs().send_text(MAV_SEVERITY_NOTICE, "RCO_Ocius: Recieved a PWM of 0 for the winch.\n");
+        gcs().send_text(MAV_SEVERITY_NOTICE, "RCO_Ocius: Received a PWM of 0 for the winch.");
     }
 
     if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {

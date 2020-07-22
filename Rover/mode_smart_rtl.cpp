@@ -50,9 +50,9 @@ void ModeSmartRTL::update()
             // load point if required
             if (_load_point) {
                 Vector3f next_point;
-                if (!g2.smart_rtl.pop_point(next_point)) {
+                if (!rover.g2.smart_rtl.pop_point(next_point)) {
                     // if not more points, we have reached home
-                    gcs().send_text(MAV_SEVERITY_INFO, "Reached destination");
+                    rover.gcs().send_text(MAV_SEVERITY_INFO, "Reached destination");
                     smart_rtl_state = SmartRTL_StopAtHome;
                     break;
                 }
@@ -60,7 +60,7 @@ void ModeSmartRTL::update()
                 // set target destination to new point
                 if (!g2.wp_nav.set_desired_location_NED(next_point)) {
                     // this failure should never happen but we add it just in case
-                    gcs().send_text(MAV_SEVERITY_INFO, "SmartRTL: failed to set destination");
+                    rover.gcs().send_text(MAV_SEVERITY_WARNING, "SmartRTL: failed to set destination");
                     smart_rtl_state = SmartRTL_Failure;
                 }
             }
