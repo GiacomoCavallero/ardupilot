@@ -70,27 +70,40 @@ public:
 
     class Triducer {
     public:
-        float water_depth;      // m
-        float water_temp;       // celcius
-        float speed_thru_water; // m/s
+        float water_depth;      // (m)
+        float water_offset;     // (m) (+ve to water surface, -ve to bottom of keel)
+        float water_range;      // maximum measurable water depth (m)
+        float water_temp;       // (celcius)
+        float longitudinal_speed_water;  // longitudinal speed (water reference) (m/s)
+        float transverse_speed_water;   // transverse speed (water reference) (m/s)
+        float longitudinal_speed_ground; // longitudinal speed (ground reference) (m/s)
+        float transverse_speed_ground;  // transverse speed (ground reference) (m/s)
+        float stern_speed_water;        // stern speed (water reference) (m/s)
+        float stern_speed_ground;       // stern speed (ground reference) (m/s)
+
         uint64_t last_update;   // System time of last update (millis)
 
-        Triducer() : water_depth(0), water_temp(0), speed_thru_water(0), last_update(0) {}
+        Triducer() : water_depth(0), water_offset(0), water_range(0), water_temp(0),
+                longitudinal_speed_water(0), transverse_speed_water(0),
+                longitudinal_speed_ground(0), transverse_speed_ground(0),
+                stern_speed_water(0), stern_speed_ground(0),
+                last_update(0) {}
     };
 
     class WeatherStation {
     public:
-        float wind_speed_true;       // m/s
-        float wind_dir_true;         // deg[0..360]
-        float air_pressure;
-        float air_temp;             // celcius
-        float humidity;
+        float wind_speed_true;      // (m/s)
+        float wind_dir_true;        // (deg[0..360])
+        float wind_gusts;           // (m/s)
+        float atmos_pressure;       // Atmospheric pressure (hPa)
+        float air_temp;             // (celcius)
+        float humidity;             // (%)
         uint64_t last_update;       // System time of last update (millis)
 
         vector_average_t wind_average;
 
-        WeatherStation() : wind_speed_true(0), wind_dir_true(0),
-                air_pressure(0), air_temp(0), humidity(0),
+        WeatherStation() : wind_speed_true(0), wind_dir_true(0), wind_gusts(0),
+                atmos_pressure(0), air_temp(0), humidity(0),
                 last_update(0),
                 wind_average(25) {}
     };

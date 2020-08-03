@@ -1430,6 +1430,18 @@ Pgn pgnList[] =
   , { 0 }
   }
 }
+/* http://www.airmartechnology.com/uploads/installguide/DST200UserlManual.pdf */
+,
+{ "Airmar: Speed Pulse Count", 65409, false, 8, 0,
+{ { "Manufacturer Code", 11, RES_MANUFACTURER, false, "=135", "Airmar" }
+, { "Reserved", 2, RES_NOTUSED, false, 0, "" }
+, { "Industry Code", 3, RES_LOOKUP, false, "=4", "Marine Industry" }
+, { "SID", BYTES(1), 1, false, 0, "" }
+, { "Duration of interval", BYTES(2), 0.001, false, "s", "" }
+, { "Pulses received", BYTES(2), 1, false, 0, "" }
+, { 0 }
+}
+}
 
   /* http://www.airmartechnology.com/uploads/installguide/DST200UserlManual.pdf */
 ,

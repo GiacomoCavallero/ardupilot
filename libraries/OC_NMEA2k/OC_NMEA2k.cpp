@@ -417,17 +417,36 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             break;
 
         case 128259: // Speed
-            triducer.speed_thru_water = pmv->getDouble("Speed Water Referenced");
+            if (fabs(triducer.transverse_speed_water) > FLT_EPSILON)
+                triducer.longitudinal_speed_water = pmv->getDouble("Speed Water Referenced");
+            break;
+        case 130578: // Vessel Speed Components
+            triducer.longitudinal_speed_water = pmv->getDouble("Longitudinal Speed, Water-referenced");
+            triducer.transverse_speed_water = pmv->getDouble("Transverse Speed, Water-referenced");
+            triducer.longitudinal_speed_ground = pmv->getDouble("Longitudinal Speed, Ground-referenced");
+            triducer.transverse_speed_ground = pmv->getDouble("Transverse Speed, Ground-referenced");
+            triducer.stern_speed_water = pmv->getDouble("Stern Speed, Water-referenced");
+            triducer.stern_speed_ground = pmv->getDouble("Stern Speed, Ground-referenced");
             break;
 
         case 128267: // Water Depth
             triducer.water_depth = pmv->getDouble("Depth");
+            triducer.water_offset = pmv->getDouble("Offset");
+            triducer.water_range = pmv->getDouble("Range");
             break;
 
-        case 130311: // Temperature
-            if (pmv->getInteger("Temperature Source") == 0)
+        case 130311: // Environmental Parameters
+            if (pmv->getInteger("Temperature Source") == 0) // Water temp
             {
                 triducer.water_temp = pmv->getDouble("Temperature");
+            } else if (pmv->getInteger("Temperature Source") == 1) // Outside temp
+            {
+                weather.air_temp = pmv->getDouble("Temperature");
+            }
+            if (pmv->getInteger("Humidity Source") == 1) // Outside humidity
+            {
+                weather.humidity = pmv->getDouble("Humidity");
+                weather.atmos_pressure = pmv->getDouble("Atmospheric Pressure");
             }
             break;
         case 130312: // Temperature
@@ -435,6 +454,22 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         //    {
         //        triducer.water_temp = pmv->getDouble("Actual Temperature");
         //    }
+            break;
+        case 130323: // Meteorological Station Data
+            {
+                double wind_speed = pmv->getDouble("Wind Speed");
+                double wind_angle = ToDeg(pmv->getDouble("Wind Direction"));
+                double wind_gusts = pmv->getDouble("Wind Gusts");
+                if (pmv->getInteger("Wind Reference") == 0) { // True wind
+                    weather.wind_dir_true = wrap_360(wind_angle);
+                    weather.wind_speed_true = wind_speed;
+                    weather.wind_gusts = wind_gusts;
+                }
+                double ambient_temp = pmv->getDouble("Ambient Temperature");
+                double atmos_pressure = pmv->getDouble("Atmospheric Pressure");
+                weather.air_temp = ambient_temp;
+                weather.atmos_pressure = atmos_pressure;
+            }
             break;
 
         case 59904:  // ISO Request
@@ -444,15 +479,15 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         case 127258: // Magnetic Variation
         case 129044: // Datum
         //case 130311: // Environmental Parameters
-        case 130313: // Humidity
-        case 130314: // Actual Pressure
-        case 130323: // Meteorological Station Data
+        case 130313: // Humidity  // TODO: Does it differ from in 130311?
+        case 130314: // Actual Pressure // TODO: Does it differ from in 130311?
+//        case 130323: // Meteorological Station Data // TODO: Does it differ from in 130311?
         case 130944: // Airmar: POST
         case 0: // Ignore
         case 130945: // Fast Packet Transfer
             // TODO: Look up these PGNs
         case 65408:  // Airmar: Depth Quality Factor
-        case 65409:  // Airmar: ???
+        case 65409:  // Airmar: Speed Pulse Count
         case 128275: // Distance Log
             break;
         case 129038: // AIS Class A Position Report
@@ -461,9 +496,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 
         case 129809: // AIS Class B static data (msg 24 Part A)
         case 129810: // AIS Class B static data (msg 24 Part B)
-        case 130578: // Vessel Speed Components
-        case 130934:
-        case 130935:
+        case 130934: // ???
+        case 130935: // ???
             break;
 
         default:
