@@ -119,12 +119,12 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
     // TODO: check can be sent
     Location wp;
     bool have_wp = rover.control_mode->get_desired_location(wp);
-    if (rover.control_mode == &rover.mode_ivp) {
-        // In IVP mode set the WP to 1km in direction desired
-        wp = rover.current_loc;
-        wp.offset_bearing(rover.mode_ivp.getDesiredHeading(), 1000);
-        have_wp = true;
-    }
+//    if (rover.control_mode == &rover.mode_ivp) {
+//        // In IVP mode set the WP to 1km in direction desired
+//        wp = rover.current_loc;
+//        wp.offset_bearing(rover.mode_ivp.getDesiredHeading(), 1000);
+//        have_wp = true;
+//    }
     mavlink_msg_ocius_nav_controller_output_send(chan,
             MIN(control_mode->get_distance_to_destination(), UINT32_MAX),
             (have_wp?wp.lat:0), (have_wp?wp.lng:0),

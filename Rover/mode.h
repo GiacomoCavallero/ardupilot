@@ -768,9 +768,9 @@ private:
 public:
     uint32_t mode_number() const override { return IVP; }
     const char *name4() const override { return "IVP"; }
-
-    float getDesiredHeading() { return _desired_yaw_cd / 100; }
-    float getDesiredSpeed() { return _desired_speed; }
+    float nav_bearing() const override { return _desired_yaw_cd / 100; }
+    float wp_bearing() const override { return _desired_yaw_cd / 100; }
+    float nav_speed() const { return _desired_speed; }
 
     // set desired heading and speed
     void set_desired_heading_and_speed(float yaw_angle_cd, float target_speed) override;
