@@ -195,11 +195,19 @@ void GCS_MAVLINK_Rover::send_water_velocity() {
             wave_height = -1, wave_spd = -1, wave_dir = -1, wave_period = -1;
 
     // TODO: Calculate water velocity
-    float my_speed = 2, my_dir = 0, my_hdg_rad = 0,
-            longitudinal_spd = 1, transverse_spd = 0;
+//    float my_speed = 1, my_dir = 0, my_hdg_rad = rover.ahrs.yaw,
+    float my_hdg_rad = rover.ahrs.yaw,
+            longitudinal_spd = nmea2k_sensors.triducer.longitudinal_speed_water,
+            transverse_spd = nmea2k_sensors.triducer.transverse_speed_water;
 
-    float my_speed_E = my_speed * sin(radians(my_dir)),
-            my_speed_N = my_speed * cos(radians(my_dir));
+    Vector2f g_speed = rover.ahrs.groundspeed_vector();
+
+//    float my_speed_E = my_speed * sin(radians(my_dir)),
+//            my_speed_N = my_speed * cos(radians(my_dir));
+    float my_speed_E = g_speed[1],
+            my_speed_N = g_speed[0];
+
+    // TODO: Add any filtering here.
 
     float my_w_spd_N = cos(my_hdg_rad) * longitudinal_spd - sin(my_hdg_rad) * transverse_spd,
             my_w_spd_E = sin(my_hdg_rad) * longitudinal_spd + cos(my_hdg_rad) * transverse_spd;
@@ -208,7 +216,7 @@ void GCS_MAVLINK_Rover::send_water_velocity() {
             water_spd_E = my_speed_E - my_w_spd_E;
 
     water_spd = sqrt(water_spd_N*water_spd_N+water_spd_E*water_spd_E);
-    water_dir = atan2(water_spd_E, water_spd_N);
+    water_dir = wrap_360(degrees(atan2(water_spd_E, water_spd_N)));
 
     // TODO: Calculate wave parameters
 
