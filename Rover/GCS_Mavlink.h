@@ -35,6 +35,7 @@ protected:
     void send_water();
     void send_water_depth();
     void send_vessel_speed_components();
+    void send_water_velocity();
     void send_weather_data();
     void send_compass_airmar();
 

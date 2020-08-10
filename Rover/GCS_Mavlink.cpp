@@ -167,9 +167,65 @@ void GCS_MAVLINK_Rover::send_sail_status() {
 
 void GCS_MAVLINK_Rover::send_water() {
     mavlink_msg_water_send(chan,
-            rover.g2.sailboat.nmea2k_sensors.triducer.speed_thru_water,
-            rover.g2.sailboat.nmea2k_sensors.triducer.water_temp,
-            rover.g2.sailboat.nmea2k_sensors.triducer.water_depth);
+            nmea2k_sensors.triducer.longitudinal_speed_water,
+            nmea2k_sensors.triducer.water_temp,
+            nmea2k_sensors.triducer.water_depth);
+}
+
+void GCS_MAVLINK_Rover::send_water_depth() {
+    mavlink_msg_water_depth_send(chan,
+            nmea2k_sensors.triducer.water_depth,
+            nmea2k_sensors.triducer.water_offset,
+            nmea2k_sensors.triducer.water_range,
+            nmea2k_sensors.triducer.water_temp);
+}
+
+void GCS_MAVLINK_Rover::send_vessel_speed_components() {
+    mavlink_msg_vessel_speed_components_send(chan,
+            nmea2k_sensors.triducer.longitudinal_speed_water,
+            nmea2k_sensors.triducer.transverse_speed_water,
+            nmea2k_sensors.triducer.longitudinal_speed_ground,
+            nmea2k_sensors.triducer.transverse_speed_ground,
+            nmea2k_sensors.triducer.stern_speed_water,
+            nmea2k_sensors.triducer.stern_speed_ground);
+}
+
+void GCS_MAVLINK_Rover::send_water_velocity() {
+    float water_spd = -1, water_dir = -1,
+            wave_height = -1, wave_spd = -1, wave_dir = -1, wave_period = -1;
+
+    // TODO: Calculate water velocity
+    float my_speed = 2, my_dir = 0, my_hdg_rad = 0,
+            longitudinal_spd = 1, transverse_spd = 0;
+
+    float my_speed_E = my_speed * sin(radians(my_dir)),
+            my_speed_N = my_speed * cos(radians(my_dir));
+
+    float my_w_spd_N = cos(my_hdg_rad) * longitudinal_spd - sin(my_hdg_rad) * transverse_spd,
+            my_w_spd_E = sin(my_hdg_rad) * longitudinal_spd + cos(my_hdg_rad) * transverse_spd;
+
+    float water_spd_N = my_speed_N - my_w_spd_N,
+            water_spd_E = my_speed_E - my_w_spd_E;
+
+    water_spd = sqrt(water_spd_N*water_spd_N+water_spd_E*water_spd_E);
+    water_dir = atan2(water_spd_E, water_spd_N);
+
+    // TODO: Calculate wave parameters
+
+    mavlink_msg_water_velocity_send(chan,
+            water_spd, water_dir,
+            wave_height, wave_spd, wave_dir, wave_period);
+}
+
+void GCS_MAVLINK_Rover::send_weather_data() {
+    mavlink_msg_weather_data_send(chan,
+            nmea2k_sensors.weather.air_temp,
+            nmea2k_sensors.weather.atmos_pressure,
+            nmea2k_sensors.weather.humidity,
+            0, // No irradiance sensor yet
+            nmea2k_sensors.weather.wind_speed_true,
+            nmea2k_sensors.weather.wind_dir_true,
+            nmea2k_sensors.weather.wind_gusts);
 }
 
 void GCS_MAVLINK_Rover::send_compass_airmar() {
@@ -418,6 +474,12 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
     case MSG_WATER:
         CHECK_PAYLOAD_SIZE(WATER);
         send_water();
+        CHECK_PAYLOAD_SIZE(WATER_DEPTH);
+        send_water_depth();
+        CHECK_PAYLOAD_SIZE(VESSEL_SPEED_COMPONENTS);
+        send_vessel_speed_components();
+        CHECK_PAYLOAD_SIZE(WATER_VELOCITY);
+        send_water_velocity();
         break;
     case MSG_COMPASS_AIRMAR:
         CHECK_PAYLOAD_SIZE(COMPASS_AIRMAR);
