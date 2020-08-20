@@ -174,7 +174,7 @@ class FiltBoxcar
     // Boxcar filtering class for scalar values
 public:
     FiltBoxcar(std::chrono::seconds secs) : bctime{secs} {} // Creates empty deque and sets up parameters
-    T addPoint(T point);                                    // Adds variable, trims old and returns filtered value
+    T filterPoint(T point);                                    // Adds variable, trims old and returns filtered value
 
 private:
     std::chrono::seconds bctime;
@@ -189,7 +189,7 @@ class FiltBoxcarAng : FiltBoxcar<T>
     // mod = 180: returns angle in -180 to 180 range
 public:
     FiltBoxcarAng(time_t secs, int mod = 360) : FiltBoxcar<T>::bctime{secs}, mod_{mod} {} // Creates empty deque and sets up parameters
-    T addPoint(T angle);
+    T filterPoint(T angle);
 
 private:
     int mod_;
@@ -207,7 +207,7 @@ class FiltExp
     // Exponential filtering class for scalar values
 public:
     FiltExp(double secs) : tau{secs} {} // Creates initial lastPoint and sets up parameters
-    T addPoint(T point);                // Adds new data point and returns filtered value
+    T filterPoint(T point);                // Adds new data point and returns filtered value
 
 private:
     double tau;
@@ -222,7 +222,7 @@ class FiltExpAng : FiltExp<T>
     // mod = 180: returns angle in -180 to 180 range
 public:
     FiltExpAng(double secs, int mod = 360) : FiltExp<T>::tau{secs}, mod_{mod} {} // Creates initlal lastPoint and sets up parameters
-    T addPoint(T angle);
+    T filterPoint(T angle);
 
 private:
     int mod_;
@@ -235,7 +235,7 @@ class FiltExpNl
     // Damping reduces to 0 by 8 * bound
 public:
     FiltExpNl(double secs, T bound_) : tau{secs}, bound{bound_} {} // Creates initial lastPoint and sets up parameters
-    T addPoint(T point);                                           // Adds new data point and returns filtered value
+    T filterPoint(T point);                                           // Adds new data point and returns filtered value
 
 private:
     double tau;
@@ -251,7 +251,7 @@ class FiltExpNlAng : FiltExpNl<T>
     // mod = 180: returns angle in -180 to 180 range
 public:
     FiltExpNlAng(double secs, T bound_, int mod = 360) : FiltExpNl<T>::tau{secs}, FiltExpNl<T>::bound{bound_}, mod_{mod} {} // Creates initial lastPoint and sets up parameters
-    T addPoint(T angle);
+    T filterPoint(T angle);
 
 private:
     int mod_;

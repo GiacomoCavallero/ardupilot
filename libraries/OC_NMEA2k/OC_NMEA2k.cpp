@@ -721,7 +721,7 @@ FiltVar<T>::FiltVar(T var)
 }
 
 template <typename T>
-T FiltBoxcar<T>::addPoint(T point)
+T FiltBoxcar<T>::filterPoint(T point)
 {
     // Add new point to deque
     sample.push_front(FiltVar<T>(point));
@@ -745,17 +745,17 @@ T FiltBoxcar<T>::addPoint(T point)
 }
 
 template <typename T>
-T FiltBoxcarAng<T>::addPoint(T angle)
+T FiltBoxcarAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
     FiltVar<Vector2<T>> dataPoint(dToUv(angle));
-    Vector2<T> filtAng = FiltBoxcar<T>::addPoint(dataPoint);
+    Vector2<T> filtVec = FiltBoxcar<T>::filterPoint(dataPoint);
 
-    return mod_ == 180 ? wrap_180(filtAng.angle()) : wrap_360(filtAng.angle());
+    return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
 }
 
 template <typename T>
-T FiltExp<T>::addPoint(T point)
+T FiltExp<T>::filterPoint(T point)
 {
     // Create new datapoint and calculate smoothing constant based on time difference
     FiltVar<T> newPoint(point);
@@ -771,17 +771,17 @@ T FiltExp<T>::addPoint(T point)
 }
 
 template <typename T>
-T FiltExpAng<T>::addPoint(T angle)
+T FiltExpAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
     FiltVar<Vector2<T>> dataPoint(dToUv(angle));
-    Vector2<T> filtAng = FiltExp<T>::addPoint(dataPoint);
+    Vector2<T> filtVec = FiltExp<T>::filterPoint(dataPoint);
 
-    return mod_ == 180 ? wrap_180(filtAng.angle()) : wrap_360(filtAng.angle());
+    return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
 }
 
 template <typename T>
-T FiltExpNl<T>::addPoint(T point)
+T FiltExpNl<T>::filterPoint(T point)
 {
     // Create new datapoint and calculate smoothing constant based on time difference 
     // If new point is outside bound from oldPoint, reduce smoothing constant
@@ -807,11 +807,11 @@ T FiltExpNl<T>::addPoint(T point)
 }
 
 template <typename T>
-T FiltExpNlAng<T>::addPoint(T angle)
+T FiltExpNlAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
     FiltVar<Vector2<T>> dataPoint(dToUv(angle));
-    Vector2<T> filtAng = FiltExpNl<T>::addPoint(dataPoint);
+    Vector2<T> filtVec = FiltExpNl<T>::filterPoint(dataPoint);
 
-    return mod_ == 180 ? wrap_180(filtAng.angle()) : wrap_360(filtAng.angle());
+    return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
 }
