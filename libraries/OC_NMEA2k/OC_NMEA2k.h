@@ -256,3 +256,6 @@ public:
 private:
     int mod_;
 };
+
+double calCompass(double hdg);
+double linInterp(double h1, double h2, double c1, double c2, double h);
