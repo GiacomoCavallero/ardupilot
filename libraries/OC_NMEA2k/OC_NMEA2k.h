@@ -174,7 +174,7 @@ class FiltBoxcar
     // Boxcar filtering class for scalar values
 public:
     FiltBoxcar(std::chrono::seconds secs) : bctime{secs} {} // Creates empty deque and sets up parameters
-    T addPoint(T point);                           // Adds variable, trims old and returns filtered value
+    T addPoint(T point);                                    // Adds variable, trims old and returns filtered value
 
 private:
     std::chrono::seconds bctime;
@@ -206,8 +206,8 @@ class FiltExp
 {
     // Exponential filtering class for scalar values
 public:
-    FiltExp(double secs) : tau{secs} { } // Creates initial lastPoint and sets up parameters
-    T addPoint(T point);                        // Adds new data point and returns filtered value
+    FiltExp(double secs) : tau{secs} {} // Creates initial lastPoint and sets up parameters
+    T addPoint(T point);                // Adds new data point and returns filtered value
 
 private:
     double tau;
@@ -232,9 +232,10 @@ template <typename T>
 class FiltExpNl
 {
     // Non-linear exponential filtering class for scalar values
+    // Damping reduces to 0 by 8 * bound
 public:
-    FiltExpNl(double secs, T bound_) : tau{secs}, bound{bound_} { } // Creates initial lastPoint and sets up parameters
-    T addPoint(T point);                        // Adds new data point and returns filtered value
+    FiltExpNl(double secs, T bound_) : tau{secs}, bound{bound_} {} // Creates initial lastPoint and sets up parameters
+    T addPoint(T point);                                           // Adds new data point and returns filtered value
 
 private:
     double tau;
