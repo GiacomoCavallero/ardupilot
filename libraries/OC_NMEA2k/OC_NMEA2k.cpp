@@ -503,10 +503,12 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 pmv->getDouble("Speed Water Referenced");
         break;
     case 130578: // Vessel Speed Components
-        triducer.longitudinal_speed_water =
-            pmv->getDouble("Longitudinal Speed, Water-referenced");
-        triducer.transverse_speed_water =
-            pmv->getDouble("Transverse Speed, Water-referenced");
+        //triducer.longitudinal_speed_water =
+        //    pmv->getDouble("Longitudinal Speed, Water-referenced");
+        //triducer.transverse_speed_water =
+        //    pmv->getDouble("Transverse Speed, Water-referenced");
+        triducer.longitudinal_speed_water = triducer.filt_bsp.filterPoint(pmv->getDouble("Longitudinal Speed, Water-referenced"));
+        triducer.transverse_speed_water = triducer.filt_lee.filterPoint(pmv->getDouble("Transverse Speed, Water-referenced"));
         triducer.longitudinal_speed_ground =
             pmv->getDouble("Longitudinal Speed, Ground-referenced");
         triducer.transverse_speed_ground =
@@ -728,7 +730,7 @@ T FiltBoxcar<T>::filterPoint(T point)
 
     // Trim off old points
     while (!sample.empty() &&
-           (point.timestamp() - sample.back().timestamp() > bctime))
+           std::chrono::duration<double>(point.timestamp() - sample.back().timestamp()).count() > *bctime)
     {
         sample.pop_back();
     }
@@ -759,9 +761,8 @@ T FiltExp<T>::filterPoint(T point)
 {
     // Create new datapoint and calculate smoothing constant based on time difference
     FiltVar<T> newPoint(point);
-    double dTime = std::chrono::duration_cast<std::chrono::seconds>(
-        newPoint.timestamp() - oldPoint.timestamp());
-    double a = std::exp(-dTime / tau);
+    double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
+    double a = std::exp(-dTime / (*tau));
 
     // Return filtered value and store for next time
     T newVal = a * oldPoint.var() + (1 - a) * newPoint.var();
@@ -787,9 +788,8 @@ T FiltExpNl<T>::filterPoint(T point)
     // If new point is outside bound from oldPoint, reduce smoothing constant
 
     FiltVar<T> newPoint(point);
-    double dTime = std::chrono::duration_cast<std::chrono::seconds>(
-        newPoint.timestamp() - oldPoint.timestamp());
-    double a = std::exp(-dTime / tau);
+    double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
+    double a = std::exp(-dTime / *(tau));
 
     double bFac = abs(newPoint.val() - oldPoint.val()) / bound;
     if (bFac > 1)
