@@ -48,45 +48,6 @@ static uint32_t getHMSInMillis(const char *time)
     return rval;
 }
 
-vector_average_t::vector_average_t(uint32_t mr) : MAX_READINGS(mr)
-{
-    directions = new float[MAX_READINGS];
-    speeds = new float[MAX_READINGS];
-    sind = new float[MAX_READINGS];
-    cosd = new float[MAX_READINGS];
-    direction = speed = idx = 0;
-    memset(sind, 0, sizeof(float) * MAX_READINGS);
-    memset(cosd, 0, sizeof(float) * MAX_READINGS);
-}
-
-//#define CLIP_360(A) (A < 0 ? A + 360 : A > 360 ? A - 360 : A)
-void vector_average_t::push_reading(float dir_deg, float spd_mps)
-{
-    directions[idx] = dir_deg;
-    speeds[idx] = spd_mps;
-    sind[idx] = sin(radians(dir_deg)) * spd_mps;
-    cosd[idx] = cos(radians(dir_deg)) * spd_mps;
-    idx = (idx + 1) % MAX_READINGS;
-    float sina = 0, cosa = 0;
-    for (uint32_t n = 0; n < MAX_READINGS; ++n)
-    {
-        sina += sind[n];
-        cosa += cosd[n];
-    }
-    sina /= MAX_READINGS;
-    cosa /= MAX_READINGS;
-    if (fabs(sina) < 0.01 && fabs(cosa) < 0.01)
-    {
-        direction = speed = 0;
-    }
-    else
-    {
-        speed = sqrt(sina * sina + cosa * cosa);
-        direction = degrees(atan2(sina, cosa));
-        direction = CLIP_360(direction);
-    }
-}
-
 static void nmea2k_writeMessage(AP_HAL::UARTDriver &port, unsigned char command,
                                 const unsigned char *cmd, const int len)
 {
@@ -781,7 +742,7 @@ T FiltExp<T>::filterPoint(T point)
     FiltVar<T> newPoint(point);
     double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
     double a = 0;
-    if (*tau)
+    if (fpclassify(*tau) != FP_ZERO)
         a = std::exp(-dTime / (*tau));
 
     // Return filtered value and store for next time
@@ -810,9 +771,15 @@ T FiltExpNl<T>::filterPoint(T point)
 
     FiltVar<T> newPoint(point);
     double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
-    double a = std::exp(-dTime / *(tau));
 
-    double bFac = abs(newPoint.val() - oldPoint.val()) / bound;
+    double a = 0;
+    if (fpclassify(*tau) != FP_ZERO)
+        a = std::exp(-dTime / *(tau));
+
+    double bFac = 0;
+    if (bound)
+        bFac = abs((newPoint.val() - oldPoint.val()) / bound);
+
     if (bFac > 1)
     {
         // Reduce damping to 0 by the time we are 8 times bounds - for faster
