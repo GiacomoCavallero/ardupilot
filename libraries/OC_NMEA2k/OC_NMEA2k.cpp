@@ -779,7 +779,9 @@ T FiltExp<T>::filterPoint(T point)
     // Create new datapoint and calculate smoothing constant based on time difference
     FiltVar<T> newPoint(point);
     double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
-    double a = std::exp(-dTime / (*tau));
+    double a = 0;
+    if (*tau)
+        a = std::exp(-dTime / (*tau));
 
     // Return filtered value and store for next time
     T newVal = oldPoint.var() * a + newPoint.var() * (1 - a);
