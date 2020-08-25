@@ -1188,7 +1188,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FILT_BSP", 4, NMEA2k_Params, filt_bsp, 5),
+    AP_GROUPINFO("F_BSP", 4, NMEA2k_Params, filt_bsp, 5),
 
     // @Param: FILT_LEE
     // @DisplayName: Leeway filter time constant
@@ -1197,7 +1197,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FILT_LEE", 5, NMEA2k_Params, filt_lee, 5),
+    AP_GROUPINFO("F_LEE", 5, NMEA2k_Params, filt_lee, 5),
 
     // @Param: FILT_HDG_TC
     // @DisplayName: Heading filter time constant
@@ -1206,7 +1206,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FILT_HDG_TC", 6, NMEA2k_Params, filt_hdg_tc, 5),
+    AP_GROUPINFO("F_HDG_TC", 6, NMEA2k_Params, filt_hdg_tc, 5),
 
     // @Param: FILT_HDG_NL
     // @DisplayName: Heading filter non-linear constant
@@ -1215,7 +1215,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FILT_HDG_NL", 7, NMEA2k_Params, filt_hdg_nl, 5),
+    AP_GROUPINFO("F_HDG_NL", 7, NMEA2k_Params, filt_hdg_nl, 5),
 
     // @Param: FILT_TWS
     // @DisplayName: TWS filter time constant
@@ -1224,7 +1224,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FILT_TWS", 8, NMEA2k_Params, filt_tws, 5),
+    AP_GROUPINFO("F_TWS", 8, NMEA2k_Params, filt_tws, 5),
 
     // @Param: FILT_TWD
     // @DisplayName: TWD filter time constant
@@ -1233,7 +1233,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FILT_TWD", 9, NMEA2k_Params, filt_twd, 5),
+    AP_GROUPINFO("F_TWD", 9, NMEA2k_Params, filt_twd, 5),
 
     AP_GROUPEND
 };
