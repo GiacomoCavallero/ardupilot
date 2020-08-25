@@ -268,7 +268,7 @@ void RCOutput_Ocius::motor_status_check(void) {
 
             // Get the phase for the hydraulic speed
             double phase = 0;
-            int32_t relay_delay = rover.g2.sailboat.mast_time_delay;
+            uint32_t relay_delay = rover.g2.sailboat.mast_time_delay;
             if (hydraulic_run_time > 2 * relay_delay) {
                 hydraulic_run_time -= 2 * relay_delay;
                 uint32_t signal_time = millis() - timeMastSignalStarted;
