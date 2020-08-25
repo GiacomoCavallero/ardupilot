@@ -473,12 +473,17 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 switch (pmv->getInteger("Reference"))
                 {
                 case 0: // True wind
-                    weather.wind_dir_true = wrap_360(wind_angle);
-                    weather.wind_speed_true = wind_speed;
+                    //weather.wind_dir_true = wrap_360(wind_angle);
+                    //weather.wind_speed_true = wind_speed;
+
+                    // Filter TWS and TWD
+                    weather.wind_dir_true = weather.filt_wind_dir.filterPoint(wind_angle);
+                    weather.wind_speed_true = weather.filt_wind_spd.filterPoint(wind_speed);
+
 
                     // TODO: Do we wish to average the wind speed/direction?
-                    weather.wind_average.push_reading(weather.wind_dir_true,
-                                                      weather.wind_speed_true);
+                    //weather.wind_average.push_reading(weather.wind_dir_true,
+                    //                                  weather.wind_speed_true);
                     break;
                 case 1: // Magnetic
                 case 2: // Apparent
@@ -503,12 +508,10 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 pmv->getDouble("Speed Water Referenced");
         break;
     case 130578: // Vessel Speed Components
-        //triducer.longitudinal_speed_water =
-        //    pmv->getDouble("Longitudinal Speed, Water-referenced");
-        //triducer.transverse_speed_water =
-        //    pmv->getDouble("Transverse Speed, Water-referenced");
-        triducer.longitudinal_speed_water = triducer.filt_bsp.filterPoint(pmv->getDouble("Longitudinal Speed, Water-referenced"));
-        triducer.transverse_speed_water = triducer.filt_lee.filterPoint(pmv->getDouble("Transverse Speed, Water-referenced"));
+        triducer.longitudinal_speed_water =
+            pmv->getDouble("Longitudinal Speed, Water-referenced");
+        triducer.transverse_speed_water =
+            pmv->getDouble("Transverse Speed, Water-referenced");
         triducer.longitudinal_speed_ground =
             pmv->getDouble("Longitudinal Speed, Ground-referenced");
         triducer.transverse_speed_ground =
@@ -517,6 +520,10 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             pmv->getDouble("Stern Speed, Water-referenced");
         triducer.stern_speed_ground =
             pmv->getDouble("Stern Speed, Ground-referenced");
+
+        // Filter boatspeed and leeway
+        triducer.longitudinal_speed_water = triducer.filt_bsp_longitudinal.filterPoint(triducer.longitudinal_speed_water);
+        triducer.transverse_speed_water = triducer.filt_bsp_transverse.filterPoint(triducer.transverse_speed_water);
         break;
 
     case 128267: // Water Depth
@@ -554,9 +561,12 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         double wind_gusts = pmv->getDouble("Wind Gusts");
         if (pmv->getInteger("Wind Reference") == 0)
         { // True wind
-            weather.wind_dir_true = wrap_360(wind_angle);
-            weather.wind_speed_true = wind_speed;
+            //weather.wind_dir_true = wrap_360(wind_angle);
+            //weather.wind_speed_true = wind_speed;
             weather.wind_gusts = wind_gusts;
+
+            weather.wind_dir_true   = weather.filt_wind_dir.filterPoint(wind_angle);
+            weather.wind_speed_true = weather.filt_wind_spd.filterPoint(wind_speed);
         }
         double ambient_temp = pmv->getDouble("Ambient Temperature");
         double atmos_pressure = pmv->getDouble("Atmospheric Pressure");
@@ -723,6 +733,13 @@ FiltVar<T>::FiltVar(T var)
 }
 
 template <typename T>
+FiltVar<T>::FiltVar()
+{
+    // Construct a timestamp, Leave var_ default initialized
+    timestamp_ = std::chrono::system_clock::now();
+}
+
+template <typename T>
 T FiltBoxcar<T>::filterPoint(T point)
 {
     // Add new point to deque
@@ -750,7 +767,7 @@ template <typename T>
 T FiltBoxcarAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
-    FiltVar<Vector2<T>> dataPoint(dToUv(angle));
+    Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = FiltBoxcar<T>::filterPoint(dataPoint);
 
     return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
@@ -765,7 +782,7 @@ T FiltExp<T>::filterPoint(T point)
     double a = std::exp(-dTime / (*tau));
 
     // Return filtered value and store for next time
-    T newVal = a * oldPoint.var() + (1 - a) * newPoint.var();
+    T newVal = oldPoint.var() * a + newPoint.var() * (1 - a);
     newPoint.setVar(newVal);
     oldPoint = newPoint;
     return newVal;
@@ -775,8 +792,8 @@ template <typename T>
 T FiltExpAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
-    FiltVar<Vector2<T>> dataPoint(dToUv(angle));
-    Vector2<T> filtVec = FiltExp<T>::filterPoint(dataPoint);
+    Vector2<T> dataPoint(dToUv(angle));
+    Vector2<T> filtVec = this->FiltExp<Vector2<T>>::filterPoint(dataPoint);
 
     return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
 }
@@ -810,7 +827,7 @@ template <typename T>
 T FiltExpNlAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
-    FiltVar<Vector2<T>> dataPoint(dToUv(angle));
+    Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = FiltExpNl<T>::filterPoint(dataPoint);
 
     return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());

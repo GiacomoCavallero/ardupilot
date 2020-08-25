@@ -60,6 +60,7 @@ private:
 
 public:
     FiltVar(T var);
+    FiltVar();
     void setVar(T var) { var_ = var; }
     std::chrono::system_clock::time_point timestamp() { return timestamp_; }
     T var() { return var_; }
@@ -103,22 +104,22 @@ class FiltExp
 {
     // Exponential filtering class for scalar values
 public:
-    FiltExp(AP_Float* secs) : tau{secs} {} // Creates initial lastPoint and sets up parameters
+    FiltExp(AP_Float* secs) : tau{secs} {} // Creates initial oldPoint and sets up parameters
     T filterPoint(T point);                // Adds new data point and returns filtered value
 
 private:
     AP_Float* tau;
-    FiltVar<T> oldPoint = FiltVar<T>(0);
+    FiltVar<T> oldPoint;
 };
 
 template <typename T>
-class FiltExpAng : FiltExp<T>
+class FiltExpAng : FiltExp<Vector2<T>>
 {
     // Exponential filtering class for angular data
     // mod = 360: returns angle in 0 to 360 range
     // mod = 180: returns angle in -180 to 180 range
 public:
-    FiltExpAng(AP_Float* secs, int mod = 360) : FiltExp<T>::tau{secs}, mod_{mod} {} // Creates initlal lastPoint and sets up parameters
+    FiltExpAng(AP_Float* secs, int mod = 360) : FiltExp<Vector2<T>>(secs), mod_{mod} {} // Creates initlal oldPoint and sets up parameters
     T filterPoint(T angle);
 
 private:
@@ -201,14 +202,15 @@ public:
 
         uint64_t last_update; // System time of last update (millis)
 
-        FiltExp<double> filt_bsp;
-        FiltExp<double> filt_lee;
+        FiltExp<float> filt_bsp_longitudinal;
+        FiltExp<float> filt_bsp_transverse;
 
         Triducer() : water_depth(0), water_offset(0), water_range(0), water_temp(0),
                      longitudinal_speed_water(0), transverse_speed_water(0),
                      longitudinal_speed_ground(0), transverse_speed_ground(0),
                      stern_speed_water(0), stern_speed_ground(0),
-                     last_update(0), filt_bsp(&(rover.g2.nmea2k.filt_bsp)), filt_lee(&(rover.g2.nmea2k.filt_lee)) {}
+                     last_update(0), filt_bsp_longitudinal(&(rover.g2.nmea2k.filt_bsp)), 
+                     filt_bsp_transverse(&(rover.g2.nmea2k.filt_lee)) {}
     };
 
     class WeatherStation
@@ -222,12 +224,14 @@ public:
         float humidity;        // (%)
         uint64_t last_update;  // System time of last update (millis)
 
-        vector_average_t wind_average;
+        FiltExp<float> filt_wind_spd;
+        FiltExpAng<float> filt_wind_dir;
 
         WeatherStation() : wind_speed_true(0), wind_dir_true(0), wind_gusts(0),
                            atmos_pressure(0), air_temp(0), humidity(0),
                            last_update(0),
-                           wind_average(25) {}
+                           filt_wind_spd(&(rover.g2.nmea2k.filt_tws)),
+                           filt_wind_dir(&(rover.g2.nmea2k.filt_twd)) {}
     };
 
     class Compass
