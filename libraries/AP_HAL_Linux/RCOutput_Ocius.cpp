@@ -101,15 +101,15 @@ static uint32_t timeMastSignalStarted = 0;
 #define winch_status    pwm_status[BLUEBOTTLE_WINCH_CHANN]
 
 void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
-    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && ch == (rover.rcmap.roll()-1)) {
-        if (period_us < 1250) {
-//            printf("Reducing rudder travel on Bruce(-).\n");
-            period_us = 1250;
-        } else if (period_us > 1850) {
-//            printf("Reducing rudder travel on Bruce(+).\n");
-            period_us = 1850;
-        }
-    }
+//    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && ch == (rover.rcmap.roll()-1)) {
+//        if (period_us < 1250) {
+////            printf("Reducing rudder travel on Bruce(-).\n");
+//            period_us = 1250;
+//        } else if (period_us > 1850) {
+////            printf("Reducing rudder travel on Bruce(+).\n");
+//            period_us = 1850;
+//        }
+//    }
 
     RCOutput_Ocius_Parent::write(ch, period_us);
 
