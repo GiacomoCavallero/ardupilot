@@ -26,6 +26,7 @@
 #define BLUEBOTTLE_WINCH_CHANN             (14 - 1)
 
 //#define BLUEBOTTLE_MAST_RELAY_DURATION     7500
+//#define BLUEBOTTLE_MAST_RELAY_DELAY        500
 
 #define BLUEBOTTLE_THREAD_PERIOD_WAIT      200000
 #define BLUEBOTTLE_MOTOR_OFFSET            (rover.g2.sailboat.sail_epos_zero)
@@ -259,11 +260,28 @@ void RCOutput_Ocius::motor_status_check(void) {
             SRV_Channel* chan = SRV_Channels::srv_channel(BLUEBOTTLE_HYDRAULIC_SPD_CHANN);
             if (chan != nullptr) {
                 ramp_spd = chan->get_output_max() - 1500;
-                if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
-                    ramp_spd = ramp_spd * 0.8;
-                }
             }
-            double phase = (millis() - timeMastSignalStarted) / hydraulic_run_time;
+            if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
+                // If driving the mast down we run the motor at 80% of the max speed.
+                ramp_spd = ramp_spd * 0.8;
+            }
+
+            // Get the phase for the hydraulic speed
+            double phase = 0;
+            int32_t relay_delay = rover.g2.sailboat.mast_time_delay;
+            if (hydraulic_run_time > 2 * relay_delay) {
+                hydraulic_run_time -= 2 * relay_delay;
+                uint32_t signal_time = millis() - timeMastSignalStarted;
+                if (signal_time > relay_delay &&
+                        signal_time < (hydraulic_run_time + relay_delay)) {
+                    signal_time -= relay_delay;
+                    phase = signal_time / hydraulic_run_time;
+                }
+            } else {
+                phase = (millis() - timeMastSignalStarted) / hydraulic_run_time;
+            }
+
+            // Use the sin of the phase to set the hydraulic motor speed
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;
             phase = sin(phase * M_PIl);
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;

@@ -147,6 +147,7 @@ private:
     AP_Int32 sail_epos_zero;
     AP_Int32 mast_time_up;
     AP_Int32 mast_time_down;
+    AP_Int32 mast_time_delay;
 
     AP_Int8 hold_mode;
     AP_Float hold_radius;

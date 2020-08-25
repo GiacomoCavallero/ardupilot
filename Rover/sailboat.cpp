@@ -183,6 +183,15 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("MTIME_DOWN", 16, Sailboat, mast_time_down, 7500),
 
+    // @Param: MTIME_DELAY
+    // @DisplayName: Mast time delay
+//     @Description: Delay at start and end of MTIME when the motor speed is 0, to allow the relays to set.
+    // @Units: milliseconds
+    // @Range: >0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MTIME_DELAY", 17, Sailboat, mast_time_delay, 0),
+
     AP_GROUPEND
 };
 
