@@ -9,122 +9,12 @@
 
 #include <AP_Common/Location.h>
 #include <AP_HAL/UARTDriver.h>
-#include <deque>
-#include <chrono>
+#include <OC_NMEA2k/oc_filter.h>
 
 
 //#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
 #include <../APMrover2/Rover.h>
 //#endif
-
-template <typename T>
-class FiltVar
-{
-    // Class for variables to be filtered. Adds timestamp to data
-private:
-    std::chrono::system_clock::time_point timestamp_;
-    T var_;
-
-public:
-    FiltVar(T var);
-    FiltVar();
-    void setVar(T var) { var_ = var; }
-    std::chrono::system_clock::time_point timestamp() { return timestamp_; }
-    T var() { return var_; }
-};
-
-template <typename T>
-class FiltBoxcar
-{
-    // Boxcar filtering class for scalar values
-public:
-    FiltBoxcar(AP_Float* secs) : bctime{secs} {} // Creates empty deque and sets up parameters
-    T filterPoint(T point);                                    // Adds variable, trims old and returns filtered value
-
-private:
-    AP_Float* bctime;
-    std::deque<FiltVar<T>> sample;
-};
-
-template <typename T>
-class FiltBoxcarAng : FiltBoxcar<T>
-{
-    // Boxcar filtering class for angular data
-    // mod = 360: returns angle in 0 to 360 range
-    // mod = 180: returns angle in -180 to 180 range
-public:
-    FiltBoxcarAng(AP_Float* secs, int mod = 360) : FiltBoxcar<T>::bctime{secs}, mod_{mod} {} // Creates empty deque and sets up parameters
-    T filterPoint(T angle);
-
-private:
-    int mod_;
-};
-
-template <typename T>
-Vector2<T> dToUv(T d)
-{
-    return Vector2<T>(-sin(radians(d)), -cos(radians(d)));
-}
-
-template <typename T>
-class FiltExp
-{
-    // Exponential filtering class for scalar values
-public:
-    FiltExp(AP_Float* secs) : tau{secs} {} // Creates initial oldPoint and sets up parameters
-    T filterPoint(T point);                // Adds new data point and returns filtered value
-
-private:
-    AP_Float* tau;
-    FiltVar<T> oldPoint;
-};
-
-template <typename T>
-class FiltExpAng : FiltExp<Vector2<T>>
-{
-    // Exponential filtering class for angular data
-    // mod = 360: returns angle in 0 to 360 range
-    // mod = 180: returns angle in -180 to 180 range
-public:
-    FiltExpAng(AP_Float* secs, int mod = 360) : FiltExp<Vector2<T>>(secs), mod_{mod} {} // Creates initlal oldPoint and sets up parameters
-    T filterPoint(T angle);
-
-private:
-    int mod_;
-};
-
-template <typename T>
-class FiltExpNl
-{
-    // Non-linear exponential filtering class for scalar values
-    // Damping reduces to 0 by 8 * bound
-public:
-    FiltExpNl(AP_Float* secs, T bound_) : tau{secs}, bound{bound_} {} // Creates initial lastPoint and sets up parameters
-    T filterPoint(T point);                                           // Adds new data point and returns filtered value
-
-private:
-    AP_Float* tau;
-    T bound;
-    FiltVar<T> oldPoint;
-};
-
-template <typename T>
-class FiltExpNlAng : FiltExpNl<T>
-{
-    // Non-linear exponential filtering class for angular data
-    // mod = 360: returns angle in 0 to 360 range
-    // mod = 180: returns angle in -180 to 180 range
-public:
-    FiltExpNlAng(AP_Float* secs, T bound_, int mod = 360) : FiltExpNl<T>::tau{secs}, FiltExpNl<T>::bound{bound_}, mod_{mod} {} // Creates initial lastPoint and sets up parameters
-    T filterPoint(T angle);
-
-private:
-    int mod_;
-};
-
-double calCompass(double hdg);
-double linInterp(double h1, double h2, double c1, double c2, double h);
-
 
 class MsgVals;
 class NMEA2K
