@@ -63,7 +63,7 @@ private:
 template <typename T>
 Vector2<T> dToUv(T d)
 {
-    return Vector2<T>(sin(radians(d)), cos(radians(d)));
+    return Vector2<T>(-sin(radians(d)), -cos(radians(d)));
 }
 
 template <typename T>
