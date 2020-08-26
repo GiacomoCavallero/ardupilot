@@ -770,7 +770,8 @@ T FiltBoxcarAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = FiltBoxcar<T>::filterPoint(dataPoint);
 
-    return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
+    T angleFiltered = ToDeg(filtVec.angle());
+    return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
 
 template <typename T>
@@ -797,7 +798,8 @@ T FiltExpAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = this->FiltExp<Vector2<T>>::filterPoint(dataPoint);
 
-    return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
+    T angleFiltered = ToDeg(filtVec.angle());
+    return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
 
 template <typename T>
@@ -832,7 +834,8 @@ T FiltExpNlAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = FiltExpNl<T>::filterPoint(dataPoint);
 
-    return mod_ == 180 ? wrap_180(filtVec.angle()) : wrap_360(filtVec.angle());
+    T angleFiltered = ToDeg(filtVec.angle());
+    return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
 
 double calCompass(double h)
