@@ -213,6 +213,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                     ToDeg(heading - declination)); // assuming declincation is correct
             }
             compass.last_update = AP_HAL::millis64();
+
+            compass.heading_filt = compass.filter_hdg.filterPoint(compass.heading);
         }
         break;
 
@@ -271,11 +273,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         {
             if (pmv->isValid("SOG") && pmv->isValid("COG"))
             {
-                if (pmv->getInteger("COG Reference") ==
-                    0) // 0 True north, 2 Mag north, 3 is bad data
+                if (pmv->getInteger("COG Reference") == 0) // 0 True north, 2 Mag north, 3 is bad data
                 {
-                    // state.ground_speed     = pmv->getDouble("SOG");
-                    // state.ground_course = ToDeg(pmv->getDouble("COG"));
                     double gs = pmv->getDouble("SOG");
                     double gc = ToDeg(pmv->getDouble("COG"));
                     if (gs > 655.34)
@@ -287,12 +286,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                         gps_state->cog = static_cast<float>(gc);
                         gps_state->sog = static_cast<float>(gs);
 
-                        // TODO: Do we want to average the cog/sog again?
-
-                        //                        gps_state->average.push_reading(gc, gs);
-                        //                        gps_state->cog  =
-                        //                        gps_state->average.speed; gps_state->sog
-                        //                        = gps_state->average.direction;
+                        gps_state->cog_filt = gps_state->filter_cog.filterPoint(gps_state->cog);
+                        gps_state->sog_filt = gps_state->filter_sog.filterPoint(gps_state->sog);
 
                         gps_state->last_update = AP_HAL::millis64();
                     }
@@ -432,17 +427,13 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 switch (pmv->getInteger("Reference"))
                 {
                 case 0: // True wind
-                    //weather.wind_dir_true = wrap_360(wind_angle);
-                    //weather.wind_speed_true = wind_speed;
+                    weather.wind_dir_true = wrap_360(wind_angle);
+                    weather.wind_speed_true = wind_speed;
 
                     // Filter TWS and TWD
-                    weather.wind_dir_true = weather.filt_wind_dir.filterPoint(wind_angle);
-                    weather.wind_speed_true = weather.filt_wind_spd.filterPoint(wind_speed);
+                    weather.wind_dir_true_filt = weather.filter_twd.filterPoint(weather.wind_dir_true);
+                    weather.wind_speed_true_filt = weather.filter_tws.filterPoint(weather.wind_speed_true);
 
-
-                    // TODO: Do we wish to average the wind speed/direction?
-                    //weather.wind_average.push_reading(weather.wind_dir_true,
-                    //                                  weather.wind_speed_true);
                     break;
                 case 1: // Magnetic
                 case 2: // Apparent
@@ -481,8 +472,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             pmv->getDouble("Stern Speed, Ground-referenced");
 
         // Filter boatspeed and leeway
-        triducer.longitudinal_speed_water = triducer.filt_bsp_longitudinal.filterPoint(triducer.longitudinal_speed_water);
-        triducer.transverse_speed_water = triducer.filt_bsp_transverse.filterPoint(triducer.transverse_speed_water);
+        triducer.longitudinal_speed_water_filt = triducer.filter_boatspeed.filterPoint(triducer.longitudinal_speed_water);
+        triducer.transverse_speed_water_filt = triducer.filter_leeway.filterPoint(triducer.transverse_speed_water);
         break;
 
     case 128267: // Water Depth
@@ -520,12 +511,12 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         double wind_gusts = pmv->getDouble("Wind Gusts");
         if (pmv->getInteger("Wind Reference") == 0)
         { // True wind
-            //weather.wind_dir_true = wrap_360(wind_angle);
-            //weather.wind_speed_true = wind_speed;
+            weather.wind_dir_true = wrap_360(wind_angle);
+            weather.wind_speed_true = wind_speed;
             weather.wind_gusts = wind_gusts;
 
-            weather.wind_dir_true   = weather.filt_wind_dir.filterPoint(wind_angle);
-            weather.wind_speed_true = weather.filt_wind_spd.filterPoint(wind_speed);
+            weather.wind_dir_true_filt   = weather.filter_twd.filterPoint(wind_angle);
+            weather.wind_speed_true_filt = weather.filter_tws.filterPoint(wind_speed);
         }
         double ambient_temp = pmv->getDouble("Ambient Temperature");
         double atmos_pressure = pmv->getDouble("Atmospheric Pressure");

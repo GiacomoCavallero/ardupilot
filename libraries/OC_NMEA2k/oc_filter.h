@@ -87,29 +87,38 @@ class FiltExpNl
     // Non-linear exponential filtering class for scalar values
     // Damping reduces to -1 by 8 * bound
 public:
-    FiltExpNl(AP_Float* secs, T bound_) : tau{secs}, bound{bound_} {} // Creates initial lastPoint and sets up parameters
+    FiltExpNl(AP_Float* secs, AP_Float* bound_) : tau{secs}, bound{bound_} {} // Creates initial lastPoint and sets up parameters
     T filterPoint(T point);                                           // Adds new data point and returns filtered value
 
 private:
     AP_Float* tau;
-    T bound;
+    AP_Float* bound;
     FiltVar<T> oldPoint;
 };
 
 template <typename T>
-class FiltExpNlAng : FiltExpNl<T>
+class FiltExpNlAng : FiltExpNl<Vector2<T>>
 {
     // Non-linear exponential filtering class for angular data
     // mod = 359: returns angle in 0 to 360 range
     // mod = 179: returns angle in -180 to 180 range
 public:
-    FiltExpNlAng(AP_Float* secs, T bound_, int mod = 359) : FiltExpNl<T>::tau{secs}, FiltExpNl<T>::bound{bound_}, mod_{mod} {} // Creates initial lastPoint and sets up parameters
+    FiltExpNlAng(AP_Float* secs, AP_Float* bound_, int mod = 359) : FiltExpNl<Vector2<T>>(secs,bound_), mod_{mod} {} // Creates initial lastPoint and sets up parameters
     T filterPoint(T angle);
 
 private:
     int mod_;
 };
 
+
+// Overload of abs so we can process vector2
+// Returns absolute value of angle (not magnitude)
+template <typename T>
+T abs(Vector2<T> vec)
+{
+    //vec.angle should use atan2 which will give +=180 but wrap anyway
+    return abs(wrap_180(ToDeg(vec.angle())));
+}
 
 
 
@@ -197,7 +206,7 @@ template <typename T>
 T FiltExpNl<T>::filterPoint(T point)
 {
     // Create new datapoint and calculate smoothing constant based on time difference 
-    // If new point is outside bound from oldPoint, reduce smoothing constant
+    // If new point is outside bound from oldPoint (units per second), reduce smoothing constant
 
     FiltVar<T> newPoint(point);
     double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
@@ -206,9 +215,12 @@ T FiltExpNl<T>::filterPoint(T point)
     if (fpclassify(*tau) != FP_ZERO)
         a = std::exp(-dTime / *(tau));
 
+    // Calculate non-linear factor
     double bFac = 0;
-    if (bound)
-        bFac = abs((newPoint.val() - oldPoint.val()) / bound);
+    if (fpclassify(*bound) != FP_ZERO) {
+        T dVar = newPoint.var() - oldPoint.var();
+        bFac = abs((dVar / dTime) / (*bound));
+    }
 
     if (bFac > 1)
     {
@@ -218,7 +230,7 @@ T FiltExpNl<T>::filterPoint(T point)
     }
 
     // Return exponential filtered value and store for next time
-    T newVal = a * oldPoint.var() + (1 - a) * newPoint.var();
+    T newVal = oldPoint.var() * a + newPoint.var() * (1 - a);
     newPoint.setVar(newVal);
     oldPoint = newPoint;
     return newVal;
@@ -229,7 +241,7 @@ T FiltExpNlAng<T>::filterPoint(T angle)
 {
     // Convert directional value to u/v, filter, convert back and wrap to appropiate range
     Vector2<T> dataPoint(dToUv(angle));
-    Vector2<T> filtVec = FiltExpNl<T>::filterPoint(dataPoint);
+    Vector2<T> filtVec = this->FiltExpNl<Vector2<T>>::filterPoint(dataPoint);
 
     T angleFiltered = ToDeg(filtVec.angle());
     return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);

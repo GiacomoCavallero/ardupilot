@@ -193,6 +193,8 @@ public:
     AP_Int32 gps_1;
     AP_Int32 gps_2;
     AP_Int32 gps_3;
+    AP_Float filt_cog;
+    AP_Float filt_sog;
     AP_Float filt_bsp;
     AP_Float filt_lee;
     AP_Float filt_hdg_tc;
