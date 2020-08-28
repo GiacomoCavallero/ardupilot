@@ -38,10 +38,10 @@ template <typename T>
 class FiltBoxcarAng : FiltBoxcar<T>
 {
     // Boxcar filtering class for angular data
-    // mod = 359: returns angle in 0 to 360 range
-    // mod = 179: returns angle in -180 to 180 range
+    // mod = 360: returns angle in 0 to 360 range
+    // mod = 180 returns angle in -180 to 180 range
 public:
-    FiltBoxcarAng(AP_Float* secs, int mod = 359) : FiltBoxcar<T>::bctime{secs}, mod_{mod} {} // Creates empty deque and sets up parameters
+    FiltBoxcarAng(AP_Float* secs, int mod = 360) : FiltBoxcar<T>::bctime{secs}, mod_{mod} {} // Creates empty deque and sets up parameters
     T filterPoint(T angle);
 
 private:
@@ -71,10 +71,10 @@ template <typename T>
 class FiltExpAng : FiltExp<Vector2<T>>
 {
     // Exponential filtering class for angular data
-    // mod = 359: returns angle in 0 to 360 range
-    // mod = 179: returns angle in -180 to 180 range
+    // mod = 360: returns angle in 0 to 360 range
+    // mod = 180: returns angle in -180 to 180 range
 public:
-    FiltExpAng(AP_Float* secs, int mod = 359) : FiltExp<Vector2<T>>(secs), mod_{mod} {} // Creates initlal oldPoint and sets up parameters
+    FiltExpAng(AP_Float* secs, int mod = 360) : FiltExp<Vector2<T>>(secs), mod_{mod} {} // Creates initlal oldPoint and sets up parameters
     T filterPoint(T angle);
 
 private:
@@ -100,10 +100,10 @@ template <typename T>
 class FiltExpNlAng : FiltExpNl<Vector2<T>>
 {
     // Non-linear exponential filtering class for angular data
-    // mod = 359: returns angle in 0 to 360 range
-    // mod = 179: returns angle in -180 to 180 range
+    // mod = 360: returns angle in 0 to 360 range
+    // mod = 180: returns angle in -180 to 180 range
 public:
-    FiltExpNlAng(AP_Float* secs, AP_Float* bound_, int mod = 359) : FiltExpNl<Vector2<T>>(secs,bound_), mod_{mod} {} // Creates initial lastPoint and sets up parameters
+    FiltExpNlAng(AP_Float* secs, AP_Float* bound_, int mod = 360) : FiltExpNl<Vector2<T>>(secs,bound_), mod_{mod} {} // Creates initial lastPoint and sets up parameters
     T filterPoint(T angle);
 
 private:
