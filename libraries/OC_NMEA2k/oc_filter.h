@@ -113,6 +113,7 @@ private:
 
 // Overload of abs so we can process vector2
 // Returns absolute value of angle (not magnitude)
+// Used for change rates here so wrap around 180 not 360
 template <typename T>
 T abs(Vector2<T> vec)
 {
