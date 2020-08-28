@@ -437,7 +437,18 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                     break;
                 case 1: // Magnetic
                 case 2: // Apparent
+                    weather.awa = wrap_180(wind_angle);
+                    weather.aws = wind_speed;
+                    // Filter AWS and AWA
+                    weather.awa_filt = weather.filter_awa.filterPoint(weather.awa);
+                    weather.aws_filt = weather.filter_aws.filterPoint(weather.aws);
+                    break;
                 case 3: // True (boat referenced)
+                    weather.twa = wrap_180(wind_angle);
+                    // FIlter TWA
+                    weather.twa_filt = weather.filter_twa.filterPoint(weather.twa);
+                    break;
+
                 case 4: // True (water referenced)
                         // TODO: consider use of other readings
                 default:

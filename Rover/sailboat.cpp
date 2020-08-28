@@ -1253,5 +1253,32 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("F_TWD", 11, NMEA2k_Params, filt_twd, 5),
 
+    // @Param: FILT_TWA
+    // @DisplayName: TWA filter time constant
+    // @Description: Seconds time constant for exponential filter.
+    // @Units: Seconds
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("F_TWA", 12, NMEA2k_Params, filt_twa, 5),
+
+    // @Param: FILT_AWA
+    // @DisplayName: AWA filter time constant
+    // @Description: Seconds time constant for exponential filter.
+    // @Units: Seconds
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("F_AWA", 13, NMEA2k_Params, filt_awa, 5),
+
+    // @Param: FILT_AWS
+    // @DisplayName: AWS filter time constant
+    // @Description: Seconds time constant for exponential filter.
+    // @Units: Seconds
+    // @Range: ...
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("F_AWS", 14, NMEA2k_Params, filt_aws, 5),
+
     AP_GROUPEND
 };

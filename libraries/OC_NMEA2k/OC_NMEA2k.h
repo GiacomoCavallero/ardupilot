@@ -81,25 +81,37 @@ public:
     class WeatherStation
     {
     public:
-        float wind_speed_true;      // (m/s)
+        float wind_speed_true;      // TWS (m/s)
         float wind_speed_true_filt; // (m/s)
-        float wind_dir_true;        // (deg[0..360])
+        float wind_dir_true;        // TWD (deg[0..360])
         float wind_dir_true_filt;   // (deg[0..360])
         float wind_gusts;           // (m/s)
         float atmos_pressure;       // Atmospheric pressure (hPa)
         float air_temp;             // (celcius)
         float humidity;             // (%)
+        float awa;                  // Apparent wind angle
+        float awa_filt;
+        float aws;                  // Apparent wind speed
+        float aws_filt;
+        float twa;                  // True wind angle
+        float twa_filt;
         uint64_t last_update;       // System time of last update (millis)
 
         FiltExp<float> filter_tws;
         FiltExpAng<float> filter_twd;
+        FiltExp<float> filter_aws;
+        FiltExpAng<float> filter_awa;
+        FiltExpAng<float> filter_twa;
 
         WeatherStation() : wind_speed_true(0), wind_speed_true_filt(0),
                            wind_dir_true(0), wind_dir_true_filt(0),
                            wind_gusts(0), atmos_pressure(0), air_temp(0), humidity(0),
-                           last_update(0),
+                           last_update(0), awa(0), aws(0), twa(0),
                            filter_tws(&(rover.g2.nmea2k.filt_tws)),
-                           filter_twd(&(rover.g2.nmea2k.filt_twd)) {}
+                           filter_twd(&(rover.g2.nmea2k.filt_twd)),
+                           filter_aws(&(rover.g2.nmea2k.filt_aws)),
+                           filter_awa(&(rover.g2.nmea2k.filt_awa),180),
+                           filter_twa(&(rover.g2.nmea2k.filt_twa),180) {}
     };
 
     class Compass

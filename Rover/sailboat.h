@@ -201,5 +201,8 @@ public:
     AP_Float filt_hdg_nl;
     AP_Float filt_tws;
     AP_Float filt_twd;
+    AP_Float filt_aws;
+    AP_Float filt_awa;
+    AP_Float filt_twa;
 
 };
