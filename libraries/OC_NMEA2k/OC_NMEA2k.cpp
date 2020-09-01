@@ -201,16 +201,14 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             if (compass_reference)
             {
                 // Magnetic
-                compass.heading = CLIP_360(
-                    ToDeg(heading + declination)); // assuming declincation is correct
-                compass.magnetic = CLIP_360(ToDeg(heading));
+                compass.heading = wrap_360(ToDeg(heading + declination)); // assuming declincation is correct
+                compass.magnetic = wrap_360(ToDeg(heading));
             }
             else
             {
                 // True
-                compass.heading = CLIP_360(ToDeg(heading));
-                compass.magnetic = CLIP_360(
-                    ToDeg(heading - declination)); // assuming declincation is correct
+                compass.heading = wrap_360(ToDeg(heading));
+                compass.magnetic = wrap_360(ToDeg(heading - declination)); // assuming declincation is correct
             }
             compass.last_update = AP_HAL::millis64();
 
@@ -427,26 +425,26 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 switch (pmv->getInteger("Reference"))
                 {
                 case 0: // True wind
-                    weather.wind_dir_true = wrap_360(wind_angle);
-                    weather.wind_speed_true = wind_speed;
+                    weather.true_wind_dir = wrap_360(wind_angle);
+                    weather.true_wind_speed = wind_speed;
 
                     // Filter TWS and TWD
-                    weather.wind_dir_true_filt = weather.filter_twd.filterPoint(weather.wind_dir_true);
-                    weather.wind_speed_true_filt = weather.filter_tws.filterPoint(weather.wind_speed_true);
+                    weather.true_wind_dir_filt = weather.filter_twd.filterPoint(weather.true_wind_dir);
+                    weather.true_wind_speed_filt = weather.filter_tws.filterPoint(weather.true_wind_speed);
 
                     break;
                 case 1: // Magnetic
                 case 2: // Apparent
-                    weather.awa = wrap_180(wind_angle);
-                    weather.aws = wind_speed;
+                    weather.apparent_wind_angle = wrap_180(wind_angle);
+                    weather.apparent_wind_speed = wind_speed;
                     // Filter AWS and AWA
-                    weather.awa_filt = weather.filter_awa.filterPoint(weather.awa);
-                    weather.aws_filt = weather.filter_aws.filterPoint(weather.aws);
+                    weather.apparent_wind_angle_filt = weather.filter_awa.filterPoint(weather.apparent_wind_angle);
+                    weather.apparent_wind_speed_filt = weather.filter_aws.filterPoint(weather.apparent_wind_speed);
                     break;
                 case 3: // True (boat referenced)
-                    weather.twa = wrap_180(wind_angle);
+                    weather.true_wind_angle = wrap_180(wind_angle);
                     // FIlter TWA
-                    weather.twa_filt = weather.filter_twa.filterPoint(weather.twa);
+                    weather.true_wind_angle_filt = weather.filter_twa.filterPoint(weather.true_wind_angle);
                     break;
 
                 case 4: // True (water referenced)
@@ -520,15 +518,39 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         double wind_speed = pmv->getDouble("Wind Speed");
         double wind_angle = ToDeg(pmv->getDouble("Wind Direction"));
         double wind_gusts = pmv->getDouble("Wind Gusts");
-        if (pmv->getInteger("Wind Reference") == 0)
-        { // True wind
-            weather.wind_dir_true = wrap_360(wind_angle);
-            weather.wind_speed_true = wind_speed;
-            weather.wind_gusts = wind_gusts;
 
-            weather.wind_dir_true_filt   = weather.filter_twd.filterPoint(wind_angle);
-            weather.wind_speed_true_filt = weather.filter_tws.filterPoint(wind_speed);
+        switch (pmv->getInteger("Wind Reference"))
+        {
+        case 0: // True wind
+            weather.true_wind_dir = wrap_360(wind_angle);
+            weather.true_wind_speed = wind_speed;
+
+            // Filter TWS and TWD
+            weather.true_wind_dir_filt = weather.filter_twd.filterPoint(weather.true_wind_dir);
+            weather.true_wind_speed_filt = weather.filter_tws.filterPoint(weather.true_wind_speed);
+
+            break;
+        case 1: // Magnetic
+        case 2: // Apparent
+            weather.apparent_wind_angle = wrap_180(wind_angle);
+            weather.apparent_wind_speed = wind_speed;
+            // Filter AWS and AWA
+            weather.apparent_wind_angle_filt = weather.filter_awa.filterPoint(weather.apparent_wind_angle);
+            weather.apparent_wind_speed_filt = weather.filter_aws.filterPoint(weather.apparent_wind_speed);
+            break;
+        case 3: // True (boat referenced)
+            weather.true_wind_angle = wrap_180(wind_angle);
+            // FIlter TWA
+            weather.true_wind_angle_filt = weather.filter_twa.filterPoint(weather.true_wind_angle);
+            break;
+
+        case 4: // True (water referenced)
+                // TODO: consider use of other readings
+        default:
+            break;
         }
+        weather.wind_gusts = wind_gusts;
+
         double ambient_temp = pmv->getDouble("Ambient Temperature");
         double atmos_pressure = pmv->getDouble("Atmospheric Pressure");
         weather.air_temp = ambient_temp;
@@ -561,12 +583,14 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 
     case 129809: // AIS Class B static data (msg 24 Part A)
     case 129810: // AIS Class B static data (msg 24 Part B)
+    case 130817: // Navico: Product Information
+    case 130827: // Lowrance: unknown
     case 130934: // ???
     case 130935: // ???
         break;
 
     default:
-        gcs().send_text(MAV_SEVERITY_WARNING,
+        gcs().send_text(MAV_SEVERITY_DEBUG,
                         "Ocius N2K received pgn %d(0x%x) from source %u.", pgn, pgn,
                         pmv->src);
         break;

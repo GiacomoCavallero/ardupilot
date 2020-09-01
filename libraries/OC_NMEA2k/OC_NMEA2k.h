@@ -81,32 +81,36 @@ public:
     class WeatherStation
     {
     public:
-        float wind_speed_true;      // TWS (m/s)
-        float wind_speed_true_filt; // (m/s)
-        float wind_dir_true;        // TWD (deg[0..360])
-        float wind_dir_true_filt;   // (deg[0..360])
+        float true_wind_speed;      // TWS (m/s)
+        float true_wind_speed_filt; // (m/s)
+        float true_wind_dir;        // TWD (deg[0..360])
+        float true_wind_dir_filt;   // (deg[0..360])
         float wind_gusts;           // (m/s)
+        float true_wind_angle;      // True wind angle
+        float true_wind_angle_filt;
+        float apparent_wind_angle;  // Apparent wind angle
+        float apparent_wind_angle_filt;
+        float apparent_wind_speed;  // Apparent wind speed
+        float apparent_wind_speed_filt;
+
         float atmos_pressure;       // Atmospheric pressure (hPa)
         float air_temp;             // (celcius)
         float humidity;             // (%)
-        float awa;                  // Apparent wind angle
-        float awa_filt;
-        float aws;                  // Apparent wind speed
-        float aws_filt;
-        float twa;                  // True wind angle
-        float twa_filt;
         uint64_t last_update;       // System time of last update (millis)
 
-        FiltExp<float> filter_tws;
-        FiltExpAng<float> filter_twd;
-        FiltExp<float> filter_aws;
-        FiltExpAng<float> filter_awa;
-        FiltExpAng<float> filter_twa;
+        FiltExp<float> filter_tws;      // Filter for true wind speed
+        FiltExpAng<float> filter_twd;   // Filter for true wind direction
+        FiltExpAng<float> filter_twa;   // Filter for true wind angle
+        FiltExp<float> filter_aws;      // Filter for apparent wind speed
+        FiltExpAng<float> filter_awa;   // Filter for apparent wind angle
 
-        WeatherStation() : wind_speed_true(0), wind_speed_true_filt(0),
-                           wind_dir_true(0), wind_dir_true_filt(0),
-                           wind_gusts(0), atmos_pressure(0), air_temp(0), humidity(0),
-                           last_update(0), awa(0), aws(0), twa(0),
+        WeatherStation() : true_wind_speed(0), true_wind_speed_filt(0),
+                           true_wind_dir(0), true_wind_dir_filt(0),
+                           wind_gusts(0), true_wind_angle(0), true_wind_angle_filt(0),
+                           apparent_wind_angle(0), apparent_wind_angle_filt(0),
+                           apparent_wind_speed(0), apparent_wind_speed_filt(0),
+                           atmos_pressure(0), air_temp(0), humidity(0),
+                           last_update(0),
                            filter_tws(&(rover.g2.nmea2k.filt_tws)),
                            filter_twd(&(rover.g2.nmea2k.filt_twd)),
                            filter_aws(&(rover.g2.nmea2k.filt_aws)),

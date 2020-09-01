@@ -231,8 +231,8 @@ void GCS_MAVLINK_Rover::send_weather_data() {
             nmea2k_sensors.weather.atmos_pressure,
             nmea2k_sensors.weather.humidity,
             0, // No irradiance sensor yet
-            nmea2k_sensors.weather.wind_speed_true,
-            nmea2k_sensors.weather.wind_dir_true,
+            nmea2k_sensors.weather.true_wind_speed,
+            nmea2k_sensors.weather.true_wind_dir,
             nmea2k_sensors.weather.wind_gusts);
 }
 
@@ -249,6 +249,26 @@ void GCS_MAVLINK_Rover::send_compass_airmar() {
             nmea2k_sensors.primary_gps.cog,
             nmea2k_sensors.primary_gps.sog
         );
+}
+
+void GCS_MAVLINK_Rover::send_wind_filtered(SENSOR_FILTERING filter) {
+    switch(filter) {
+    case FILTER_RAW:
+        mavlink_msg_wind_filtered_send(chan, filter,
+                nmea2k_sensors.weather.true_wind_dir, nmea2k_sensors.weather.true_wind_speed,
+                nmea2k_sensors.weather.true_wind_angle, nmea2k_sensors.weather.wind_gusts,
+                nmea2k_sensors.weather.apparent_wind_speed, nmea2k_sensors.weather.apparent_wind_angle);
+        break;
+    case FILTER_DEFAULT:
+        mavlink_msg_wind_filtered_send(chan, filter,
+                nmea2k_sensors.weather.true_wind_dir_filt, nmea2k_sensors.weather.true_wind_speed_filt,
+                nmea2k_sensors.weather.true_wind_angle_filt, nmea2k_sensors.weather.wind_gusts,
+                nmea2k_sensors.weather.apparent_wind_speed_filt, nmea2k_sensors.weather.apparent_wind_angle_filt);
+        break;
+    case SENSOR_FILTERING_ENUM_END:
+        // Ignore
+        break;
+    }
 }
 
 void Rover::send_servo_out(mavlink_channel_t chan)
@@ -462,6 +482,12 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
     case MSG_WIND:
         CHECK_PAYLOAD_SIZE(WIND);
         rover.g2.windvane.send_wind(chan);
+        CHECK_PAYLOAD_SIZE(WEATHER_DATA);
+        send_weather_data();
+        CHECK_PAYLOAD_SIZE(WIND_FILTERED);
+        send_wind_filtered(FILTER_RAW);
+        CHECK_PAYLOAD_SIZE(WIND_FILTERED);
+        send_wind_filtered(FILTER_DEFAULT);
         break;
 
     case MSG_ADSB_VEHICLE: {
