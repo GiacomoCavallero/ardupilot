@@ -78,6 +78,12 @@ public:
         TACK_STARBOARD
     };
 
+    enum WindReference {
+        WIND_APPARENT = 1,
+        WIND_TRUE = 2,
+        WIND_BOTH = 3
+    };
+
     // return the current tack
     Sailboat_Tack get_current_tack() const { return _current_tack; }
 
@@ -151,7 +157,7 @@ private:
     float _speed_true;                              // wind's true estimated speed in m/s - filtered
     LowPassFilterFloat _speed_apparent_filt{2.0f};
     LowPassFilterFloat _speed_true_filt{2.0f};
-    bool  _have_true_wind;                          // backend is reporting the true wind
+    WindReference  _sensor_reference;             // the reference the sensor uses to report
 
     // current tack
     Sailboat_Tack _current_tack;

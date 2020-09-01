@@ -88,7 +88,7 @@ public:
         float wind_gusts;           // (m/s)
         float true_wind_angle;      // True wind angle
         float true_wind_angle_filt;
-        float apparent_wind_angle;  // Apparent wind angle
+        float apparent_wind_angle;  // Apparent wind angle (deg[-180..180])
         float apparent_wind_angle_filt;
         float apparent_wind_speed;  // Apparent wind speed
         float apparent_wind_speed_filt;

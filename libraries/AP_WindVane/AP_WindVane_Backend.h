@@ -42,12 +42,14 @@ protected:
     // update frontend
     // m/s
     void speed_update_frontend(float apparent_speed_in);
-    //radians [-Pi..Pi]
-    void direction_update_frontend(float apparent_angle_ef);
+    // radians [-Pi..Pi]
+    void direction_update_frontend(float apparent_direction_ef);
     // m/s
-    void speed_true_update_frontend(float apparent_speed_in);
+    void speed_true_update_frontend(float true_speed_in);
     // radians [0..2*Pi]
-    void direction_true_update_frontend(float apparent_angle_ef);
+    void direction_true_update_frontend(float true_direction_ef);
+    // radians [0..2*Pi], m/s, radians [-Pi..Pi], m/s
+    void update_frontend_all(float true_direction_ef, float true_speed_in, float apparent_angle_bf, float apparent_speed_in);
 
     AP_WindVane &_frontend;
 

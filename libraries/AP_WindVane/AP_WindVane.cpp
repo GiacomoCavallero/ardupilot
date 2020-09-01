@@ -154,7 +154,7 @@ const AP_Param::GroupInfo AP_WindVane::var_info[] = {
 
 // constructor
 AP_WindVane::AP_WindVane() :
-        _have_true_wind(false)
+        _sensor_reference(WIND_APPARENT)
 {
     AP_Param::setup_object_defaults(this, var_info);
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -297,9 +297,9 @@ void AP_WindVane::update()
 
     // calculate true wind speed and direction from apparent wind
     if (have_speed && have_direciton) {
-        if (_have_true_wind) {
+        if (_sensor_reference == WIND_TRUE) {
             update_apparent_wind_speed_and_direction();
-        } else {
+        } else if (_sensor_reference == WIND_APPARENT) {
             update_true_wind_speed_and_direction();
         }
     } else {
