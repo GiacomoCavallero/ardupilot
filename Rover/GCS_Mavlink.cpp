@@ -231,8 +231,8 @@ void GCS_MAVLINK_Rover::send_weather_data() {
             nmea2k_sensors.weather.atmos_pressure,
             nmea2k_sensors.weather.humidity,
             0, // No irradiance sensor yet
-            nmea2k_sensors.weather.true_wind_speed,
-            nmea2k_sensors.weather.true_wind_dir,
+            rover.g2.windvane.get_true_wind_speed(),
+            wrap_360(ToDeg(rover.g2.windvane.get_true_wind_direction_rad())),
             nmea2k_sensors.weather.wind_gusts);
 }
 
