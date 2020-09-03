@@ -144,30 +144,28 @@ void Rover::Log_Write_Sail()
     }
 
     float wind_dir_tack = logger.quiet_nanf();
+    float wind_dir_rel = logger.quiet_nanf();
+    float wind_dir_abs = logger.quiet_nanf();
+    float wind_speed_true = logger.quiet_nanf();
+    float wind_speed_apparent = logger.quiet_nanf();
     uint8_t current_tack = 0;
     if (rover.g2.windvane.enabled()) {
         wind_dir_tack = degrees(g2.windvane.get_tack_threshold_wind_dir_rad());
         current_tack = uint8_t(g2.windvane.get_current_tack());
+        wind_dir_abs = degrees(g2.windvane.get_true_wind_direction_rad());
+        wind_dir_rel = degrees(g2.windvane.get_apparent_wind_angle_rad());
+        wind_speed_true = g2.windvane.get_true_wind_speed();
+        wind_speed_apparent = g2.windvane.get_apparent_wind_speed();
     }
 
-// @LoggerMessage: SAIL
-// @Description: Sailboat information
-// @Field: TimeUS: Time since system startup
-// @Field: Tack: Current tack, 0 = port, 1 = starboard
-// @Field: TackThr: Apparent wind angle used for tack threshold
-// @Field: MainOut: Normalized mainsail output
-// @Field: WingOut: Normalized wingsail output
-// @Field: MastRotOut: Normalized direct-rotation mast output
-// @Field: VMG: Velocity made good (speed at which vehicle is making progress directly towards destination)
-
-    logger.Write("SAIL", "TimeUS,Tack,TackThr,MainOut,WingOut,MastRotOut,VMG",
-                        "s-d%%%n", "F000000", "QBfffff",
+    logger.Write("SAIL", "TimeUS,WindDirTrue,WindDirApp,WindSpdTrue,WindSpdApp,SailOut,VMG",
+                        "shhnn%n", "F000000", "Qffffff",
                         AP_HAL::micros64(),
-                        current_tack,
-                        (double)wind_dir_tack,
+                        (double)wind_dir_abs,
+                        (double)wind_dir_rel,
+                        (double)wind_speed_true,
+                        (double)wind_speed_apparent,
                         (double)g2.motors.get_mainsail(),
-                        (double)g2.motors.get_wingsail(),
-                        (double)g2.motors.get_mast_rotation(),
                         (double)g2.sailboat.get_VMG());
 }
 

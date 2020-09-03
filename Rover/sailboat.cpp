@@ -396,7 +396,7 @@ void Sailboat::get_throttle_and_mainsail_out(float desired_speed, float &throttl
     const float pid_offset = rover.g2.attitude_control.get_sail_out_from_heel(radians(sail_heel_angle_max), rover.G_Dt) * 100.0f;
 
     // get apparent wind, + is wind over starboard side, - is wind over port side
-    const float wind_dir_apparent = degrees(rover.g2.windvane.get_apparent_wind_direction_rad());
+    const float wind_dir_apparent = degrees(rover.g2.windvane.get_apparent_wind_angle_rad());
     const float wind_dir_apparent_abs = fabsf(wind_dir_apparent);
     const float wind_dir_apparent_sign = is_negative(wind_dir_apparent) ? -1.0f : 1.0f;
 
@@ -606,7 +606,7 @@ float Sailboat::calc_heading(float desired_heading_cd)
         if (new_tack != current_tack) {
             // see if it would be a tack, the front of the boat going through the wind
             // or a gybe, the back of the boat going through the wind
-            const float app_wind_rad = rover.g2.windvane.get_apparent_wind_direction_rad();
+            const float app_wind_rad = rover.g2.windvane.get_apparent_wind_angle_rad();
             if (fabsf(app_wind_rad) + fabsf(new_heading_apparent_angle) < M_PI) {
                 should_tack = true;
             }

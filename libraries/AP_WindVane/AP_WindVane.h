@@ -58,7 +58,9 @@ public:
     void update();
 
     // get the apparent wind direction in body-frame in radians, 0 = head to wind
-    float get_apparent_wind_direction_rad() const { return _direction_apparent; }
+    float get_apparent_wind_angle_rad() const {
+        return wrap_PI(_direction_apparent_ef - AP::ahrs().yaw);
+    }
 
     // get the true wind direction in radians, 0 = wind coming from north
     float get_true_wind_direction_rad() const { return _direction_true; }
