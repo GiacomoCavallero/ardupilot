@@ -135,6 +135,7 @@ private:
     AP_Float sail_angle_min;
     AP_Float sail_angle_max;
     AP_Float sail_angle_ideal;
+    AP_Float sail_angle_error;
     AP_Float sail_heel_angle_max;
     AP_Float sail_no_go;
     AP_Float sail_windspeed_min;

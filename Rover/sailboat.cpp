@@ -192,6 +192,15 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("MTIME_DELAY", 17, Sailboat, mast_time_delay, 0),
 
+    // @Param: ANGLE_ERR
+    // @DisplayName: Sail angle error
+    // @Description: Required change in sail angle before moving the set point
+    // @Units: deg
+    // @Range: 0 90
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("ANGLE_ERR", 18, Sailboat, sail_angle_error, 5),
+
     AP_GROUPEND
 };
 
@@ -813,12 +822,21 @@ MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     int32_t diff = sail_set_pos;
     diff = abs(diff - (int32_t)pwm);
-    if (sail_set_pos == pwm) {
-        if (sail_status.moving || diff < 100) {
-            // If we're already in position or still moving to the position no need to do anything.
+
+    int32_t pwm_err = sail_angle_error * 400 / 90;  // Get the PWM error given the allowed angle error
+    if (diff <= pwm_err) {
+        // New position is within error of the current set point
+
+        // How far is the current position from the desired position
+        int32_t pwm_dist = sail_status.pwm;
+        pwm_dist = abs(pwm_dist - (int32_t)pwm);
+
+        if (sail_status.moving || pwm_dist <= pwm_err) {
+            // Sail is still moving to the set point or within error of the desired point
             return MAV_RESULT_ACCEPTED;
         }
     }
+
     // Only move if armed or received a GCS command to center the sail.
     if (gcs_command && pwm == 1500) {
     } else if (!rover.arming.is_armed()) {
