@@ -19,6 +19,11 @@
 
 #include "ocius.h"
 
+#define RUDDER_SERVO_CH     1
+#define MAST_SERVO_CH       9
+#define SAIL_SERVO_CH       10
+#define WINCH_SERVO_CH      14
+
 class Sailboat
 {
 public:

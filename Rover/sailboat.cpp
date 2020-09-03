@@ -204,10 +204,6 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     AP_GROUPEND
 };
 
-#define MAST_SERVO_CH       9
-#define SAIL_SERVO_CH       10
-#define WINCH_SERVO_CH      14
-
 /*
   constructor
  */

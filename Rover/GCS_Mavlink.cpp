@@ -131,26 +131,22 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
             rover.g2.wp_nav.get_default_speed());
 }
 
-#define RUDDER_CH   0
-#define MAST_CH     8
-#define SAIL_CH     9
-#define WINCH_CH    13
 void GCS_MAVLINK_Rover::send_sail_status() {
     Location hold_loc;
     bool have_wp = rover.mode_hold.get_desired_location(hold_loc);
 
     AP_HAL::RCOutput* rcout = AP_HAL::get_HAL().rcout;
-    AP_HAL::ServoStatus rudder_status = rcout->read_status(RUDDER_CH),
-            mast_status = rcout->read_status(MAST_CH),
-            sail_status = rcout->read_status(SAIL_CH),
-            winch_status = rcout->read_status(WINCH_CH);
+    AP_HAL::ServoStatus rudder_status = rcout->read_status(RUDDER_SERVO_CH-1),
+            mast_status = rcout->read_status(MAST_SERVO_CH-1),
+            sail_status = rcout->read_status(SAIL_SERVO_CH-1),
+            winch_status = rcout->read_status(WINCH_SERVO_CH-1);
 
 
     mavlink_msg_sail_status_send(chan,
             sail_status.pwm, rudder_status.pwm,
             mast_status.pwm, winch_status.pwm,
-            rcout->read(SAIL_CH), rcout->read(RUDDER_CH),
-            rcout->read(MAST_CH), rcout->read(WINCH_CH),
+            rcout->read(SAIL_SERVO_CH-1), rcout->read(RUDDER_SERVO_CH-1),
+            rcout->read(MAST_SERVO_CH-1), rcout->read(WINCH_SERVO_CH-1),
             sail_status.homed, rudder_status.homed,
             mast_status.homed, winch_status.homed,
             // TODO: populate with parameters when created
