@@ -912,20 +912,26 @@ uint16_t Sailboat::get_optimal_sail_position() const {
     } else if (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY) {
         float desired_angle = 0;
 
-        float wind_bf = degrees(rover.g2.windvane.get_apparent_wind_direction_rad());
+        float apparent_wind_bf = ToDeg(rover.g2.windvane.get_apparent_wind_angle_rad());
+        float true_wind_speed = rover.g2.windvane.get_true_wind_speed();
 
         float desired_attack = 0;
 //        float wind_bf_180 = CLIP_180(wind_bf);
 
+        // modify sail_angle based on wind speed using AoA = AoA - 0.4*TWS^2
+        float target_attack_angle = sail_angle_ideal;
+        target_attack_angle -= 0.4*(true_wind_speed*true_wind_speed);
+        target_attack_angle = (target_attack_angle < 0 ? 0: target_attack_angle);
+
         float catch_zone = 90 - sail_angle_ideal;
-        if (fabs(wind_bf) > 180 - catch_zone) {
+        if (fabs(apparent_wind_bf) > 180 - catch_zone) {
             // Wind from behind, so square the sail
             desired_angle = 0;
         } else {
-            desired_attack = fabs(wind_bf) * sail_angle_ideal / (90 + sail_angle_ideal);
+            desired_attack = fabs(apparent_wind_bf) * sail_angle_ideal / (90 + sail_angle_ideal);
 
-            desired_angle = 90 - fabs(wind_bf) + desired_attack;
-            if (wind_bf < 0) {
+            desired_angle = 90 - fabs(apparent_wind_bf) + desired_attack;
+            if (apparent_wind_bf < 0) {
                 desired_angle = -desired_angle;
             }
         }
