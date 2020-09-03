@@ -824,7 +824,7 @@ MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
     diff = abs(diff - (int32_t)pwm);
 
     int32_t pwm_err = sail_angle_error * 400 / 90;  // Get the PWM error given the allowed angle error
-    if (diff <= pwm_err) {
+    if (!gcs_command && diff <= pwm_err) {
         // New position is within error of the current set point
 
         // How far is the current position from the desired position
@@ -892,10 +892,30 @@ uint16_t Sailboat::get_optimal_sail_position() const {
         float azi = calcSun((float)rover.current_loc.lat, (float)rover.current_loc.lng);
         if (azi > -1) {
 //            float bearing = gps.bearing_true() / 100.0;
-            float bearing = degrees(rover.ahrs.yaw);
+            float bearing = ToDeg(rover.ahrs.yaw);
             float sun_angle = CLIP_360(azi - bearing);
 
+            uint16_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
+            int32_t pwm_err = sail_angle_error * 400 / 90;  // Get the PWM error given the allowed angle error
+
             pwm = 1500;
+            if (sun_angle >= 90 - sail_angle_error && sun_angle <= 90 + sail_angle_error) {
+                // sun_angle is about 90 degrees, need to add hysteresis
+                if (sun_angle <= 90 && sail_set_pos < (1100 + pwm_err)) {
+                    sun_angle = 90.5;
+                } else if (sun_angle >= 90 && sail_set_pos > (1900 - pwm_err)) {
+                    sun_angle = 89.5;
+                }
+            } else if (sun_angle >= 270 - sail_angle_error && sun_angle <= 270 + sail_angle_error) {
+                // sun_angle is about 270 degrees, need to add hysteresis
+                if (sun_angle <= 270 && sail_set_pos < (1100 + pwm_err)) {
+                    sun_angle = 270.5;
+                } else if (sun_angle >= 270 && sail_set_pos > (1900 - pwm_err)) {
+                    sun_angle = 269.5;
+                }
+            }
+
+
             if (sun_angle <= 90) {
                 pwm = 1500 + ((sun_angle)/90) * 400;
             }
