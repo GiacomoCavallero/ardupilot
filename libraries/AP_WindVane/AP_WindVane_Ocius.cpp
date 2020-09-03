@@ -26,12 +26,12 @@ AP_WindVane_Ocius::AP_WindVane_Ocius(AP_WindVane &frontend) :
 
 void AP_WindVane_Ocius::update_direction()
 {
-    update_frontend_all(wrap_2PI(ToRad(nmea2k_sensors.weather.true_wind_dir)), nmea2k_sensors.weather.true_wind_speed,
-            wrap_PI(ToRad(nmea2k_sensors.weather.apparent_wind_angle)), nmea2k_sensors.weather.apparent_wind_speed);
+    update_frontend_all(wrap_2PI(ToRad(nmea2k_sensors.weather.true_wind_dir_filt)), nmea2k_sensors.weather.true_wind_speed_filt,
+            wrap_PI(ToRad(nmea2k_sensors.weather.apparent_wind_angle_filt)), nmea2k_sensors.weather.apparent_wind_speed_filt);
 }
 
 void AP_WindVane_Ocius::update_speed()
 {
-    update_frontend_all(wrap_2PI(ToRad(nmea2k_sensors.weather.true_wind_dir)), nmea2k_sensors.weather.true_wind_speed,
-            wrap_PI(ToRad(nmea2k_sensors.weather.apparent_wind_angle)), nmea2k_sensors.weather.apparent_wind_speed);
+    update_frontend_all(wrap_2PI(ToRad(nmea2k_sensors.weather.true_wind_dir_filt)), nmea2k_sensors.weather.true_wind_speed_filt,
+            wrap_PI(ToRad(nmea2k_sensors.weather.apparent_wind_angle_filt)), nmea2k_sensors.weather.apparent_wind_speed_filt);
 }
