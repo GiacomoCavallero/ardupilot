@@ -939,12 +939,12 @@ uint16_t Sailboat::get_optimal_sail_position() const {
         target_attack_angle -= 0.4*(true_wind_speed*true_wind_speed);
         target_attack_angle = (target_attack_angle < 0 ? 0: target_attack_angle);
 
-        float catch_zone = 90 - sail_angle_ideal;
+        float catch_zone = 90 - target_attack_angle;
         if (fabs(apparent_wind_bf) > 180 - catch_zone) {
             // Wind from behind, so square the sail
             desired_angle = 0;
         } else {
-            desired_attack = fabs(apparent_wind_bf) * sail_angle_ideal / (90 + sail_angle_ideal);
+            desired_attack = fabs(apparent_wind_bf) * target_attack_angle / (90 + target_attack_angle);
 
             desired_angle = 90 - fabs(apparent_wind_bf) + desired_attack;
             if (apparent_wind_bf < 0) {
