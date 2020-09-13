@@ -111,6 +111,9 @@ void AP_Compass_Ocius::read()
     
     // Rotate into body frame
     Vector3f mag_bf = dcm.transposed() * mag_ef;
+
+    rotate_field(mag_bf, compass_instance);
     publish_raw_field(mag_bf, compass_instance);
+    correct_field(mag_bf, compass_instance);
     publish_filtered_field(mag_bf, compass_instance);
 }
