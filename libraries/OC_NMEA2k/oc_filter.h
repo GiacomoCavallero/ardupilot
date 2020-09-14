@@ -80,7 +80,7 @@ class FiltExpAng : FiltExp<Vector2<T>>
     // mod = 360: returns angle in 0 to 360 range
     // mod = 180: returns angle in -180 to 180 range
 public:
-    FiltExpAng(AP_Float* secs, int mod = 360) : FiltExp<Vector2<T>>(secs), mod_{mod} {} // Creates initlal oldPoint and sets up parameters
+    FiltExpAng(AP_Float* secs, int mod = 360) : FiltExp<Vector2<T>>(secs), mod_{mod} {} // Creates initial oldPoint and sets up parameters
     T filterPoint(T angle);
 
 private:
@@ -124,7 +124,7 @@ template <typename T>
 T abs(Vector2<T> vec)
 {
     //uvToD uses atan2 which will give +=180 but wrap anyway
-    return abs(wrap_180(ToDeg(uvToD(vec))));
+    return abs(wrap_180(uvToD(vec)));
 }
 
 
