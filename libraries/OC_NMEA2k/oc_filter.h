@@ -51,7 +51,7 @@ private:
 template <typename T>
 Vector2<T> dToUv(T d)
 {
-    return Vector2<T>(-sin(radians(d)), -cos(radians(d)));
+    return Vector2<T>(sin(radians(d)), cos(radians(d)));
 }
 
 template <typename T>
@@ -199,7 +199,7 @@ T FiltExpAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = this->FiltExp<Vector2<T>>::filterPoint(dataPoint);
 
-    T angleFiltered = ToDeg(atan2(-filtVec[0], -filtVec[1]));
+    T angleFiltered = ToDeg(filtVec.angle());
     return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
 
