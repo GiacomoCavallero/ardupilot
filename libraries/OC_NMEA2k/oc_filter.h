@@ -55,6 +55,12 @@ Vector2<T> dToUv(T d)
 }
 
 template <typename T>
+T uvToD(Vector2<T> uv)
+{
+    return ToDeg(atan2(uv.y,uv.x));
+}
+
+template <typename T>
 class FiltExp
 {
     // Exponential filtering class for scalar values
@@ -117,8 +123,8 @@ private:
 template <typename T>
 T abs(Vector2<T> vec)
 {
-    //vec.angle should use atan2 which will give +=180 but wrap anyway
-    return abs(wrap_180(ToDeg(vec.angle())));
+    //uvToD uses atan2 which will give +=180 but wrap anyway
+    return abs(wrap_180(ToDeg(uvToD(vec))));
 }
 
 
@@ -171,7 +177,7 @@ T FiltBoxcarAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = FiltBoxcar<T>::filterPoint(dataPoint);
 
-    T angleFiltered = ToDeg(filtVec.angle());
+    T angleFiltered = uvToD(filtVec);
     return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
 
@@ -199,7 +205,7 @@ T FiltExpAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = this->FiltExp<Vector2<T>>::filterPoint(dataPoint);
 
-    T angleFiltered = ToDeg(filtVec.angle());
+    T angleFiltered = uvToD(filtVec);
     return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
 
@@ -244,6 +250,6 @@ T FiltExpNlAng<T>::filterPoint(T angle)
     Vector2<T> dataPoint(dToUv(angle));
     Vector2<T> filtVec = this->FiltExpNl<Vector2<T>>::filterPoint(dataPoint);
 
-    T angleFiltered = ToDeg(filtVec.angle());
+    T angleFiltered = uvToD(filtVec);
     return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
