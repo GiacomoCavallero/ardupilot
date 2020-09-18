@@ -151,6 +151,7 @@ private:
     AP_Int8 sail_mode;
     AP_Int16 sail_flags;
     AP_Int32 sail_epos_zero;
+    AP_Float sail_tack_corridor;
     AP_Int32 mast_time_up;
     AP_Int32 mast_time_down;
     AP_Int32 mast_time_delay;

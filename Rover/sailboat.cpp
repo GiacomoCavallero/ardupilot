@@ -136,7 +136,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: 0 16
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("FLAGS", 11, Sailboat, sail_flags, 0),
+    AP_GROUPINFO("FLAGS", 59, Sailboat, sail_flags, 0),
 
     // @Param: EPOS_ZERO
     // @DisplayName: Sail encoder 0 point
@@ -145,7 +145,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("EPOS_ZERO", 12, Sailboat, sail_epos_zero, 0),
+    AP_GROUPINFO("EPOS_ZERO", 58, Sailboat, sail_epos_zero, 0),
 
     // @Param: HOLD_MODE
     // @DisplayName: Sail hold mode
@@ -154,7 +154,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: 0..2
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("HOLD_MODE", 13, Sailboat, hold_mode, 0),
+    AP_GROUPINFO("HOLD_MODE", 57, Sailboat, hold_mode, 0),
 
     // @Param: HOLD_RADIUS
     // @DisplayName: Sail hold radius
@@ -163,7 +163,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: >=0
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("HOLD_RADIUS", 14, Sailboat, hold_radius, 0),
+    AP_GROUPINFO("HOLD_RADIUS", 56, Sailboat, hold_radius, 0),
 
     // @Param: MTIME_UP
     // @DisplayName: Mast time up
@@ -172,7 +172,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: >0
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MTIME_UP", 15, Sailboat, mast_time_up, 7500),
+    AP_GROUPINFO("MTIME_UP", 55, Sailboat, mast_time_up, 7500),
 
     // @Param: MTIME_DOWN
     // @DisplayName: Mast time down
@@ -181,7 +181,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: >0
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MTIME_DOWN", 16, Sailboat, mast_time_down, 7500),
+    AP_GROUPINFO("MTIME_DOWN", 54, Sailboat, mast_time_down, 7500),
 
     // @Param: MTIME_DELAY
     // @DisplayName: Mast time delay
@@ -190,7 +190,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: >0
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MTIME_DELAY", 17, Sailboat, mast_time_delay, 0),
+    AP_GROUPINFO("MTIME_DELAY", 53, Sailboat, mast_time_delay, 0),
 
     // @Param: ANGLE_ERR
     // @DisplayName: Sail angle error
@@ -199,7 +199,16 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: 0 90
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("ANGLE_ERR", 18, Sailboat, sail_angle_error, 5),
+    AP_GROUPINFO("ANGLE_ERR", 52, Sailboat, sail_angle_error, 5),
+
+    // @Param: TACK_CORRID
+    // @DisplayName: Tack Corridor
+    // @Description: Maximum acceptable crosstrack error while tacking upwind
+    // @Units: m
+    // @Range: 0+
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("TACK_CORRID", 51, Sailboat, sail_tack_corridor, 100),
 
     AP_GROUPEND
 };
@@ -633,7 +642,7 @@ float Sailboat::calc_heading(float desired_heading_cd)
     // trigger tack if cross track error larger than xtrack_max parameter
     // this effectively defines a 'corridor' of width 2*xtrack_max that the boat will stay within
     const float cross_track_error = rover.g2.wp_nav.crosstrack_error();
-    if ((fabsf(cross_track_error) >= xtrack_max) && !is_zero(xtrack_max) && !should_tack && !currently_tacking) {
+    if ((fabsf(cross_track_error) >= sail_tack_corridor) && !is_zero(sail_tack_corridor) && !should_tack && !currently_tacking) {
         // make sure the new tack will reduce the cross track error
         // if were on starboard tack we are traveling towards the left hand boundary
         if (is_positive(cross_track_error) && (current_tack == AP_WindVane::Sailboat_Tack::TACK_STARBOARD)) {
