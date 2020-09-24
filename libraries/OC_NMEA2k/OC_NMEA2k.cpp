@@ -566,6 +566,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     case 59904:  // ISO Request
     case 60928:  // ISO Address Claim
     case 65410:  // Airmar: Device Information
+    case 126993: // Heartbeat
     case 127251: // Rate of Turn
     case 127258: // Magnetic Variation
     case 129044: // Datum
@@ -574,13 +575,13 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     case 130314: // Actual Pressure // TODO: Does it differ from in 130311?
                  //        case 130323: // Meteorological Station Data // TODO:
                  //        Does it differ from in 130311?
-//    case 130316: // Temperature Extended Range
+    case 130316: // Temperature Extended Range
     case 130944: // Airmar: POST
     case 130945: // Fast Packet Transfer
                  // TODO: Look up these PGNs
     case 65408:  // Airmar: Depth Quality Factor
     case 65409:  // Airmar: Speed Pulse Count
-//    case 128000:
+    case 128000:
     case 128275: // Distance Log
         break;
     case 129038: // AIS Class A Position Report
