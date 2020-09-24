@@ -13,6 +13,7 @@
 #include <GCS_MAVLink/GCS.h>
 #include <OC_NMEA2k/OC_NMEA2k.h>
 #include <stdio.h>
+#include <map>
 
 #include "n2kparse.h"
 
@@ -137,6 +138,9 @@ static void nmea2k_make_gps_time(uint32_t bcd_date, uint32_t bcd_milliseconds,
          : (pmv->src == gps_secondary_id \
                 ? "Secondary"            \
                 : (pmv->src == gps_tertiary_id ? "Tertiary" : "Unknown")))
+
+
+std::map<uint32_t, uint32_t> new_pgns;
 
 // Processes a just-completed term
 // Returns true if new sentence has just passed checksum test and is validated
@@ -558,6 +562,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     }
     break;
 
+    case 0:      // Ignore
     case 59904:  // ISO Request
     case 60928:  // ISO Address Claim
     case 65410:  // Airmar: Device Information
@@ -569,12 +574,13 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     case 130314: // Actual Pressure // TODO: Does it differ from in 130311?
                  //        case 130323: // Meteorological Station Data // TODO:
                  //        Does it differ from in 130311?
+//    case 130316: // Temperature Extended Range
     case 130944: // Airmar: POST
-    case 0:      // Ignore
     case 130945: // Fast Packet Transfer
                  // TODO: Look up these PGNs
     case 65408:  // Airmar: Depth Quality Factor
     case 65409:  // Airmar: Speed Pulse Count
+//    case 128000:
     case 128275: // Distance Log
         break;
     case 129038: // AIS Class A Position Report
@@ -590,9 +596,33 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     default:
-        gcs().send_text(MAV_SEVERITY_DEBUG,
-                        "Ocius N2K received pgn %d(0x%x) from source %u.", pgn, pgn,
-                        pmv->src);
+        if (new_pgns.count(pgn) == 0) {
+            new_pgns[pgn] = 0;
+        }
+        uint32_t repeats = new_pgns[pgn];
+
+        if (repeats >= 10) {
+            // Limiting to just 10 repeats, to avoid flooding.
+        } else {
+            // update repeat count
+            new_pgns[pgn] = ++repeats;
+
+            // Look up description.
+            const char* pgn_desc = NULL;
+            for (Pgn* pgn_info = pgnListFirst(); pgn_info != pgnListEnd(); ++pgn_info) {
+                if (pgn_info->pgn == pgn) {
+                    pgn_desc = pgn_info->description;
+                }
+            }
+
+            if (pgn_desc != NULL) {
+                gcs().send_text(MAV_SEVERITY_DEBUG,
+                                "Ocius N2K: %u sent pgn %d(%s).", pmv->src, pgn, pgn_desc);
+            } else {
+                gcs().send_text(MAV_SEVERITY_DEBUG,
+                                "Ocius N2K: %u sent unknown pgn %d.", pmv->src, pgn);
+            }
+        }
         break;
     }
 
