@@ -417,7 +417,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (ch == BLUEBOTTLE_SAIL_CHANN) {
         position_pwm = ((position - BLUEBOTTLE_MOTOR_OFFSET) * 400 / BLUEBOTTLE_MOTOR_TICKS_PER_90) + 1500;  // Sail motor
     } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
-        position_pwm = 1900 - (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
+        position_pwm = 1100 + (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
     }
     motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
     motor.raw = position;
@@ -517,7 +517,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
                 desiredPosition = position;
             }
         } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
-            desiredPosition = ((1900 - pwm_last[ch]) / 800.0) * WINCH_ENCODER_RANGE + WINCH_ENCODER_RETRACT;
+            desiredPosition = ((pwm_last[ch] - 1100) / 800.0) * WINCH_ENCODER_RANGE + WINCH_ENCODER_RETRACT;
 //            printf("Desired winch position is %d.\n", desiredPosition);
         }
         if (abs(desiredPosition - position) > 100) {
