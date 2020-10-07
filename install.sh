@@ -26,7 +26,7 @@ else
 fi
 
 if [ $# -ge 2 ]; then
-	VARIANT=$2
+    VARIANT=$2
 else
     VARIANT=navio2-2019
 fi
@@ -59,6 +59,24 @@ if  ! ls $STAGE_BIN/ardu* > /dev/null 2>&1; then
   echo "Does't appear to be a valid install"
   echo "$STAGE_BIN/ardurover"
   exit 1
+fi
+
+#need to stop all services before copying
+OC_SERVICE_STAT=`ps aux | grep rover | grep -v ' rover'`
+if [ "${OC_SERVICE_STAT}" != "" ]; then
+	echo "stopping ardupilot"
+	monit stop ardupilot
+	WAIT_CNT=0
+	while [ "${OC_SERVICE_STAT}" != "" ] && [ ${WAIT_CNT} -le 15 ]
+	do
+		OC_SERVICE_STAT=`ps aux | grep rover | grep -v ' rover'`
+	    echo "Waiting for ardupilot to exit."
+		sleep 0.5s
+		WAIT_CNT=$((WAIT_CNT+1))
+	done
+	OC_SERVICE_RESTART=1
+else
+	OC_SERVICE_RESTART=0
 fi
 
 mkdir -p $INSTALL_BIN
@@ -112,4 +130,12 @@ fi
 mkdir -p $INSTALL_MONIT/conf.d
 cp $STAGE_ETC/monit/conf.d/ardupilot.monit $INSTALL_ETC/monit/conf.d
 service monit restart
+
+if [ $OC_SERVICE_RESTART != 0 ]; then
+    #sleep to give monit time to restart
+    sleep 0.5s
+    echo starting ardupilot
+    monit start ardupilot
+fi
+
 echo "done"
