@@ -57,7 +57,7 @@ Vector2<T> dToUv(T d)
 template <typename T>
 T uvToD(Vector2<T> uv)
 {
-    return ToDeg(atan2(uv.y,uv.x));
+    return ToDeg(atan2(uv.x,uv.y));
 }
 
 template <typename T>
