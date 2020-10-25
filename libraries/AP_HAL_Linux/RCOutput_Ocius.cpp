@@ -285,8 +285,13 @@ void RCOutput_Ocius::motor_status_check(void) {
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;
             phase = sin(phase * M_PIl);
             phase = (phase < 0)? 0: (phase > 1)? 1: phase;
-            ramp_spd = ramp_spd * phase;
-            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500 + ramp_spd);
+            ramp_spd = 1500 + (ramp_spd * phase);
+            if (ramp_spd < 1500) {
+                ramp_spd = 1500;
+            } else if (ramp_spd > 1900) {
+                ramp_spd = 1900;
+            }
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, ramp_spd);
         }
     }
 }
