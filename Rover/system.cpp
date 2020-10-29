@@ -204,6 +204,30 @@ bool Rover::set_mode(Mode &new_mode, ModeReason reason)
         return true;
     }
 
+    switch (reason) {
+    case MODE_REASON_TX_COMMAND:
+        gcs().send_text(MAV_SEVERITY_INFO, "Flight mode %s request from transmitter", new_mode.name4());
+        break;
+    case MODE_REASON_MISSION_END:
+        gcs().send_text(MAV_SEVERITY_INFO, "Flight mode %s set at mission end", new_mode.name4());
+        break;
+    case MODE_REASON_MISSION_COMMAND:
+        gcs().send_text(MAV_SEVERITY_INFO, "Flight mode %s set in mission command", new_mode.name4());
+        break;
+    case MODE_REASON_FAILSAFE:
+    case MODE_REASON_CRASH_FAILSAFE:
+    case MODE_REASON_EKF_FAILSAFE:
+        gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s set due to failsafe", new_mode.name4());
+        break;
+    case MODE_REASON_FENCE_BREACH:
+        gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s set after fence breach", new_mode.name4());
+        break;
+    case MODE_REASON_INITIALISED:
+    case MODE_REASON_GCS_COMMAND:
+        // These don't need log messages
+        break;
+    }
+
     Mode &old_mode = *control_mode;
     if (!new_mode.enter(reason)) {
         // Log error that we failed to enter desired flight mode
