@@ -68,11 +68,17 @@ void AP_Compass_Ocius::read()
      * All those functions expect the mag field to be in milligauss.
      */
 
-    if (nmea2k_sensors.primary_gps.last_update == 0) {
+    // TODO: Consider getting this location from the AHRS
+    Location location = nmea2k_sensors.primary_gps.location;
+    if (nmea2k_sensors.primary_gps.last_update != 0) {
+    } else if (nmea2k_sensors.secondary_gps.last_update != 0) {
+        location = nmea2k_sensors.secondary_gps.location;
+    } else if (nmea2k_sensors.tertiary_gps.last_update != 0) {
+        location = nmea2k_sensors.tertiary_gps.location;
+    } else {
         // Need a GPS position 1st.
         return;
     }
-    Location location = nmea2k_sensors.primary_gps.location;
 
     if (last_plublished_ms >= nmea2k_sensors.compass.last_update) {
         // Only publish new readings.
