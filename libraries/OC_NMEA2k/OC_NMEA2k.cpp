@@ -150,10 +150,16 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
     uint32_t gps_primary_id = rover.g2.nmea2k.gps_1,
              gps_secondary_id = rover.g2.nmea2k.gps_2,
-             gps_tertiary_id = rover.g2.nmea2k.gps_3;
+             gps_tertiary_id = rover.g2.nmea2k.gps_3,
+             compass_primary_id = rover.g2.nmea2k.compass_1,
+             compass_secondary_id = rover.g2.nmea2k.compass_2;
+//             wind_primary_id = rover.g2.nmea2k.wind_1;
 #else
     uint32_t gps_primary_id = NMEA2K_AIRMAR, gps_secondary_id = NMEA2K_AIS,
-             gps_tertiary_id = NMEA2K_BACKUP;
+             gps_tertiary_id = NMEA2K_BACKUP,
+             compass_primary_id = NMEA2K_AIRMAR,
+             compass_secondary_id = NMEA2K_BACKUP;
+//             wind_primary_id = NMEA2K_AIRMAR;
 #endif
 
     GPS *gps_state = NULL;
@@ -168,6 +174,15 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     else if (pmv->src == gps_tertiary_id)
     {
         gps_state = &tertiary_gps;
+    }
+    Compass *compass_state = NULL;
+    if (pmv->src == compass_primary_id)
+    {
+        compass_state = &primary_compass;
+    }
+    else if (pmv->src == compass_secondary_id)
+    {
+        compass_state = &secondary_compass;
     }
 
     char method[64];
@@ -193,40 +208,60 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 127250: // Vessel Heading
-        if (pmv->src == gps_primary_id)
+        if (compass_state != NULL)
         {
             // We only want the compass readings from the primary(Airmar) GPS.
-            double heading = pmv->getDouble(
-                "Heading"); // can be magnetic or true, depending on reference
-            double declination = pmv->getDouble("Variation");
+            double heading = pmv->getDouble("Heading"); // can be magnetic or true, depending on reference
             int compass_reference = pmv->getInteger("Reference");
-            compass.variation = ToDeg(declination);
+//            double declination = pmv->getDouble("Variation");
+//            compass_state.variation = ToDeg(declination);
+            double variation = get_variation();
 
-            if (compass_reference)
+            if (compass_reference == 1)
             {
                 // Magnetic
-                compass.heading = wrap_360(ToDeg(heading + declination)); // assuming declincation is correct
-                compass.magnetic = wrap_360(ToDeg(heading));
+                compass_state->heading = wrap_360(ToDeg(heading + variation)); // assuming declincation is correct
+                compass_state->magnetic = wrap_360(ToDeg(heading));
+                compass_state->last_update = AP_HAL::millis64();
+                compass_state->heading_filt = compass_state->filter_hdg.filterPoint(compass_state->heading);
             }
-            else
-            {
-                // True
-                compass.heading = wrap_360(ToDeg(heading));
-                compass.magnetic = wrap_360(ToDeg(heading - declination)); // assuming declincation is correct
-            }
-            compass.last_update = AP_HAL::millis64();
-
-            compass.heading_filt = compass.filter_hdg.filterPoint(compass.heading);
+//            else
+//            {
+//                // True
+//                primary_compass.heading = wrap_360(ToDeg(heading));
+//                compass.magnetic = wrap_360(ToDeg(heading - declination)); // assuming declincation is correct
         }
         break;
 
     case 127257: // Attitude
-        if (pmv->src == gps_primary_id)
+        if (compass_state != NULL)
         {
             // We only want the attitude readings from the primary(Airmar) GPS.
-            compass.yaw = pmv->getDouble("Yaw");
-            compass.pitch = pmv->getDouble("Pitch");
-            compass.roll = pmv->getDouble("Roll");
+            compass_state->yaw = pmv->getDouble("Yaw");
+            compass_state->pitch = pmv->getDouble("Pitch");
+            compass_state->roll = pmv->getDouble("Roll");
+        }
+        break;
+
+    case 127258: // Magnetic Variation
+        if (compass_state != NULL)
+        {
+            double variation = pmv->getDouble("Variation");
+            int source = pmv->getInteger("Source");
+            // Restricting compass variations sources to WMM 2000 to WMM 2020
+            // FIXME: add other WMMs as they are added to PGNs
+            if (variation < M_PI && source >= 4 && source <= 8) {
+                compass_state->variation = variation;
+            }
+        }
+        if (gps_state != NULL) {
+            double variation = pmv->getDouble("Variation");
+            int source = pmv->getInteger("Source");
+            // Restricting compass variations sources to WMM 2000 to WMM 2020
+            // FIXME: add other WMMs as they are added to PGNs
+            if (variation < M_PI && source >= 4 && source <= 8) {
+                gps_state->variation = variation;
+            }
         }
         break;
 
@@ -414,8 +449,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 130306: // Wind Data
-        if (pmv->src == gps_primary_id &&
-            primary_gps.have_fix) // Ignore wind data when AIRMAR has no GPS fix
+//        if (pmv->src == wind_primary_id) // Ignore wind data when AIRMAR has no GPS fix
         {
             double wind_speed = pmv->getDouble("Wind Speed");
             double wind_angle = ToDeg(pmv->getDouble("Wind Angle"));
@@ -458,10 +492,10 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 }
             }
         }
-        else
-        {
-            // if we have no fix then ignore wind readings
-        }
+//        else
+//        {
+//            // if we have no fix then ignore wind readings
+//        }
 
         break;
 
@@ -568,7 +602,6 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     case 65410:  // Airmar: Device Information
     case 126993: // Heartbeat
     case 127251: // Rate of Turn
-    case 127258: // Magnetic Variation
     case 129044: // Datum
     // case 130311: // Environmental Parameters
     case 130313: // Humidity  // TODO: Does it differ from in 130311?
@@ -618,10 +651,10 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 
             if (pgn_desc != NULL) {
                 gcs().send_text(MAV_SEVERITY_DEBUG,
-                                "Ocius N2K: %u sent pgn %d(%s).", pmv->src, pgn, pgn_desc);
+                                "Ocius N2K: %u sent pgn %u(%s).", pmv->src, pgn, pgn_desc);
             } else {
                 gcs().send_text(MAV_SEVERITY_DEBUG,
-                                "Ocius N2K: %u sent unknown pgn %d.", pmv->src, pgn);
+                                "Ocius N2K: %u sent unknown pgn %u.", pmv->src, pgn);
             }
         }
         break;
@@ -738,4 +771,17 @@ bool NMEA2K::read()
         numc--;
     }
     return parsed;
+}
+
+Location NMEA2K::get_location() {
+    GPS* gps = get_active_gps();
+    if (gps != NULL)
+        return gps->location;
+#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+    Location l;
+    if (rover.ahrs.get_position(l)) {
+        return l;
+    }
+#endif
+    return Location();
 }

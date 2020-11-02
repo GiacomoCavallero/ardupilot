@@ -58,18 +58,14 @@ bool AP_GPS_Ocius::read(void)
     //bool rval = nmea2k_sensors.read();
 
     // copy data into state
-    NMEA2K::GPS *nmea_gps = &nmea2k_sensors.primary_gps;
+    NMEA2K::GPS *nmea_gps = nmea2k_sensors.get_active_gps();
     AP_GPS::GPS_Status nmea_status = AP_GPS::GPS_OK_FIX_3D;
-    if (!nmea_gps->have_fix){
-        if (nmea2k_sensors.secondary_gps.have_fix) {
-            nmea_gps = &nmea2k_sensors.secondary_gps;
-            nmea_status = AP_GPS::GPS_OK_FIX_2D;
-        } else if (nmea2k_sensors.tertiary_gps.have_fix) {
-            nmea_gps = &nmea2k_sensors.tertiary_gps;
-            nmea_status = AP_GPS::GPS_OK_FIX_2D;
-        } else {
-            nmea_status = AP_GPS::NO_FIX;
-        }
+    if (nmea_gps == &(nmea2k_sensors.secondary_gps) ||
+                nmea_gps == &(nmea2k_sensors.tertiary_gps)){
+        nmea_status = AP_GPS::GPS_OK_FIX_2D;
+    } else if (nmea_gps == NULL) {
+        nmea_status = AP_GPS::NO_FIX;
+        nmea_gps = &nmea2k_sensors.primary_gps;
     }
 
     state.status = nmea_status;

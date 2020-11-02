@@ -26,6 +26,7 @@ public:
         Location location;
         float cog, cog_filt; // deg[0..360]
         float sog, sog_filt; // m/s
+        float variation;        /*< Variation to true north (degrees)*/
 
         uint64_t last_update; // System time of last update (millis)
 
@@ -41,7 +42,7 @@ public:
         FiltExpAng<float> filter_cog;
         FiltExp<float> filter_sog;
 
-        GPS() : cog(0), cog_filt(0), sog(0), sog_filt(0), last_update(0),
+        GPS() : cog(0), cog_filt(0), sog(0), sog_filt(0), variation(M_PI + 1), last_update(0),
                 have_fix(false), hdop(0), vdop(0), num_sats(0), time_week(0), time_week_ms(0),
                 time_last_update(0), 
                 filter_cog(&(rover.g2.nmea2k.filt_cog)), filter_sog(&(rover.g2.nmea2k.filt_sog)) {}
@@ -133,7 +134,7 @@ public:
         FiltExpNlAng<float> filter_hdg;
 
         Compass() : heading(0), heading_filt(0), 
-                    magnetic(0), variation(0), last_update(0),
+                    magnetic(0), variation(M_PI+1), last_update(0),
                     roll(0), pitch(0), yaw(0),
                     filter_hdg(&(rover.g2.nmea2k.filt_hdg_tc),&(rover.g2.nmea2k.filt_hdg_nl)) {}
     };
@@ -143,7 +144,8 @@ public:
     GPS tertiary_gps;  // Backup GPS
     Triducer triducer;
     WeatherStation weather;
-    Compass compass;
+    Compass primary_compass;
+    Compass secondary_compass;
 
     void init();
     bool read();
@@ -152,12 +154,39 @@ public:
 private:
     AP_HAL::UARTDriver *_port;
     unsigned char msg[512];
-    //    NMEA2K() {}
+
     bool term_complete(unsigned int pgn, MsgVals *pmv);
     void update_status();
 
 public:
     NMEA2K() : _port(nullptr) {}
+
+
+    Location get_location();
+    float get_heading();
+
+    inline GPS* get_active_gps() {
+        if (primary_gps.have_fix) {
+            return &primary_gps;
+        } else if (secondary_gps.have_fix) {
+            return &secondary_gps;
+        } else if (tertiary_gps.have_fix) {
+            return &tertiary_gps;
+        }
+        return NULL;
+    }
+
+    inline float get_variation() {
+        if (primary_gps.have_fix && primary_gps.variation < M_PI) {
+            return primary_gps.variation;
+        } else if (secondary_gps.have_fix && secondary_gps.variation < M_PI) {
+            return secondary_gps.variation;
+        } else if (tertiary_gps.have_fix && tertiary_gps.variation < M_PI) {
+            return tertiary_gps.variation;
+        }
+        // TODO: find another source if all GPSs are down
+        return 0;
+    }
 };
 
 extern NMEA2K nmea2k_sensors;
