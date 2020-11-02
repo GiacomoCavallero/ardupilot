@@ -196,10 +196,15 @@ public:
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
 
-    // parameters
+    // device ids
     AP_Int32 gps_1;
     AP_Int32 gps_2;
     AP_Int32 gps_3;
+    AP_Int32 compass_1;
+    AP_Int32 compass_2;
+//    AP_Int32 wind_1;
+
+    // Filtering parameters
     AP_Float filt_cog;
     AP_Float filt_sog;
     AP_Float filt_bsp;
@@ -211,5 +216,4 @@ public:
     AP_Float filt_aws;
     AP_Float filt_awa;
     AP_Float filt_twa;
-
 };

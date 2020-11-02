@@ -395,6 +395,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                     gps_state->location.lng =
                         pmv->getDouble("Longitude") * NMEA2K_LATLONG_RESOLUTION;
                     gps_state->location.alt = 0;
+                    gps_state->num_sats = 6;        // FIXME: A hack
                     if (!gps_state->have_fix)
                         gcs().send_text(MAV_SEVERITY_INFO,
                                         "Ocius N2K: AIS GPS Fix(%s) restored from msg %d",
@@ -453,7 +454,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         {
             double wind_speed = pmv->getDouble("Wind Speed");
             double wind_angle = ToDeg(pmv->getDouble("Wind Angle"));
-            if (wind_speed > 655.34 || wind_speed < 0 || wind_angle < -180 ||
+            if (!pmv->isValid("Wind Speed") || !pmv->isValid("Wind Angle") || wind_speed > 655.34 || wind_speed < 0 || wind_angle < -180 ||
                 wind_angle > 360)
             {
                 // INVALID readings ignore

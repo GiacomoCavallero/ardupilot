@@ -1329,5 +1329,21 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("F_AWS", 14, NMEA2k_Params, filt_aws, 5),
 
+    // @Param: COMPASS_1
+    // @DisplayName: Primary compass ID
+    // @Description: ID of the primary compass.
+    // @Range: 0..127
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("COMPASS_1", 15, NMEA2k_Params, compass_1, 0),
+
+    // @Param: COMPASS_2
+    // @DisplayName: Secondary compass ID
+    // @Description: ID of the secondary compass.
+    // @Range: 0..127
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("COMPASS_2", 16, NMEA2k_Params, compass_2, 0),
+
     AP_GROUPEND
 };
