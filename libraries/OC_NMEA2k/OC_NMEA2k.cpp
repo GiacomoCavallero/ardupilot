@@ -244,23 +244,18 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 127258: // Magnetic Variation
-        if (compass_state != NULL)
-        {
+        if (pmv->isValid("Variation")) {
             double variation = pmv->getDouble("Variation");
             int source = pmv->getInteger("Source");
             // Restricting compass variations sources to WMM 2000 to WMM 2020
             // FIXME: add other WMMs as they are added to PGNs
             if (variation < M_PI && source >= 4 && source <= 8) {
-                compass_state->variation = variation;
-            }
-        }
-        if (gps_state != NULL) {
-            double variation = pmv->getDouble("Variation");
-            int source = pmv->getInteger("Source");
-            // Restricting compass variations sources to WMM 2000 to WMM 2020
-            // FIXME: add other WMMs as they are added to PGNs
-            if (variation < M_PI && source >= 4 && source <= 8) {
-                gps_state->variation = variation;
+                if (compass_state != NULL) {
+                    compass_state->variation = variation;  // Should never be used.
+                }
+                if (gps_state != NULL) {
+                    gps_state->variation = variation;
+                }
             }
         }
         break;
@@ -419,11 +414,6 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                     gps_state->sog = static_cast<float>(gs);
 
                     // TODO: Do we want to average the cog/sog again?
-
-                    //                        gps_state->average.push_reading(gc, gs);
-                    //                        gps_state->cog  =
-                    //                        gps_state->average.speed; gps_state->sog =
-                    //                        gps_state->average.direction;
                 }
             }
         }

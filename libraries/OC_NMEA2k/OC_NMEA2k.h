@@ -125,7 +125,7 @@ public:
         float heading;          /*< True heading (degrees)*/
         float heading_filt;     /*< True heading (degrees)*/
         float magnetic;         /*< Magnetic heading (degrees)*/
-        float variation;        /*< Variation to true north (degrees)*/
+        float variation;        /*< Variation to true north (degrees), Should not be used, use variation from a GPS instead */
 
         uint64_t last_update; // System time of last update (millis)
 
