@@ -69,18 +69,26 @@ void AP_Compass_Ocius::read()
      * All those functions expect the mag field to be in milligauss.
      */
 
-    // TODO: Consider getting this location from the AHRS
     Location location = nmea2k_sensors.get_location();
 
-    // FIXME: failover to secondary compass
-    if (last_plublished_ms >= nmea2k_sensors.primary_compass.last_update) {
-        // Only publish new readings.
-        return;
-    } else if (fabs(nmea2k_sensors.primary_compass.pitch) >= radians(45)) {
-        // Stop publishing compass readings when the comms mast is down, otherwise it will just report 0 degrees
+    // failover to secondary compass
+    NMEA2K::Compass *compass = NULL;
+    if (nmea2k_sensors.primary_compass.last_update > last_plublished_ms &&
+                fabs(nmea2k_sensors.primary_compass.pitch) < radians(45)) {
+        // Primary compass is not pitched forward/back and has more recent readings
+        // When the comms mast is lowered the AIRMAR compass stops reporting useful values
+        compass = &nmea2k_sensors.primary_compass;
+    } else if (nmea2k_sensors.secondary_compass.last_update > last_plublished_ms &&
+            fabs(nmea2k_sensors.secondary_compass.pitch) < radians(45)) {
+        // Secondary compass is not pitched forward/back and has more recent readings
+        compass = &nmea2k_sensors.secondary_compass;
+    }
+
+    if (compass == NULL) {
+        // No compass found with fresh valid data.
         return;
     }
-    last_plublished_ms = nmea2k_sensors.primary_compass.last_update;
+    last_plublished_ms = compass->last_update;
 
     // get the magnetic field intensity and orientation
     float intensity;
@@ -96,10 +104,10 @@ void AP_Compass_Ocius::read()
     R.from_euler(0.0f, -ToRad(inclination), ToRad(declination));
     mag_ef = R * mag_ef;
 
-    float roll  = nmea2k_sensors.primary_compass.roll,
-          pitch = nmea2k_sensors.primary_compass.pitch,
-          //yaw   = nmea2k_sensors.compass.yaw,
-          heading = nmea2k_sensors.primary_compass.heading;
+    float roll  = compass->roll,
+          pitch = compass->pitch,
+          //yaw   = compass->yaw,
+          heading = compass->heading;
 
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
     heading += rover.g2.magnetic_offset;
