@@ -132,6 +132,39 @@ static void nmea2k_make_gps_time(uint32_t bcd_date, uint32_t bcd_milliseconds,
     state.time_week_ms += msec;
 }
 
+void nmea2k_updateWind(NMEA2K::WeatherStation& weather, float wind_apparent_speed, float wind_apparent_angle) {
+    weather.apparent_wind_angle = wind_apparent_angle;
+    weather.apparent_wind_speed = wind_apparent_speed;
+
+    // Filter AWS and AWA
+    weather.apparent_wind_angle_filt = weather.filter_awa.filterPoint(weather.apparent_wind_angle);
+    weather.apparent_wind_speed_filt = weather.filter_aws.filterPoint(weather.apparent_wind_speed);
+
+    NMEA2K::GPS* gps = nmea2k_sensors.get_active_gps();
+    float heading = nmea2k_sensors.get_heading();
+    if (gps != NULL && heading >= 0 && heading < 360) {
+        // Get apparent wind direction
+        float aw_dir = weather.apparent_wind_angle + heading;
+
+        // Wind velocity relative to vehicle in a North-East reference
+        Vector2f ab_NE(wind_apparent_speed*cos(ToRad(aw_dir)), wind_apparent_speed*sin(ToRad(aw_dir)));
+        // Vehicle ground velocity in North-East reference
+        Vector2f bg_NE(gps->sog*cos(ToRad(gps->cog)), gps->sog*sin(ToRad(gps->cog)));
+        // Sum to get velocity of air with respect to ground.
+        Vector2f ag_NE = ab_NE - bg_NE;
+
+        // Get True(ground referenced) speed and direction.
+        double ag_speed = ag_NE.length();
+        double ag_dir = ToDeg(atan2(ag_NE[1], ag_NE[0]));
+        weather.true_wind_dir = wrap_360(ag_dir);
+        weather.true_wind_speed = ag_speed;
+
+        // Filter TWS and TWD
+        weather.true_wind_dir_filt = weather.filter_twd.filterPoint(weather.true_wind_dir);
+        weather.true_wind_speed_filt = weather.filter_tws.filterPoint(weather.true_wind_speed);
+    }
+}
+
 #define GPS_ID                           \
     (pmv->src == gps_primary_id          \
          ? "Primary"                     \
@@ -444,8 +477,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         {
             double wind_speed = pmv->getDouble("Wind Speed");
             double wind_angle = ToDeg(pmv->getDouble("Wind Angle"));
-            if (!pmv->isValid("Wind Speed") || !pmv->isValid("Wind Angle") || wind_speed > 655.34 || wind_speed < 0 || wind_angle < -180 ||
-                wind_angle > 360)
+            if (!pmv->isValid("Wind Speed") || !pmv->isValid("Wind Angle") ||
+                        wind_speed > 655.34 || wind_speed < 0 || wind_angle < -180 || wind_angle > 360)
             {
                 // INVALID readings ignore
             }
@@ -453,31 +486,15 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             {
                 switch (pmv->getInteger("Reference"))
                 {
-                case 0: // True wind
-                    weather.true_wind_dir = wrap_360(wind_angle);
-                    weather.true_wind_speed = wind_speed;
-
-                    // Filter TWS and TWD
-                    weather.true_wind_dir_filt = weather.filter_twd.filterPoint(weather.true_wind_dir);
-                    weather.true_wind_speed_filt = weather.filter_tws.filterPoint(weather.true_wind_speed);
-
-                    break;
-                case 1: // Magnetic
                 case 2: // Apparent
-                    weather.apparent_wind_angle = wrap_180(wind_angle);
-                    weather.apparent_wind_speed = wind_speed;
-                    // Filter AWS and AWA
-                    weather.apparent_wind_angle_filt = weather.filter_awa.filterPoint(weather.apparent_wind_angle);
-                    weather.apparent_wind_speed_filt = weather.filter_aws.filterPoint(weather.apparent_wind_speed);
+                    nmea2k_updateWind(weather, wind_speed, wrap_180(wind_angle));
                     break;
+                case 0: // True (ground referenced to North)
+                case 1: // Magnetic (ground referenced to Magnetic North)
                 case 3: // True (boat referenced)
-                    weather.true_wind_angle = wrap_180(wind_angle);
-                    // FIlter TWA
-                    weather.true_wind_angle_filt = weather.filter_twa.filterPoint(weather.true_wind_angle);
-                    break;
-
                 case 4: // True (water referenced)
-                        // TODO: consider use of other readings
+                    // For robustness we're only using the apparent wind, which doesn't require a GPS fix, or water speed sensor
+                    break;
                 default:
                     break;
                 }
@@ -544,46 +561,41 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
     case 130323: // Meteorological Station Data
     {
-        double wind_speed = pmv->getDouble("Wind Speed");
-        double wind_angle = ToDeg(pmv->getDouble("Wind Direction"));
-        double wind_gusts = pmv->getDouble("Wind Gusts");
+        // FIXME: This message looks to be filtered so we'll just use the wind from 130306
+//        double wind_speed = pmv->getDouble("Wind Speed");
+//        double wind_angle = ToDeg(pmv->getDouble("Wind Direction"));
+//        double wind_gusts = pmv->getDouble("Wind Gusts");
+//        if (!pmv->isValid("Wind Speed") || !pmv->isValid("Wind Direction") ||
+//                    wind_speed > 655.34 || wind_speed < 0 || wind_angle < -180 || wind_angle > 360)
+//        {
+//            // INVALID readings ignore
+//        }
+//        else
+//        {
+//            switch (pmv->getInteger("Wind Reference"))
+//            {
+//            case 2: // Apparent
+//                nmea2k_updateWind(weather, wind_speed, wrap_180(wind_angle));
+//                break;
+//            case 0: // True (ground referenced to North)
+//            case 1: // Magnetic (ground referenced to Magnetic North)
+//            case 3: // True (boat referenced)
+//            case 4: // True (water referenced)
+//                // For robustness we're only using the apparent wind, which doesn't require a GPS fix, or water speed sensor
+//                break;
+//            default:
+//                break;
+//            }
+//        }
+//      Currently the AIRMAR doesn't provide a valid gusts reading
+//        weather.wind_gusts = wind_gusts;
 
-        switch (pmv->getInteger("Wind Reference"))
-        {
-        case 0: // True wind
-            weather.true_wind_dir = wrap_360(wind_angle);
-            weather.true_wind_speed = wind_speed;
-
-            // Filter TWS and TWD
-            weather.true_wind_dir_filt = weather.filter_twd.filterPoint(weather.true_wind_dir);
-            weather.true_wind_speed_filt = weather.filter_tws.filterPoint(weather.true_wind_speed);
-
-            break;
-        case 1: // Magnetic
-        case 2: // Apparent
-            weather.apparent_wind_angle = wrap_180(wind_angle);
-            weather.apparent_wind_speed = wind_speed;
-            // Filter AWS and AWA
-            weather.apparent_wind_angle_filt = weather.filter_awa.filterPoint(weather.apparent_wind_angle);
-            weather.apparent_wind_speed_filt = weather.filter_aws.filterPoint(weather.apparent_wind_speed);
-            break;
-        case 3: // True (boat referenced)
-            weather.true_wind_angle = wrap_180(wind_angle);
-            // FIlter TWA
-            weather.true_wind_angle_filt = weather.filter_twa.filterPoint(weather.true_wind_angle);
-            break;
-
-        case 4: // True (water referenced)
-                // TODO: consider use of other readings
-        default:
-            break;
+        if (pmv->isValid("Ambient Temperature")) {
+            weather.air_temp = pmv->getDouble("Ambient Temperature");
         }
-        weather.wind_gusts = wind_gusts;
-
-        double ambient_temp = pmv->getDouble("Ambient Temperature");
-        double atmos_pressure = pmv->getDouble("Atmospheric Pressure");
-        weather.air_temp = ambient_temp;
-        weather.atmos_pressure = atmos_pressure;
+        if (pmv->isValid("Atmospheric Pressure")) {
+            weather.atmos_pressure = pmv->getDouble("Atmospheric Pressure");
+        }
     }
     break;
 
@@ -775,4 +787,20 @@ Location NMEA2K::get_location() {
     }
 #endif
     return Location();
+}
+
+float NMEA2K::get_heading() {
+    uint64_t now = AP_HAL::millis64();
+    if ((now - primary_compass.last_update) < 5000) {
+        // primary compass has updated in last 5 seconds
+        return primary_compass.heading;
+    } else if ((now - secondary_compass.last_update) < 5000) {
+        // secondary compass has updated in last 5 seconds
+        return secondary_compass.heading;
+    }
+#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+    return wrap_360(ToDeg(rover.ahrs.get_yaw()));
+#else
+    return 0;
+#endif
 }
