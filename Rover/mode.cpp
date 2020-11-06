@@ -22,7 +22,8 @@ void Mode::exit(mode_reason_t reason)
 
 bool Mode::enter(mode_reason_t reason)
 {
-    const bool ignore_checks = !hal.util->get_soft_armed();   // allow switching to any mode if disarmed.  We rely on the arming check to perform
+    bool ignore_checks = !hal.util->get_soft_armed();   // allow switching to any mode if disarmed.  We rely on the arming check to perform
+    ignore_checks = true;
     if (!ignore_checks) {
 
         // get EKF filter status
