@@ -387,6 +387,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
     // Get motor position
     if (readPosition(nodeid, &position)) {
+        motor._position_is_good = false;
         // Error reading motor position.
         consecutive_failures[ch]++;
         if (consecutive_failures[ch] >= MAX_CONSEQ_FAILS) {
@@ -427,6 +428,11 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
     motor.raw = position;
     motor.pwm = position_pwm;
+    if (motor.pwm >= 1000 && motor.pwm <= 2000) {
+        motor._position_is_good = true;
+    } else {
+        motor._position_is_good = false;
+    }
 	//printf("EPOS %d is at position %d(%d)\n", nodeid, position, position_pwm);
 
     if (!(motor.moving)) {
@@ -492,7 +498,13 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         return;
     }
 
-    if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
+    if (!motor._position_is_good) {
+        // Last read position of motor is not good, not safe to move
+        return;
+    }
+
+    // PWMs from 1 .. 500 are used as an emergency stop
+    if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] >= 1 && pwm_last[ch] <= 500) {
         // have emergency stop
         if (motor_enabled[ch]) {
             printf("RCOut: Emergency stop called on winch.\n");
@@ -504,6 +516,14 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         moveToPosition(nodeid, position);
         motor_enabled[ch] = false;
         return;
+    }
+
+    //FIXME
+    if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
+        // We're armed, but the winch hasn't been given a position, so can self deploy
+        // We'll set its desired position to its current good position
+        SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_WINCH_CHANN, motor.pwm);
+//        pwm_last[ch] = motor.pwm;
     }
 
     // Move sail/winch to desired position

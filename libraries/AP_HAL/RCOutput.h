@@ -47,8 +47,10 @@ struct ServoStatus {
     int32_t raw;
 
     uint64_t _last_home_check;
+    // FIXME: is there a EPOS object entry to check the status of the SSI encoder?
+    bool _position_is_good;
 
-    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED), raw(0), _last_home_check(0) {}
+    ServoStatus() : pwm(0), moving(false), homed(SERVO_UNHOMED), raw(0), _last_home_check(0), _position_is_good(false) {}
 };
 
 }
