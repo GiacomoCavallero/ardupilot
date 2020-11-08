@@ -82,7 +82,7 @@ protected:
     bool wamv;
     float sail_area; // 1.0 for normal area
 
-    SlowResponseServo rudder, mast, sail;
+    SlowResponseServo rudder, mast, sail, winch;
 private:
 
     // calculate the lift and drag as values from 0 to 1 given an apparent wind speed in m/s and angle-of-attack in degrees

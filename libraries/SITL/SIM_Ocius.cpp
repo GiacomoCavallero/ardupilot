@@ -42,6 +42,7 @@ namespace SITL {
 
 #define MAST_RAISE_CH       8   // mast raise/lower controlled by servo output 9
 #define SAIL_ROTATE_CH      9   // sail rotate controlled by servo output 10
+#define WINCH_ROTATE_CH     13   // winch rotate controlled by servo output 14
 
     // very roughly sort of a stability factors for waves
 #define WAVE_ANGLE_GAIN 1
@@ -56,7 +57,8 @@ SimOcius::SimOcius(const char *frame_str) :
     wave_phase(0),
     rudder(0),
     mast(-1,0.3f),
-    sail(0,0.3f)
+    sail(0,0.3f),
+    winch(-1, 0.01f)
 {
     wamv = (strcmp(frame_str, "wamv") == 0);
 }
@@ -229,6 +231,12 @@ void SimOcius::update(const struct sitl_input &input)
         rudder.update(delta_time);
         steering = rudder.get_position();
 
+	if (input.servos[WINCH_ROTATE_CH]) {
+            float winch_set_pos = 2*((input.servos[WINCH_ROTATE_CH]-1000)/1000.0f - 0.5f);
+	    winch.set_desired_position(winch_set_pos);
+	}
+	winch.update(delta_time);
+
         // throttle force (for motor sailing)
         // gives throttle force == hull drag at 10m/s
         const uint16_t throttle_out = constrain_int16(input.servos[THROTTLE_SERVO_CH], 1000, 2000);
@@ -255,12 +263,18 @@ void SimOcius::update(const struct sitl_input &input)
             status.moving = fabs(rudder.get_position() - rudder.get_desired_position()) > FLT_EPSILON;
             status.pwm = (-rudder.get_position()*500) + 1500;
             rcout->_actual[STEERING_SERVO_CH] = status;
+
             status.moving = fabs(mast.get_position() - mast.get_desired_position()) > FLT_EPSILON;
             status.pwm = (mast.get_position()*500) + 1500;
             rcout->_actual[MAST_RAISE_CH] = status;
+
             status.moving = fabs(sail.get_position() - sail.get_desired_position()) > FLT_EPSILON;
             status.pwm = (sail.get_position()*500) + 1500;
             rcout->_actual[SAIL_ROTATE_CH] = status;
+
+            status.moving = fabs(winch.get_position() - winch.get_desired_position()) > FLT_EPSILON;
+            status.pwm = (winch.get_position()*500) + 1500;
+            rcout->_actual[WINCH_ROTATE_CH] = status;
         }
     }
 
