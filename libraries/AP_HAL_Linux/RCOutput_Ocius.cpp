@@ -262,30 +262,52 @@ void RCOutput_Ocius::motor_status_check(void) {
                 ramp_spd = chan->get_output_max() - 1500;
             }
             if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
-                // If driving the mast down we run the motor at 80% of the max speed.
-                ramp_spd = ramp_spd * 0.8;
+                // If driving mast down hydraulic speed is the smaller of (max - 1500) or (1500 - min)
+                uint32_t down_spd = abs(1500 - chan->get_output_min());
+                if (down_spd < ramp_spd)
+                    ramp_spd = down_spd;
             }
 
             // Get the phase for the hydraulic speed
             double phase = 0;
             uint32_t relay_delay = rover.g2.sailboat.mast_time_delay;
-            if (hydraulic_run_time > 2 * relay_delay) {
-                hydraulic_run_time -= 2 * relay_delay;
-                uint32_t signal_time = millis() - timeMastSignalStarted;
-                if (signal_time > relay_delay &&
-                        signal_time < (hydraulic_run_time + relay_delay)) {
+            if (relay_delay <= 0) {
+                // avoid divide by 0
+                relay_delay = hydraulic_run_time / 2;
+            }
+            uint32_t signal_time = millis() - timeMastSignalStarted;
+            if (hydraulic_run_time > 4 * relay_delay) {
+                if (signal_time <= relay_delay || signal_time >= (hydraulic_run_time - relay_delay)) {
+                    // We're in the delay period before or after we run.
+                    signal_time = 0;
+                    phase = 0;
+                } else {
+                    // adjust the signal and hydraulic runtime
                     signal_time -= relay_delay;
-                    phase = signal_time / hydraulic_run_time;
+                    hydraulic_run_time -= 2 * relay_delay;
+                }
+            }
+            if (signal_time < hydraulic_run_time / 2) {
+                // 1st half of the signal pattern
+                if (relay_delay > hydraulic_run_time / 2) {
+                    // if delay is greater the 50% of run time, set it to 50% run time
+                    relay_delay = hydraulic_run_time / 2;
+                }
+                if (signal_time < relay_delay) {
+                    // we ramp up to max over the relay_delay time
+                    phase = signal_time / relay_delay;
+                } else {
+                    // rest of the 1st half we run at full speed
+                    phase = 1;
                 }
             } else {
-                phase = (millis() - timeMastSignalStarted) / hydraulic_run_time;
+                // 2nd half of signal pattern
+                phase = (hydraulic_run_time - signal_time) / (hydraulic_run_time/2);
+//                phase = 1 - ((signal_time - (hydraulic_run_time/2)) /  (hydraulic_run_time/2));
             }
 
-            // Use the sin of the phase to set the hydraulic motor speed
-            phase = (phase < 0)? 0: (phase > 1)? 1: phase;
-            phase = sin(phase * M_PIl);
-            phase = (phase < 0)? 0: (phase > 1)? 1: phase;
             ramp_spd = 1500 + (ramp_spd * phase);
+
             if (ramp_spd < 1500) {
                 ramp_spd = 1500;
             } else if (ramp_spd > 1900) {
@@ -518,7 +540,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         return;
     }
 
-    //FIXME
+    // FIXME
     if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
         // We're armed, but the winch hasn't been given a position, so can self deploy
         // We'll set its desired position to its current good position
