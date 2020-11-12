@@ -251,20 +251,46 @@ void GCS_MAVLINK_Rover::send_wind_filtered(SENSOR_FILTERING filter) {
     switch(filter) {
     case FILTER_RAW:
         mavlink_msg_wind_filtered_send(chan, filter,
-                nmea2k_sensors.weather.true_wind_dir, nmea2k_sensors.weather.true_wind_speed,
-                nmea2k_sensors.weather.true_wind_angle, nmea2k_sensors.weather.wind_gusts,
+                nmea2k_sensors.weather.water_wind_dir, nmea2k_sensors.weather.water_wind_speed,
+                nmea2k_sensors.weather.water_wind_angle, nmea2k_sensors.weather.wind_gusts,
                 nmea2k_sensors.weather.apparent_wind_speed, nmea2k_sensors.weather.apparent_wind_angle);
         break;
     case FILTER_DEFAULT:
         mavlink_msg_wind_filtered_send(chan, filter,
-                nmea2k_sensors.weather.true_wind_dir_filt, nmea2k_sensors.weather.true_wind_speed_filt,
-                nmea2k_sensors.weather.true_wind_angle_filt, nmea2k_sensors.weather.wind_gusts,
+                nmea2k_sensors.weather.water_wind_dir_filt, nmea2k_sensors.weather.water_wind_speed_filt,
+                nmea2k_sensors.weather.water_wind_angle_filt, nmea2k_sensors.weather.wind_gusts,
                 nmea2k_sensors.weather.apparent_wind_speed_filt, nmea2k_sensors.weather.apparent_wind_angle_filt);
         break;
     case SENSOR_FILTERING_ENUM_END:
         // Ignore
         break;
     }
+}
+
+void GCS_MAVLINK_Rover::send_nmea2k_sensors() {
+    NMEA2K::GPS* gps = nmea2k_sensors.get_active_gps();
+    NMEA2K::Compass* compass = nmea2k_sensors.get_active_compass();
+    mavlink_msg_nmea2k_sensors_send(chan,
+            (gps!=NULL?gps->id:0),
+            (gps!=NULL?gps->location.lat:0), (gps!=NULL?gps->location.lng:0),
+            (gps!=NULL?gps->cog:0), (gps!=NULL?gps->cog_filt:0),
+            (gps!=NULL?gps->sog:0), (gps!=NULL?gps->sog_filt:0),
+            (gps!=NULL?gps->variation:0),
+            (compass!=NULL?compass->id:0),
+            (compass!=NULL?compass->magnetic:0),
+            (compass!=NULL?compass->heading:0), (compass!=NULL?compass->heading_filt:0),
+            nmea2k_sensors.triducer.id,
+            nmea2k_sensors.triducer.longitudinal_speed_water, nmea2k_sensors.triducer.longitudinal_speed_water_filt,
+            nmea2k_sensors.triducer.transverse_speed_water, nmea2k_sensors.triducer.transverse_speed_water_filt,
+            nmea2k_sensors.weather.id,
+            nmea2k_sensors.weather.apparent_wind_angle, nmea2k_sensors.weather.apparent_wind_angle_filt,
+            nmea2k_sensors.weather.apparent_wind_speed, nmea2k_sensors.weather.apparent_wind_speed_filt,
+            nmea2k_sensors.weather.water_wind_angle, nmea2k_sensors.weather.water_wind_angle_filt,
+            nmea2k_sensors.weather.water_wind_dir, nmea2k_sensors.weather.water_wind_dir_filt,
+            nmea2k_sensors.weather.water_wind_speed, nmea2k_sensors.weather.water_wind_speed_filt,
+            nmea2k_sensors.weather.ground_wind_dir, nmea2k_sensors.weather.ground_wind_dir_filt,
+            nmea2k_sensors.weather.ground_wind_speed_filt, nmea2k_sensors.weather.ground_wind_speed_filt
+    );
 }
 
 void Rover::send_servo_out(mavlink_channel_t chan)

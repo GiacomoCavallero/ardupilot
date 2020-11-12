@@ -39,6 +39,7 @@ protected:
     void send_weather_data();
     void send_compass_airmar();
     void send_wind_filtered(SENSOR_FILTERING filter);
+    void send_nmea2k_sensors();
 
 private:
 

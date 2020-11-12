@@ -23,6 +23,7 @@ public:
     class GPS
     {
     public:
+        uint32_t id;         // Device ID
         Location location;
         float cog, cog_filt; // deg[0..360]
         float sog, sog_filt; // m/s
@@ -42,7 +43,7 @@ public:
         FiltExpAng<float> filter_cog;
         FiltExp<float> filter_sog;
 
-        GPS() : cog(0), cog_filt(0), sog(0), sog_filt(0), variation(M_PI + 1), last_update(0),
+        GPS() : id(0), cog(0), cog_filt(0), sog(0), sog_filt(0), variation(M_PI + 1), last_update(0),
                 have_fix(false), hdop(0), vdop(0), num_sats(0), time_week(0), time_week_ms(0),
                 time_last_update(0), 
                 filter_cog(&(rover.g2.nmea2k.filt_cog)), filter_sog(&(rover.g2.nmea2k.filt_sog)) {}
@@ -51,6 +52,7 @@ public:
     class Triducer
     {
     public:
+        uint32_t id;                            // Device ID
         float water_depth;                      // (m)
         float water_offset;                     // (m) (+ve to water surface, -ve to bottom of keel)
         float water_range;                      // maximum measurable water depth (m)
@@ -69,7 +71,7 @@ public:
         FiltExp<float> filter_boatspeed;
         FiltExp<float> filter_leeway;
 
-        Triducer() : water_depth(0), water_offset(0), water_range(0), water_temp(0),
+        Triducer() : id(0), water_depth(0), water_offset(0), water_range(0), water_temp(0),
                      longitudinal_speed_water(0), transverse_speed_water(0),
                      longitudinal_speed_water_filt(0), transverse_speed_water_filt(0),
                      longitudinal_speed_ground(0), transverse_speed_ground(0),
@@ -82,46 +84,59 @@ public:
     class WeatherStation
     {
     public:
-        float true_wind_speed;      // TWS (m/s)
-        float true_wind_speed_filt; // (m/s)
-        float true_wind_dir;        // TWD (deg[0..360])
-        float true_wind_dir_filt;   // (deg[0..360])
-        float wind_gusts;           // (m/s)
-        float true_wind_angle;      // True wind angle
-        float true_wind_angle_filt;
+        uint32_t id;         // Device ID
         float apparent_wind_angle;  // Apparent wind angle (deg[-180..180])
         float apparent_wind_angle_filt;
         float apparent_wind_speed;  // Apparent wind speed
         float apparent_wind_speed_filt;
+        float water_wind_angle;      // (deg[-180..180])
+        float water_wind_angle_filt;
+        float water_wind_dir;      // (deg[0..360])
+        float water_wind_dir_filt;
+        float water_wind_speed;      // (m/s)
+        float water_wind_speed_filt;
+        float ground_wind_dir;        // TWD (deg[0..360])
+        float ground_wind_dir_filt;   // (deg[0..360])
+        float ground_wind_speed;      // TWS (m/s)
+        float ground_wind_speed_filt; // (m/s)
+        float wind_gusts;           // (m/s)
 
         float atmos_pressure;       // Atmospheric pressure (hPa)
         float air_temp;             // (celcius)
         float humidity;             // (%)
         uint64_t last_update;       // System time of last update (millis)
 
-        FiltExp<float> filter_tws;      // Filter for true wind speed
-        FiltExpAng<float> filter_twd;   // Filter for true wind direction
-        FiltExpAng<float> filter_twa;   // Filter for true wind angle
-        FiltExp<float> filter_aws;      // Filter for apparent wind speed
         FiltExpAng<float> filter_awa;   // Filter for apparent wind angle
+        FiltExp<float> filter_aws;      // Filter for apparent wind speed
+        FiltExpAng<float> filter_wwa;   // Filter for water wind angle
+        FiltExpAng<float> filter_wwd;   // Filter for water wind direction
+        FiltExp<float> filter_wws;      // Filter for water wind speed
+        FiltExpAng<float> filter_gwd;   // Filter for ground wind direction
+        FiltExp<float> filter_gws;      // Filter for ground wind speed
 
-        WeatherStation() : true_wind_speed(0), true_wind_speed_filt(0),
-                           true_wind_dir(0), true_wind_dir_filt(0),
-                           wind_gusts(0), true_wind_angle(0), true_wind_angle_filt(0),
-                           apparent_wind_angle(0), apparent_wind_angle_filt(0),
+        WeatherStation() : id(0), apparent_wind_angle(0), apparent_wind_angle_filt(0),
                            apparent_wind_speed(0), apparent_wind_speed_filt(0),
+                           water_wind_angle(0), water_wind_angle_filt(0),
+                           water_wind_dir(0), water_wind_dir_filt(0),
+                           water_wind_speed(0), water_wind_speed_filt(0),
+                           ground_wind_dir(0), ground_wind_dir_filt(0),
+                           ground_wind_speed(0), ground_wind_speed_filt(0),
+                           wind_gusts(0),
                            atmos_pressure(0), air_temp(0), humidity(0),
                            last_update(0),
-                           filter_tws(&(rover.g2.nmea2k.filt_tws)),
-                           filter_twd(&(rover.g2.nmea2k.filt_twd)),
                            filter_aws(&(rover.g2.nmea2k.filt_aws)),
                            filter_awa(&(rover.g2.nmea2k.filt_awa),180),
-                           filter_twa(&(rover.g2.nmea2k.filt_twa),180) {}
+                           filter_gws(&(rover.g2.nmea2k.filt_tws)),
+                           filter_gwd(&(rover.g2.nmea2k.filt_twd)),
+                           filter_wwa(&(rover.g2.nmea2k.filt_twa),180),
+                           filter_wws(&(rover.g2.nmea2k.filt_twd)),
+                           filter_wwd(&(rover.g2.nmea2k.filt_tws)) {}
     };
 
     class Compass
     {
     public:
+        uint32_t id;         // Device ID
         float heading;          /*< True heading (degrees)*/
         float heading_filt;     /*< True heading (degrees)*/
         float magnetic;         /*< Magnetic heading (degrees)*/
@@ -133,7 +148,7 @@ public:
 
         FiltExpNlAng<float> filter_hdg;
 
-        Compass() : heading(0), heading_filt(0), 
+        Compass() : id(0), heading(0), heading_filt(0),
                     magnetic(0), variation(M_PI+1), last_update(0),
                     roll(0), pitch(0), yaw(0),
                     filter_hdg(&(rover.g2.nmea2k.filt_hdg_tc),&(rover.g2.nmea2k.filt_hdg_nl)) {}
@@ -172,6 +187,16 @@ public:
             return &secondary_gps;
         } else if (tertiary_gps.have_fix) {
             return &tertiary_gps;
+        }
+        return NULL;
+    }
+
+    inline Compass* get_active_compass() {
+        uint64_t now = AP_HAL::millis64();
+        if ((now - primary_compass.last_update) < 5000) { // Primary compass reading is < 5 seconds old
+            return &primary_compass;
+        } else if ((now - secondary_compass.last_update) < 5000) { // Secondary compass reading is < 5 seconds old
+            return &secondary_compass;
         }
         return NULL;
     }

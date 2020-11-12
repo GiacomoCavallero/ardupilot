@@ -143,25 +143,51 @@ void nmea2k_updateWind(NMEA2K::WeatherStation& weather, float wind_apparent_spee
     NMEA2K::GPS* gps = nmea2k_sensors.get_active_gps();
     float heading = nmea2k_sensors.get_heading();
     if (gps != NULL && heading >= 0 && heading < 360) {
-        // Get apparent wind direction
-        float aw_dir = weather.apparent_wind_angle + heading;
 
-        // Wind velocity relative to vehicle in a North-East reference
-        Vector2f ab_NE(wind_apparent_speed*cos(ToRad(aw_dir)), wind_apparent_speed*sin(ToRad(aw_dir)));
-        // Vehicle ground velocity in North-East reference
-        Vector2f bg_NE(gps->sog*cos(ToRad(gps->cog)), gps->sog*sin(ToRad(gps->cog)));
-        // Sum to get velocity of air with respect to ground.
-        Vector2f ag_NE = ab_NE - bg_NE;
+        {
+            // Calculate the True(Water referenced) wind
+            Vector2f aw(wind_apparent_speed * cos(ToRad(wind_apparent_angle)), wind_apparent_speed * sin(ToRad(wind_apparent_angle)));
+            Vector2f bs(nmea2k_sensors.triducer.longitudinal_speed_water, nmea2k_sensors.triducer.transverse_speed_water);
 
-        // Get True(ground referenced) speed and direction.
-        double ag_speed = ag_NE.length();
-        double ag_dir = ToDeg(atan2(ag_NE[1], ag_NE[0]));
-        weather.true_wind_dir = wrap_360(ag_dir);
-        weather.true_wind_speed = ag_speed;
+            Vector2f ww = aw - bs;
 
-        // Filter TWS and TWD
-        weather.true_wind_dir_filt = weather.filter_twd.filterPoint(weather.true_wind_dir);
-        weather.true_wind_speed_filt = weather.filter_tws.filterPoint(weather.true_wind_speed);
+            double wws = ww.length();
+            double wwa = wrap_180(ToDeg(atan2(ww[1], ww[0])));
+            double wwd = wrap_360(wwa + heading);
+
+            weather.water_wind_angle = wwa;
+            weather.water_wind_dir = wwd;
+            weather.water_wind_speed = wws;
+
+            // Filter TWS and TWD
+            weather.water_wind_angle_filt = weather.filter_wwa.filterPoint(weather.water_wind_angle);
+            weather.water_wind_dir_filt = weather.filter_wwd.filterPoint(weather.water_wind_dir);
+            weather.water_wind_speed_filt = weather.filter_wws.filterPoint(weather.water_wind_speed);
+        }
+
+        {
+            // Calculate the True(Ground referenced) wind
+
+            // Get apparent wind direction
+            float aw_dir = weather.apparent_wind_angle + heading;
+
+            // Wind velocity relative to vehicle in a North-East reference
+            Vector2f ab_NE(wind_apparent_speed*cos(ToRad(aw_dir)), wind_apparent_speed*sin(ToRad(aw_dir)));
+            // Vehicle ground velocity in North-East reference
+            Vector2f bg_NE(gps->sog*cos(ToRad(gps->cog)), gps->sog*sin(ToRad(gps->cog)));
+            // Sum to get velocity of air with respect to ground.
+            Vector2f ag_NE = ab_NE - bg_NE;
+
+            // Get True(ground referenced) speed and direction.
+            double ag_speed = ag_NE.length();
+            double ag_dir = ToDeg(atan2(ag_NE[1], ag_NE[0]));
+            weather.ground_wind_dir = wrap_360(ag_dir);
+            weather.ground_wind_speed = ag_speed;
+
+            // Filter TWS and TWD
+            weather.ground_wind_dir_filt = weather.filter_gwd.filterPoint(weather.ground_wind_dir);
+            weather.ground_wind_speed_filt = weather.filter_gws.filterPoint(weather.ground_wind_speed);
+        }
     }
 }
 
@@ -199,23 +225,28 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     if (pmv->src == gps_primary_id)
     {
         gps_state = &primary_gps;
+        gps_state->id = gps_primary_id;
     }
     else if (pmv->src == gps_secondary_id)
     {
         gps_state = &secondary_gps;
+        gps_state->id = gps_secondary_id;
     }
     else if (pmv->src == gps_tertiary_id)
     {
         gps_state = &tertiary_gps;
+        gps_state->id = gps_tertiary_id;
     }
     Compass *compass_state = NULL;
     if (pmv->src == compass_primary_id)
     {
         compass_state = &primary_compass;
+        compass_state->id = compass_primary_id;
     }
     else if (pmv->src == compass_secondary_id)
     {
         compass_state = &secondary_compass;
+        compass_state->id = compass_secondary_id;
     }
 
     char method[64];
@@ -253,7 +284,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
             if (compass_reference == 1)
             {
                 // Magnetic
-                compass_state->heading = wrap_360(ToDeg(heading + variation)); // assuming declincation is correct
+                compass_state->heading = wrap_360(ToDeg(heading + variation));
                 compass_state->magnetic = wrap_360(ToDeg(heading));
                 compass_state->last_update = AP_HAL::millis64();
                 compass_state->heading_filt = compass_state->filter_hdg.filterPoint(compass_state->heading);
@@ -447,6 +478,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                     gps_state->sog = static_cast<float>(gs);
 
                     // TODO: Do we want to average the cog/sog again?
+                    gps_state->cog_filt = gps_state->filter_cog.filterPoint(gps_state->cog);
+                    gps_state->sog_filt = gps_state->filter_sog.filterPoint(gps_state->sog);
                 }
             }
         }
@@ -487,6 +520,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 switch (pmv->getInteger("Reference"))
                 {
                 case 2: // Apparent
+                    weather.id = pmv->src;
                     nmea2k_updateWind(weather, wind_speed, wrap_180(wind_angle));
                     break;
                 case 0: // True (ground referenced to North)
@@ -513,22 +547,26 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                 pmv->getDouble("Speed Water Referenced");
         break;
     case 130578: // Vessel Speed Components
-        triducer.longitudinal_speed_water =
-            pmv->getDouble("Longitudinal Speed, Water-referenced");
-        triducer.transverse_speed_water =
-            pmv->getDouble("Transverse Speed, Water-referenced");
-        triducer.longitudinal_speed_ground =
-            pmv->getDouble("Longitudinal Speed, Ground-referenced");
-        triducer.transverse_speed_ground =
-            pmv->getDouble("Transverse Speed, Ground-referenced");
-        triducer.stern_speed_water =
-            pmv->getDouble("Stern Speed, Water-referenced");
-        triducer.stern_speed_ground =
-            pmv->getDouble("Stern Speed, Ground-referenced");
+        if (pmv->isValid("Longitudinal Speed, Water-referenced") &&
+                pmv->isValid("Transverse Speed, Water-referenced")) {
+            triducer.id = pmv->src;
+            triducer.longitudinal_speed_water =
+                pmv->getDouble("Longitudinal Speed, Water-referenced");
+            triducer.transverse_speed_water =
+                pmv->getDouble("Transverse Speed, Water-referenced");
+            triducer.longitudinal_speed_ground =
+                pmv->getDouble("Longitudinal Speed, Ground-referenced");
+            triducer.transverse_speed_ground =
+                pmv->getDouble("Transverse Speed, Ground-referenced");
+            triducer.stern_speed_water =
+                pmv->getDouble("Stern Speed, Water-referenced");
+            triducer.stern_speed_ground =
+                pmv->getDouble("Stern Speed, Ground-referenced");
 
-        // Filter boatspeed and leeway
-        triducer.longitudinal_speed_water_filt = triducer.filter_boatspeed.filterPoint(triducer.longitudinal_speed_water);
-        triducer.transverse_speed_water_filt = triducer.filter_leeway.filterPoint(triducer.transverse_speed_water);
+            // Filter boatspeed and leeway
+            triducer.longitudinal_speed_water_filt = triducer.filter_boatspeed.filterPoint(triducer.longitudinal_speed_water);
+            triducer.transverse_speed_water_filt = triducer.filter_leeway.filterPoint(triducer.transverse_speed_water);
+        }
         break;
 
     case 128267: // Water Depth
@@ -790,13 +828,9 @@ Location NMEA2K::get_location() {
 }
 
 float NMEA2K::get_heading() {
-    uint64_t now = AP_HAL::millis64();
-    if ((now - primary_compass.last_update) < 5000) {
-        // primary compass has updated in last 5 seconds
-        return primary_compass.heading;
-    } else if ((now - secondary_compass.last_update) < 5000) {
-        // secondary compass has updated in last 5 seconds
-        return secondary_compass.heading;
+    Compass* compass = get_active_compass();
+    if (compass != NULL) {
+        return compass->heading;
     }
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
     return wrap_360(ToDeg(rover.ahrs.get_yaw()));
