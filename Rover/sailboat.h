@@ -19,6 +19,8 @@
 
 #include "ocius.h"
 
+#define KNOTS_PER_METRE     1.94384
+
 #define RUDDER_SERVO_CH     1
 #define MAST_SERVO_CH       9
 #define SAIL_SERVO_CH       10
@@ -88,13 +90,14 @@ public:
         MOTOR_SAIL      = 1,
         SAIL_ONLY       = 2,
         WAVE_POWER      = 3,
-        MOTOR_SOLAR     = 5
+        MOTOR_SOLAR     = 5,
     };
 
     enum SailFlags {
         FLAG_NONE           = 0,
         FLAG_JIBE_ONLY      = 1,
-        FLAG_IGNORE_XTRACK  = 2
+        FLAG_IGNORE_XTRACK  = 2,  // Replaced with NAVL1_IGN_XTRACK
+        FLAG_HEADING_TO_WP  = 4,
     };
 
     enum WindStrength {
@@ -103,6 +106,14 @@ public:
         WIND_FAIR           = 2,  // Light sailing wind
         WIND_STRONG         = 4,  // Strong sailing wind
         WIND_HIGH           = 8,  // High winds, stow sail if possible
+
+        WIND_GOOD           = 6,  // Wind is fair/strong, so can sail
+    };
+
+    enum SailHoldMode {
+        HOLD_DRIFT      = 0,
+        HOLD_ACTIVE     = 1,
+        HOLD_FIGURE8    = 2,
     };
 
     // set state of motor

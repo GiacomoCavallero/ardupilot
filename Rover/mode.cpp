@@ -333,7 +333,7 @@ void Mode::calc_throttle(float target_speed, bool avoidance_enabled)
         if (throttle_out <= 0)
             throttle_out = 0;
         g2.motors.limit.throttle_lower = throttle_out <= 0;
-        if (g2.sailboat.sail_mode == WAVE_POWER && (g2.wp_nav.get_default_speed() * KNOTS_PER_METRE < (0.5*1.1))) {
+        if (g2.sailboat.sail_mode == Sailboat::WAVE_POWER && (g2.wp_nav.get_default_speed() * KNOTS_PER_METRE < (0.5*1.1))) {
             // If in wave power, with speed < 0.55kts, then no throttle
             throttle_out = 0;
         }
@@ -463,9 +463,9 @@ void Mode::navigate_to_waypoint()
         const float turn_rate = g2.sailboat.tacking() ? g2.wp_nav.get_pivot_rate() : 0.0f;
         calc_steering_to_heading(desired_heading_cd, turn_rate);
     } else if (g2.frame_class == FRAME_BLUEBOTTLE &&
-                (g2.sailboat.sail_mode == WAVE_POWER ||
-                        (g2.sailboat.sail_mode == SAIL_ONLY &&
-                                ((g2.sailboat.wind_strength & WIND_GOOD) == 0)))) {
+                (g2.sailboat.sail_mode == Sailboat::WAVE_POWER ||
+                        (g2.sailboat.sail_mode == Sailboat::SAIL_ONLY &&
+                                ((g2.sailboat.wind_strength & Sailboat::WIND_GOOD) == 0)))) {
         // In wave_power mode (or sail_only but unable to sail), we use a high P only steering
         // get angle to WP
         float wp_angle = wrap_180_cd(g2.wp_nav.nav_bearing_cd() - ahrs.yaw_sensor) / 100.0;
@@ -476,7 +476,7 @@ void Mode::navigate_to_waypoint()
         }
 
         set_steering(servo_out);
-    } else if (g2.sailboat.sail_flags & SAIL_HEADING_TO_WP) {
+    } else if (g2.sailboat.sail_flags & Sailboat::FLAG_HEADING_TO_WP) {
         // use pivot turn rate for tacks
         const float turn_rate = g2.sailboat.tacking() ? g2.wp_nav.get_pivot_rate() : 0.0f;
         calc_steering_to_heading(desired_heading_cd, turn_rate);

@@ -66,7 +66,7 @@ void ModeManual::update()
         }}
             break;
 
-        case MOTOR_ONLY: case WAVE_POWER:
+        case Sailboat::MOTOR_ONLY: case Sailboat::WAVE_POWER:
             break;
         }
     }

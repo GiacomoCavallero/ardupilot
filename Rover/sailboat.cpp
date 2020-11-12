@@ -350,14 +350,14 @@ void Sailboat::get_throttle_and_mainsail_out(float desired_speed, float &throttl
                     if (relative_wind > (sail_no_go_rad / 2)) {
                         // nose is just a bit high, so we reduce the desired speed for the throttle
                         desired_speed = desired_speed * MAX((sail_no_go_rad - relative_wind) * 2, 0);
-                        printf("reducing desired speed - rel wind:%.1f, speed: %.2f\n",
-                                degrees(relative_wind), desired_speed);
+//                        printf("reducing desired speed - rel wind:%.1f, speed: %.2f\n",
+//                                degrees(relative_wind), desired_speed);
                     }
                 }
             }
         }
 
-        // TODO: Throttle up in MOTOR_SAIL while tacking.
+        // Throttle up in MOTOR_SAIL while tacking.
         if (sail_mode == MOTOR_ONLY || sail_mode == MOTOR_SAIL ||
                 sail_mode == MOTOR_SOLAR ||
                 (sail_mode == SAIL_ONLY && tack_push_required) ||
@@ -898,7 +898,7 @@ uint16_t Sailboat::get_optimal_sail_position() const {
         if (azi > -1) {
 //            float bearing = gps.bearing_true() / 100.0;
             float bearing = ToDeg(rover.ahrs.yaw);
-            float sun_angle = CLIP_360(azi - bearing);
+            float sun_angle = wrap_360(azi - bearing);
 
             uint16_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
             int32_t pwm_err = sail_angle_error * 400 / 90;  // Get the PWM error given the allowed angle error

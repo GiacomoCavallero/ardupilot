@@ -214,12 +214,11 @@ std::vector< Location > ModeHold::generateFigure8(const Location& centre, int nu
     if (num_points <= 5) {
         float angle_from_90 = ToDeg((float)atan2(wp_radius + DIST_2_JIBE_WP, hold_radius));
 //        rval.push_back(centre);
-
         std::vector <float> bearings;
-        bearings.push_back(CLIP_360(true_wind + (90 - angle_from_90)));
-        bearings.push_back(CLIP_360(true_wind + (90 + angle_from_90)));
-        bearings.push_back(CLIP_360(true_wind - (90 - angle_from_90)));
-        bearings.push_back(CLIP_360(true_wind - (90 + angle_from_90)));
+        bearings.push_back(wrap_360(true_wind + (90 - angle_from_90)));
+        bearings.push_back(wrap_360(true_wind + (90 + angle_from_90)));
+        bearings.push_back(wrap_360(true_wind - (90 - angle_from_90)));
+        bearings.push_back(wrap_360(true_wind - (90 + angle_from_90)));
 
         for (size_t i = 0; i < bearings.size(); ++i) {
             Location l = centre;
@@ -231,8 +230,8 @@ std::vector< Location > ModeHold::generateFigure8(const Location& centre, int nu
         for (int i = 0; i < num_points; ++i) {
             float X = sin(M_PI * 2 * i / (num_points - 1));
             float Y = sin(M_PI * 4 * i / (num_points - 1)) / 4;
-            float vector_bearing = CLIP_360(ToDeg(atan2(-X,Y)));
-            vector_bearing = CLIP_360(vector_bearing + true_wind);
+            float vector_bearing = wrap_360(ToDeg(atan2(-X,Y)));
+            vector_bearing = wrap_360(vector_bearing + true_wind);
 
             Location l = centre;
             l.offset_bearing(vector_bearing, sqrt(X*X+Y*Y) * hold_radius);
