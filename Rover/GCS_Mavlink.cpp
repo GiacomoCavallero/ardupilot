@@ -510,6 +510,8 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
         send_wind_filtered(FILTER_RAW);
         CHECK_PAYLOAD_SIZE(WIND_FILTERED);
         send_wind_filtered(FILTER_DEFAULT);
+        CHECK_PAYLOAD_SIZE(NMEA2K_SENSORS);
+        send_nmea2k_sensors();
         break;
 
     case MSG_ADSB_VEHICLE: {
