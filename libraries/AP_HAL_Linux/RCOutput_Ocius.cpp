@@ -530,7 +530,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         // have emergency stop
         if (motor_enabled[ch]) {
             printf("RCOut: Emergency stop called on winch.\n");
-            gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: Received emergency stop for winch.\n");
+            gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: Received emergency stop for winch.");
         }
         // disable motor power
         disableMotor(nodeid);
@@ -544,8 +544,9 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
         // We're armed, but the winch hasn't been given a position, so can self deploy
         // We'll set its desired position to its current good position
+        gcs().send_text(MAV_SEVERITY_NOTICE, "Sending STOP(%u) to EPOS on 1st arming.", (uint32_t)motor.pwm);
         SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_WINCH_CHANN, motor.pwm);
-//        pwm_last[ch] = motor.pwm;
+        return;
     }
 
     // Move sail/winch to desired position
