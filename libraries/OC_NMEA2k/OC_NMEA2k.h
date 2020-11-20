@@ -27,7 +27,7 @@ public:
         Location location;
         float cog, cog_filt; // deg[0..360]
         float sog, sog_filt; // m/s
-        float variation;        /*< Variation to true north (degrees)*/
+        float variation;        /*< Variation to true north (radians)*/
 
         uint64_t last_update; // System time of last update (millis)
 
@@ -140,11 +140,12 @@ public:
         float heading;          /*< True heading (degrees)*/
         float heading_filt;     /*< True heading (degrees)*/
         float magnetic;         /*< Magnetic heading (degrees)*/
-        float variation;        /*< Variation to true north (degrees), Should not be used, use variation from a GPS instead */
+        float variation;        /*< Variation to true north (radians), Should not be used, use variation from a GPS instead */
 
         uint64_t last_update; // System time of last update (millis)
 
-        float roll, pitch, yaw; // Attitude reported from the compass/Airmar (radians)
+        float roll, pitch;  // Attitude reported from the compass/Airmar (radians)
+        float yaw;          // None of our devices currently report a valid value for Yaw
 
         FiltExpNlAng<float> filter_hdg;
 
@@ -201,6 +202,7 @@ public:
         return NULL;
     }
 
+    // Get the compass variation from the GPS (radians)
     inline float get_variation() {
         if (primary_gps.have_fix && primary_gps.variation < M_PI) {
             return primary_gps.variation;

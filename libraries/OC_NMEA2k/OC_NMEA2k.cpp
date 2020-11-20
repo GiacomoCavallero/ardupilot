@@ -143,7 +143,6 @@ void nmea2k_updateWind(NMEA2K::WeatherStation& weather, float wind_apparent_spee
     NMEA2K::GPS* gps = nmea2k_sensors.get_active_gps();
     float heading = nmea2k_sensors.get_heading();
     if (gps != NULL && heading >= 0 && heading < 360) {
-
         {
             // Calculate the True(Water referenced) wind
             Vector2f aw(wind_apparent_speed * cos(ToRad(wind_apparent_angle)), wind_apparent_speed * sin(ToRad(wind_apparent_angle)));
@@ -164,7 +163,6 @@ void nmea2k_updateWind(NMEA2K::WeatherStation& weather, float wind_apparent_spee
             weather.water_wind_dir_filt = weather.filter_wwd.filterPoint(weather.water_wind_dir);
             weather.water_wind_speed_filt = weather.filter_wws.filterPoint(weather.water_wind_speed);
         }
-
         {
             // Calculate the True(Ground referenced) wind
 
@@ -301,9 +299,13 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         if (compass_state != NULL)
         {
             // We only want the attitude readings from the primary(Airmar) GPS.
-            compass_state->yaw = pmv->getDouble("Yaw");
-            compass_state->pitch = pmv->getDouble("Pitch");
-            compass_state->roll = pmv->getDouble("Roll");
+            if (pmv->isValid("yaw")) {
+                compass_state->yaw = pmv->getDouble("Yaw");
+            }
+            if (pmv->isValid("Pitch") && pmv->isValid("Roll")) {
+                compass_state->pitch = pmv->getDouble("Pitch");
+                compass_state->roll = pmv->getDouble("Roll");
+            }
         }
         break;
 
@@ -575,7 +577,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         triducer.water_range = pmv->getDouble("Range");
         break;
 
-    case 130311:                                        // Environmental Parameters
+    case 130311: // Environmental Parameters
         if (pmv->getInteger("Temperature Source") == 0) // Water temp
         {
             triducer.water_temp = pmv->getDouble("Temperature");
