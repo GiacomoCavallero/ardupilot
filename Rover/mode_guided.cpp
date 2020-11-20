@@ -272,6 +272,9 @@ bool ModeGuided::set_desired_location(const struct Location& destination,
         _guided_mode = ModeGuided::Guided_WP;
         send_notification = true;
         rover.Log_Write_GuidedTarget(_guided_mode, Vector3f(destination.lat, destination.lng, 0), Vector3f(g2.wp_nav.get_desired_speed(), 0.0f, 0.0f));
+        char cStr[65];
+        snprintf(cStr, 64, "GUIDED wp: %.7f, %.7f", destination.lat * 1e-7, destination.lng * 1e-7);
+        rover.gcs().send_text(MAV_SEVERITY_INFO, "%s", cStr);
         return true;
     }
     return false;
