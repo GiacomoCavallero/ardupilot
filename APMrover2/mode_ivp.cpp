@@ -13,8 +13,8 @@ bool ModeIVP::_enter(mode_reason_t reason)
 void ModeIVP::update()
 {
     // stop vehicle if target not updated within 3 seconds
-    if (have_attitude_target && (millis() - _des_att_time_ms) > 3000) {
-        rover.gcs().send_text(MAV_SEVERITY_WARNING, "IVP Mode: target not received in last 3secs, stopping");
+    if (have_attitude_target && (millis() - _des_att_time_ms) > 5000) {
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "IVP Mode: target not received in last 5 secs, stopping");
         have_attitude_target = false;
     }
     if (have_attitude_target) {
@@ -22,6 +22,15 @@ void ModeIVP::update()
         calc_steering_to_heading(_desired_yaw_cd);
 
         if (_target_is_throttle) {
+            // IVP allows the sail to automatically adjust
+            if (rover.g2.sailboat.sail_enabled()) {
+                // sailboats use special throttle and mainsail controller.
+                // but we ignore the throttle out
+                float mainsail_out = 0.0f;
+                float throttle_out = 0.0f;
+                rover.g2.sailboat.get_throttle_and_mainsail_out(1.0, throttle_out, mainsail_out);
+                rover.g2.motors.set_mainsail(mainsail_out);
+            }
             g2.motors.set_throttle(_desired_speed);
         } else {
             float desired_speed = rover.g2.wp_nav.get_desired_speed();
