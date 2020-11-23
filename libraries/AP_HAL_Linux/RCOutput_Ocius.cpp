@@ -397,6 +397,16 @@ bool RCOutput_Ocius_stinger_epos_all_broken(int* consecutive_failures, int chann
 
 #define MOTOR_NAME (nodeid == 2?"Winch":"Sail")
 
+void RCOutput_Ocius_EmergencyHandler(uint8_t nodeid, uint16_t errCode) {
+    if (nodeid == 1 || nodeid == 2) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: EPOS fault(0x%04x) detected on %s.", (uint32_t)errCode, MOTOR_NAME);
+        uint16_t family;
+        if (!getEPOSFamily(nodeid, &family)) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "RCOut:     %s", getErrorDescription(errCode, family));
+        }
+    }
+}
+
 void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_t ch, uint8_t nodeid) {
     if (!bridge_initialised) {
         return;
@@ -416,13 +426,13 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
             consecutive_failures[ch] = MAX_CONSEQ_FAILS;
             if (motor.homed != AP_HAL::SERVO_UNHOMED) {
                 gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
-                printf("RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
+//                printf("RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
             }
             motor.homed = AP_HAL::SERVO_UNHOMED;
 
             if (RCOutput_Ocius_stinger_epos_all_broken(consecutive_failures, (int)_channel_count)) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Too many consecutive read failures. Resetting bridge connection.");
-                printf("RCOut: Too many consecutive read failures. Resetting bridge connection.\n");
+//                printf("RCOut: Too many consecutive read failures. Resetting bridge connection.\n");
                 shutdownBridge();
                 bridge_initialised = false;
                 memset(consecutive_failures, -1, sizeof(int)*(unsigned int)_channel_count);
@@ -436,9 +446,9 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 //        fflush(stdout);
     }
 
-    if (consecutive_failures[ch] > 0) {
-        printf("RCOut: Successful read, clearing consecutive failures.\n");
-    }
+//    if (consecutive_failures[ch] > 0) {
+//        printf("RCOut: Successful read, clearing consecutive failures.\n");
+//    }
     consecutive_failures[ch] = 0;
 
     position_pwm = 0;
@@ -475,7 +485,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
             if (homed) {
                 // Sail is homed
                 if (motor.homed != AP_HAL::SERVO_HOMED) {
-                    printf("%s is homed.\n", MOTOR_NAME);
+//                    printf("%s is homed.\n", MOTOR_NAME);
                     gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: %s is homed.", MOTOR_NAME);
                 }
                 motor.homed = AP_HAL::SERVO_HOMED;
@@ -495,7 +505,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (motor.homed != AP_HAL::SERVO_HOMED || (ch == BLUEBOTTLE_SAIL_CHANN && (thread_flags & HomeSail))) {
         if (motor.homed != AP_HAL::SERVO_HOMING) {
             gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: homing %s.", MOTOR_NAME);
-            printf("RCOut: homing %s.\n", MOTOR_NAME);
+//            printf("RCOut: homing %s.\n", MOTOR_NAME);
         }
         motor_enabled[ch] = true;
         homeMotor(nodeid);
@@ -540,7 +550,6 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         return;
     }
 
-    // FIXME
     if (ch == BLUEBOTTLE_WINCH_CHANN && pwm_last[ch] == 0) {
         // We're armed, but the winch hasn't been given a position, so can self deploy
         // We'll set its desired position to its current good position
@@ -586,7 +595,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
                 }
 
                 motor_enabled[ch] = true;
-                printf("RCOut: Moving %s to position %d.\n", MOTOR_NAME, desiredPosition);
+//                printf("RCOut: Moving %s to position %d.\n", MOTOR_NAME, desiredPosition);
                 last_move_attempt[ch] = desiredPosition;
                 if (!moveToPosition(nodeid, desiredPosition)) {
                     last_move_success[ch] = desiredPosition;
