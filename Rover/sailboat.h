@@ -110,11 +110,11 @@ public:
         WIND_GOOD           = 6,  // Wind is fair/strong, so can sail
     };
 
-    enum SailHoldMode {
-        HOLD_DRIFT      = 0,
-        HOLD_ACTIVE     = 1,
-        HOLD_FIGURE8    = 2,
-    };
+//    enum SailHoldMode {
+//        HOLD_DRIFT      = 0,
+//        HOLD_ACTIVE     = 1,
+//        HOLD_FIGURE8    = 2,
+//    };
 
     // set state of motor
     // if report_failure is true a message will be sent to all GCSs

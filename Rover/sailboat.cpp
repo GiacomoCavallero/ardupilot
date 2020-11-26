@@ -341,6 +341,7 @@ void Sailboat::get_throttle_and_mainsail_out(float desired_speed, float &throttl
                 tack_push_required = true;
             } else {
                 // If not tacking, but nose gets too high, need to use throttle to help push nose down
+                // FIXME: this should use the water/true wind
                 float relative_wind = wrap_PI(rover.g2.windvane.get_true_wind_direction_rad() - AP::ahrs().get_yaw());
                 relative_wind = fabs(relative_wind);
                 float sail_no_go_rad = radians(sail_no_go);
@@ -523,6 +524,7 @@ void Sailboat::handle_tack_request_acro()
     }
     // set tacking heading target to the current angle relative to the true wind but on the new tack
     currently_tacking = true;
+    // FIXME: this should use the water/true wind
     tack_heading_rad = wrap_2PI(rover.ahrs.yaw + 2.0f * wrap_PI((rover.g2.windvane.get_true_wind_direction_rad() - rover.ahrs.yaw)));
 
     tack_request_ms = AP_HAL::millis();
@@ -583,6 +585,7 @@ bool Sailboat::use_indirect_route(float desired_heading_cd) const
 
     // check if desired heading is in the no go zone, if it is we can't go direct
     // pad no go zone, this allows use of heading controller rather than L1 when close to the wind
+    // FIXME: this should use the water/true wind
     return fabsf(wrap_PI(rover.g2.windvane.get_true_wind_direction_rad() - desired_heading_rad)) <= radians(sail_no_go + SAILBOAT_NOGO_PAD);
 }
 
@@ -604,6 +607,7 @@ float Sailboat::calc_heading(float desired_heading_cd)
     // if the desired heading is outside the no go zone there is no need to change it
     // this allows use of heading controller rather than L1 when desired
     // this is used in the 'SAILBOAT_NOGO_PAD' region
+    // FIXME: this should use the water/true wind
     const float true_wind_rad = rover.g2.windvane.get_true_wind_direction_rad();
     if (fabsf(wrap_PI(true_wind_rad - desired_heading_rad)) > radians(sail_no_go) && !currently_tacking) {
 
@@ -890,6 +894,11 @@ bool Sailboat::sail_is_safe() const {
     return true;
 }
 
+static float linInterp(const double x1, const double x2, const double y1, const double y2, const double x)
+{
+    return y1 + (x - x1) / (x2 - x1) * (y2 - y1);
+}
+
 extern float calcSun(float lat, float lon);
 uint16_t Sailboat::get_optimal_sail_position() const {
     uint16_t pwm = 0;
@@ -937,28 +946,29 @@ uint16_t Sailboat::get_optimal_sail_position() const {
     } else if (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY) {
         float desired_angle = 0;
 
-        float apparent_wind_bf = ToDeg(rover.g2.windvane.get_apparent_wind_angle_rad());
-        float true_wind_speed = rover.g2.windvane.get_true_wind_speed();
+        const float apparent_wind_ang = ToDeg(rover.g2.windvane.get_apparent_wind_angle_rad());
+        const float apparent_wind_speed = rover.g2.windvane.get_apparent_wind_speed();
 
-        float desired_attack = 0;
-//        float wind_bf_180 = CLIP_180(wind_bf);
+        const float target_trim_angle = std::max(sail_angle_ideal - 0.4*(apparent_wind_speed*apparent_wind_speed), 0.0);
 
-        // modify sail_angle based on wind speed using AoA = AoA - 0.4*TWS^2
-        float target_attack_angle = sail_angle_ideal;
-        target_attack_angle -= 0.4*(true_wind_speed*true_wind_speed);
-        target_attack_angle = (target_attack_angle < 0 ? 0: target_attack_angle);
+        const float trim_start = 90 + target_trim_angle;
 
-        float catch_zone = 90 - target_attack_angle;
-        if (fabs(apparent_wind_bf) > 180 - catch_zone) {
-            // Wind from behind, so square the sail
+        const float upwind_target = 35;
+        const float upwind_trim = 16;
+
+        float desired_trim = 0;
+
+        if (fabs(apparent_wind_ang) >= trim_start) {
+            desired_trim = 90;
             desired_angle = 0;
+        } else if (fabs(apparent_wind_ang) < upwind_target) {
+            // Finer than target - interpolate between upwind trim and 0
+            desired_trim = linInterp(0, upwind_target, 0, upwind_trim, fabs(apparent_wind_ang));
+            desired_angle = std::copysign(90 - desired_trim, apparent_wind_ang);
         } else {
-            desired_attack = fabs(apparent_wind_bf) * target_attack_angle / (90 + target_attack_angle);
-
-            desired_angle = 90 - fabs(apparent_wind_bf) + desired_attack;
-            if (apparent_wind_bf < 0) {
-                desired_angle = -desired_angle;
-            }
+            // Trimmable zone - interpolate between 90 and upwind trim
+            desired_trim = linInterp(upwind_target, trim_start, upwind_trim, 90, fabs(apparent_wind_ang));
+            desired_angle = std::copysign(90 - desired_trim, apparent_wind_ang);
         }
 
         pwm =  1500 - (desired_angle * 400) / 90;
@@ -966,6 +976,7 @@ uint16_t Sailboat::get_optimal_sail_position() const {
 
     return pwm;
 }
+
 void Sailboat::check_wind() {
     static uint32_t extremeWeatherStart = 0;
     static uint32_t timeWeatherCleared = 0;
