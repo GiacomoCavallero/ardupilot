@@ -322,6 +322,18 @@ void RCOutput_Ocius::motor_status_check(void) {
 ////  DEBUGV("Reading motor status.\n");
 //}
 
+#define MOTOR_NAME (nodeid == 2?"Winch":"Sail")
+
+static void RCOutput_Ocius_EmergencyHandler(uint8_t nodeid, uint16_t errCode) {
+    if (nodeid == 1 || nodeid == 2) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: EPOS fault(0x%04x) detected on %s.", (uint32_t)errCode, MOTOR_NAME);
+        uint16_t family;
+        if (!getEPOSFamily(nodeid, &family)) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "RCOut:     %s", getErrorDescription(errCode, family));
+        }
+    }
+}
+
 bool bridge_initialised = false;
 uint32_t last_initialise_fail_message = 0;
 void RCOutput_Ocius::stinger_sail_comm_thread() {
@@ -362,6 +374,7 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
             last_initialise_fail_message = 0;
             sail_status.homed = AP_HAL::SERVO_UNHOMED;
             winch_status.homed = AP_HAL::SERVO_UNHOMED;
+            setEmergencyHandler(&RCOutput_Ocius_EmergencyHandler);
         }
 
         if (motor_enabled[BLUEBOTTLE_SAIL_CHANN] && mast_status.homed == AP_HAL::SERVO_HOMED && mast_status.pwm <= 1200) {
@@ -395,17 +408,6 @@ bool RCOutput_Ocius_stinger_epos_all_broken(int* consecutive_failures, int chann
     return have_broken_reading;
 }
 
-#define MOTOR_NAME (nodeid == 2?"Winch":"Sail")
-
-void RCOutput_Ocius_EmergencyHandler(uint8_t nodeid, uint16_t errCode) {
-    if (nodeid == 1 || nodeid == 2) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: EPOS fault(0x%04x) detected on %s.", (uint32_t)errCode, MOTOR_NAME);
-        uint16_t family;
-        if (!getEPOSFamily(nodeid, &family)) {
-            gcs().send_text(MAV_SEVERITY_WARNING, "RCOut:     %s", getErrorDescription(errCode, family));
-        }
-    }
-}
 
 void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_t ch, uint8_t nodeid) {
     if (!bridge_initialised) {
