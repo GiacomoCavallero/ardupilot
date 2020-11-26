@@ -240,8 +240,8 @@ void GCS_MAVLINK_Rover::send_compass_airmar() {
             nmea2k_sensors.compass.magnetic,
             nmea2k_sensors.compass.variation,
             rover.g2.magnetic_offset,
-            nmea2k_sensors.primary_gps.location.lat,
-            nmea2k_sensors.primary_gps.location.lng,
+            nmea2k_sensors.primary_gps.location.lat * 1e-7,
+            nmea2k_sensors.primary_gps.location.lng * 1e-7,
             nmea2k_sensors.primary_gps.cog,
             nmea2k_sensors.primary_gps.sog
         );
