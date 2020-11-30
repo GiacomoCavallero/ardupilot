@@ -203,7 +203,7 @@ void RCOutput_Ocius::home(uint8_t chan) {
                 return;
             }
     //        printf("RCOutput_Ocius::home_mast() - Homing mast on Stinger.\n");
-    //        gcs().send_text(MAV_SEVERITY_NOTICE, "Homing mast on Stinger.\n");
+    //        gcs().send_text(MAV_SEVERITY_NOTICE, "Homing mast on Stinger.");
             uint16_t home_pos = 1900;
             if (pwm_last[BLUEBOTTLE_MAST_CHANN] == 1900) {
                 home_pos = 1899;
@@ -350,14 +350,14 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
             if (initializeBridge(0x04, bridgeAddr.c_str()) != 0) {
                 // Initialisation failed.
                 if (last_initialise_fail_message == 0 || (now - last_initialise_fail_message) > 10000) {
-                    gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Unable to initialise bridge connection.\n");
+                    gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Unable to initialise bridge connection.");
                     printf("RCOut: Unable to initialise bridge connection.\n");
                     last_initialise_fail_message = now;
                 }
                 continue;
             }
             bridge_initialised = true;
-            gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Epos bridge initialised.\n");
+            gcs().send_text(MAV_SEVERITY_INFO, "RCOut: Epos bridge initialised.");
             printf("RCOut: Epos bridge initialised.\n");
             last_initialise_fail_message = 0;
             sail_status.homed = AP_HAL::SERVO_UNHOMED;
