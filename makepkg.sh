@@ -12,4 +12,5 @@ else
 	bundle_name=../ardupilot.tgz
 fi
 
-cd $STAGE_DIR && tar -czvf $bundle_name . && cd -
+cd $STAGE_DIR && tar -czvf $bundle_name . && cd - && echo Created $bundle_name
+
