@@ -40,6 +40,7 @@ protected:
     void send_compass_airmar();
     void send_wind_filtered(SENSOR_FILTERING filter);
     void send_nmea2k_sensors();
+    void send_epos_status();
 
 private:
 

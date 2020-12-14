@@ -607,3 +607,38 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         }
     }
 }
+
+void RCOutput_Ocius::send_epos_status(mavlink_channel_t chan) {
+    // TODO void RCOutput_Ocius::send_epos_status(mavlink_channel_t chan);
+    mavlink_msg_epos_status_send(chan,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0);
+}
+
+void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
+    // get acc from onboard imu
+    Vector3f boat_accel = AP::ins().get_accel();
+
+    // calc mast angle
+    Vector3f mast_accel(xacc, yacc, zacc);
+
+    if (boat_accel.length_squared() == 0 || mast_accel.length_squared() == 0) {
+        // Need unit vectors so have to skip.
+        return;
+    }
+
+    boat_accel.normalize();
+    mast_accel.normalize();
+
+    float dot = boat_accel * mast_accel;
+    float angle = 180 - ToDeg(acos(dot));
+    int pwm = (int)(angle*800/90+1100);
+
+    gcs().send_text(MAV_SEVERITY_DEBUG, "Mast angle: %.1f, PWM: %d", angle, pwm);
+}

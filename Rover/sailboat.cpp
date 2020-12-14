@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#include <AP_HAL_Linux/RCOutput_Ocius.h>  // send_epos_status()
+
 #define SAILBOAT_AUTO_TACKING_TIMEOUT_MS 15000   // tacks in auto mode timeout if not successfully completed within this many milliseconds
 #define SAILBOAT_TACKING_ACCURACY_DEG 10        // tack is considered complete when vehicle is within this many degrees of target tack angle
 #define SAILBOAT_NOGO_PAD 10                    // deg, the no go zone is padded by this much when deciding if we should use the Sailboat heading controller
@@ -209,6 +211,15 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Increment: 0.1
     // @User: Standard
     AP_GROUPINFO("TACK_CORRID", 51, Sailboat, sail_tack_corridor, 100),
+
+    // @Param: TILT_IMU
+    // @DisplayName: Tack Corridor
+    // @Description: Component ID of the IMU on the sail
+    // @Units: CompID
+    // @Range: 0+
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("TILT_IMU", 20, Sailboat, tilt_imu, 0),
 
     AP_GROUPEND
 };
