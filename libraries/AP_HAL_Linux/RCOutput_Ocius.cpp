@@ -249,7 +249,10 @@ void RCOutput_Ocius::motor_status_check(void) {
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
             mast_status.homed = AP_HAL::SERVO_HOMED;
             mast_status.moving = false;
-            mast_status.pwm = pwm_last[BLUEBOTTLE_MAST_CHANN];
+            if (rover.g2.sailboat.tilt_imu == 0) {
+                // If the tilt IMU is 0, we just us the time to set the position.
+                mast_status.pwm = pwm_last[BLUEBOTTLE_MAST_CHANN];
+            }
             timeMastSignalStarted = 0;
             if (mast_status.pwm <= 1200) {
                 // Mast is down, disable the sail motor.
@@ -641,4 +644,5 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     int pwm = (int)(angle*800/90+1100);
 
     gcs().send_text(MAV_SEVERITY_DEBUG, "Mast angle: %.1f, PWM: %d", angle, pwm);
+    mast_status.pwm = pwm;
 }
