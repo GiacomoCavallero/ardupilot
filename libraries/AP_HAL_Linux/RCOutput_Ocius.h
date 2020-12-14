@@ -3,7 +3,7 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 
 #include <pthread.h>
-#include "include/mavlink/v2.0/mavlink_types.h"
+//#include "include/mavlink/v2.0/mavlink_types.h"
 
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO
 #include "RCOutput_PCA9685.h"
@@ -74,6 +74,6 @@ public:
     void stinger_sail_comm_thread();
     void stinger_check_mast_signal();
     void stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_t ch, uint8_t nodeid);
-    void send_epos_status(mavlink_channel_t chan);
+    void send_epos_status(uint8_t chan);
     void updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc);
 };

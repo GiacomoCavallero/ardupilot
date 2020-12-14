@@ -608,9 +608,9 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     }
 }
 
-void RCOutput_Ocius::send_epos_status(mavlink_channel_t chan) {
-    // TODO void RCOutput_Ocius::send_epos_status(mavlink_channel_t chan);
-    mavlink_msg_epos_status_send(chan,
+void RCOutput_Ocius::send_epos_status(uint8_t chan) {
+    // TODO void RCOutput_Ocius::send_epos_status(uint8_t chan);
+    mavlink_msg_epos_status_send((mavlink_channel_t)chan,
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0,
