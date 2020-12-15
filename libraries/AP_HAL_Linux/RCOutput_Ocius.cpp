@@ -478,6 +478,15 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     motor.pwm = position_pwm;
     uint16_t motorFam;
     getEPOSFamily(nodeid, &motorFam);
+    switch(motorFam) {
+    case FamilyEPOS2:
+        motorFam = 2; break;
+    case FamilyEPOS4:
+        motorFam = 4; break;
+    default:
+        motorFam = 0; break;
+    }
+
     motor.flag = motorFam;
     if (motor.pwm >= 1000 && motor.pwm <= 2000) {
         motor._position_is_good = true;
