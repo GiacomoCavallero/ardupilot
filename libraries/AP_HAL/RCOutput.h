@@ -45,6 +45,7 @@ struct ServoStatus {
     ServoHoming homed;
 
     int32_t raw;
+    uint8_t flag;
 
     uint64_t _last_home_check;
     // FIXME: is there a EPOS object entry to check the status of the SSI encoder?

@@ -528,6 +528,8 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
     case MSG_SAIL_STATUS:
         CHECK_PAYLOAD_SIZE(SAIL_STATUS);
         send_sail_status();
+        CHECK_PAYLOAD_SIZE(EPOS_STATUS);
+        send_epos_status();
         break;
     case MSG_WATER:
         CHECK_PAYLOAD_SIZE(WATER);

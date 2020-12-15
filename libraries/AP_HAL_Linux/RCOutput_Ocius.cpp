@@ -465,6 +465,9 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
     motor.raw = position;
     motor.pwm = position_pwm;
+    uint16_t motorFam;
+    getEPOSFamily(nodeid, &motorFam);
+    motor.flag = motorFam;
     if (motor.pwm >= 1000 && motor.pwm <= 2000) {
         motor._position_is_good = true;
     } else {
@@ -612,10 +615,9 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 }
 
 void RCOutput_Ocius::send_epos_status(uint8_t chan) {
-    // TODO void RCOutput_Ocius::send_epos_status(uint8_t chan);
     mavlink_msg_epos_status_send((mavlink_channel_t)chan,
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
+            sail_status.flag, sail_status.raw, sail_status.pwm, last_move_attempt[BLUEBOTTLE_SAIL_CHANN], pwm_last[BLUEBOTTLE_SAIL_CHANN],
+            winch_status.flag, winch_status.raw, winch_status.pwm, last_move_attempt[BLUEBOTTLE_WINCH_CHANN], pwm_last[BLUEBOTTLE_WINCH_CHANN],
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0,
