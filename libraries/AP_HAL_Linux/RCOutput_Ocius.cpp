@@ -237,7 +237,8 @@ void RCOutput_Ocius::motor_status_check(void) {
         if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
             hydraulic_run_time = rover.g2.sailboat.mast_time_down;
         }
-        if (timeMastSignalStarted != 0 && rover.g2.sailboat.tilt_imu != 0 && (abs((int)mast_status.pwm - (int)pwm_last) <= 20)) {
+        if (timeMastSignalStarted != 0 && rover.g2.sailboat.tilt_imu != 0 &&
+                (abs((int)mast_status.pwm - (int)pwm_last[BLUEBOTTLE_MAST_CHANN]) <= rover.g2.sailboat.tilt_err)) {
             // If the hydraulics are running and the tilt imu is set, when we approach the position we cut the timer short.
             uint32_t shortTime = millis() + 1000;
             if (shortTime > hydraulic_run_time) {
@@ -476,7 +477,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
     motor.raw = position;
     motor.pwm = position_pwm;
-    uint16_t motorFam;
+    uint16_t motorFam = 0;
     getEPOSFamily(nodeid, &motorFam);
     switch(motorFam) {
     case FamilyEPOS2:

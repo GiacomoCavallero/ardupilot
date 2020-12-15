@@ -213,13 +213,22 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     AP_GROUPINFO("TACK_CORRID", 51, Sailboat, sail_tack_corridor, 100),
 
     // @Param: TILT_IMU
-    // @DisplayName: Tack Corridor
-    // @Description: Component ID of the IMU on the sail
+    // @DisplayName: ID of Mast Tilt IMU
+    // @Description: Component ID of the IMU on the mast
     // @Units: CompID
     // @Range: 0+
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("TILT_IMU", 20, Sailboat, tilt_imu, 0),
+
+    // @Param: TILT_ERR
+    // @DisplayName: Tilt IMU Error
+    // @Description: Accepted error in position of the mast up/down
+    // @Units: PWM
+    // @Range: 0+
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("TILT_ERR", 21, Sailboat, tilt_err, 20),
 
     AP_GROUPEND
 };

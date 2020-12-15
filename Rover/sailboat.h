@@ -167,6 +167,7 @@ private:
     AP_Int32 mast_time_down;
     AP_Int32 mast_time_delay;
     AP_Int16 tilt_imu;
+    AP_Int16 tilt_err;
 
     AP_Int8 hold_mode;
     AP_Float hold_radius;
