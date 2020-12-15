@@ -59,6 +59,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t chann
     last_move_attempt = new int[_channel_count];
     last_move_success = new int[_channel_count];
     last_move_time = new int[_channel_count];
+    last_imu_update = 0;
 
     memset(pwm_last, 0, sizeof(uint16_t)*(unsigned int)channel_count);
     memset(pwm_status, 0, sizeof(AP_HAL::ServoStatus)*(unsigned int)channel_count);
@@ -233,6 +234,12 @@ void RCOutput_Ocius::motor_status_check(void) {
         // disable relay signal for mast
 //		printf("Checking if mast signal to be disabled. (%u, %u)\n", timeMastSignalStarted, millis());
 
+        // if the imu is configured and old, set mast_status.pwm to 0
+        if (rover.g2.sailboat.tilt_imu != 0 && last_imu_update + 5000 < millis()) {
+            // If the imu is set but we haven't updated in 5 seconds, we're not sure where the mast is
+            mast_status.pwm = 0;
+        }
+
         double hydraulic_run_time = rover.g2.sailboat.mast_time_up;
         if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
             hydraulic_run_time = rover.g2.sailboat.mast_time_down;
@@ -250,6 +257,7 @@ void RCOutput_Ocius::motor_status_check(void) {
                 timeMastSignalStarted = shortTime;
             }
         }
+
         if (timeMastSignalStarted != 0 &&
                 (millis() - timeMastSignalStarted) > hydraulic_run_time) {
             // Signal has passed desired time / kill it
@@ -658,6 +666,8 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
         // Need unit vectors so have to skip.
         return;
     }
+
+    last_imu_update = millis();
 
     boat_accel.normalize();
     mast_accel.normalize();

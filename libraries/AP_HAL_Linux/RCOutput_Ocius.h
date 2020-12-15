@@ -23,6 +23,7 @@ protected:
     int* last_move_attempt;
     int* last_move_success;
     int* last_move_time;
+    uint32_t last_imu_update;
 
     char linebuf[128];
     uint8_t linebuf_len = 0;
