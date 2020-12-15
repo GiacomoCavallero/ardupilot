@@ -666,6 +666,5 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     float angle = 180 - ToDeg(acos(dot));
     int pwm = (int)(angle*800/90+1100);
 
-    gcs().send_text(MAV_SEVERITY_DEBUG, "Mast angle: %.1f, PWM: %d", angle, pwm);
     mast_status.pwm = pwm;
 }
