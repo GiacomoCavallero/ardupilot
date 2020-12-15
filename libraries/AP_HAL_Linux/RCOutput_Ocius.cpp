@@ -237,7 +237,18 @@ void RCOutput_Ocius::motor_status_check(void) {
         if (pwm_last[BLUEBOTTLE_MAST_CHANN] < 1500) {
             hydraulic_run_time = rover.g2.sailboat.mast_time_down;
         }
+        if (timeMastSignalStarted != 0 && rover.g2.sailboat.tilt_imu != 0 && (abs((int)mast_status.pwm - (int)pwm_last) <= 20)) {
+            // If the hydraulics are running and the tilt imu is set, when we approach the position we cut the timer short.
+            uint32_t shortTime = millis() + 1000;
+            if (shortTime > hydraulic_run_time) {
+                // avoiding negatives
+                shortTime -= hydraulic_run_time;
+            }
 
+            if (shortTime < timeMastSignalStarted) {
+                timeMastSignalStarted = shortTime;
+            }
+        }
         if (timeMastSignalStarted != 0 &&
                 (millis() - timeMastSignalStarted) > hydraulic_run_time) {
             // Signal has passed desired time / kill it
