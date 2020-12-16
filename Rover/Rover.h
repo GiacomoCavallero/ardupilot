@@ -126,6 +126,7 @@ public:
     friend class RCOutput_Ocius;
     friend class NMEA2K;
     friend class AP_WindVane_Ocius;
+    friend class AP_GPS_Ocius;
     friend class AP_Compass_Ocius;
 
     // TODO: add friends for gps, compass, windvane

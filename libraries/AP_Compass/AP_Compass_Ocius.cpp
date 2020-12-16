@@ -24,7 +24,6 @@ AP_Compass_Backend *AP_Compass_Ocius::probe() {
 #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2
 
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#include <../APMrover2/Rover.h>
     if (rover.get_frame_class() == FRAME_BLUEBOTTLE || rover.get_frame_class() == FRAME_WAMV) {
         driver = new AP_Compass_Ocius();
         driver->init();
@@ -110,6 +109,9 @@ void AP_Compass_Ocius::read()
           heading = compass->heading;
 
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+    if (rover.g2.nmea2k.use_filtered) {
+        heading = compass->heading_filt;
+    }
     heading += rover.g2.magnetic_offset;
 #endif
 

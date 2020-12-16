@@ -41,6 +41,10 @@
 #include <GCS_MAVLink/GCS.h>
 #include <OC_NMEA2k/OC_NMEA2k.h>
 
+#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#include <../APMrover2/Rover.h>
+#endif
+
 extern const AP_HAL::HAL& hal;
 
 AP_GPS_Ocius::AP_GPS_Ocius(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDriver *_port) :
@@ -71,8 +75,20 @@ bool AP_GPS_Ocius::read(void)
 
     state.status = nmea_status;
     state.location = nmea_gps->location;
+
+
+#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+    if (rover.g2.nmea2k.use_filtered) {
+        state.ground_course = nmea_gps->cog_filt;
+        state.ground_speed = nmea_gps->sog_filt;
+    } else {
+        state.ground_course = nmea_gps->cog;
+        state.ground_speed = nmea_gps->sog;
+    }
+#else
     state.ground_course = nmea_gps->cog;
     state.ground_speed = nmea_gps->sog;
+#endif
     state.hdop = nmea_gps->hdop;
     state.vdop = nmea_gps->vdop;
     state.num_sats = nmea_gps->num_sats;

@@ -1376,5 +1376,13 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("COMPASS_2", 16, NMEA2k_Params, compass_2, 0),
 
+    // @Param: USE_FILTERED
+    // @DisplayName: Use Filtered NMEA2K Input
+    // @Description: Whether or not to feed the filtered nmea2k reading into the autopilot.
+    // @Range: 0..127
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("USE_FILTERED", 17, NMEA2k_Params, use_filtered, 0),
+
     AP_GROUPEND
 };

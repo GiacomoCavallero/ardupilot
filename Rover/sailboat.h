@@ -229,4 +229,6 @@ public:
     AP_Float filt_aws;
     AP_Float filt_awa;
     AP_Float filt_twa;
+
+    AP_Int8  use_filtered;
 };
