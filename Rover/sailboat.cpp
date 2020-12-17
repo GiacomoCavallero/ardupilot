@@ -886,7 +886,7 @@ MAV_RESULT Sailboat::set_winch_position(uint16_t pwm, bool gcs_command) {
     // TODO: Sailboat::set_winch_position
     if (!rover.arming.is_armed()) {
         return MAV_RESULT_TEMPORARILY_REJECTED;
-    } else if (pwm == 0) {
+    } else if (pwm >= 1 && pwm <= 500) {
         gcs().send_text(MAV_SEVERITY_INFO, "Bluebottle: Winch emergency stop received.");
     }
 
@@ -993,6 +993,12 @@ uint16_t Sailboat::get_optimal_sail_position() const {
 
         pwm =  1500 - (desired_angle * 400) / 90;
     }
+
+    // Restrict the possible pwm values to 1100--1900, this should be unnecessary, but just in case
+    if (pwm < 1100)
+        pwm == 1100;
+    else if (pwm > 1900)
+        pwm == 1900;
 
     return pwm;
 }
