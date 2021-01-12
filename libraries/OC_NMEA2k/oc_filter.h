@@ -253,3 +253,33 @@ T FiltExpNlAng<T>::filterPoint(T angle)
     T angleFiltered = uvToD(filtVec);
     return mod_ == 180 ? wrap_180(angleFiltered) : wrap_360(angleFiltered);
 }
+
+template <typename T>
+class FiltExpBasic
+{
+    // Exponential filtering class for scalar values
+public:
+    FiltExpBasic(float secs) : tau{secs} {} // Creates initial oldPoint and sets up parameters
+    T filterPoint(T point);                // Adds new data point and returns filtered value
+
+private:
+    float tau;
+    FiltVar<T> oldPoint;
+};
+
+template <typename T>
+T FiltExpBasic<T>::filterPoint(T point)
+{
+    // Create new datapoint and calculate smoothing constant based on time difference
+    FiltVar<T> newPoint(point);
+    double dTime = std::chrono::duration<double>(newPoint.timestamp() - oldPoint.timestamp()).count();
+    double a = 0;
+    if (fpclassify(tau) != FP_ZERO)
+        a = std::exp(-dTime / tau);
+
+    // Return filtered value and store for next time
+    T newVal = oldPoint.var() * a + newPoint.var() * (1 - a);
+    newPoint.setVar(newVal);
+    oldPoint = newPoint;
+    return newVal;
+}

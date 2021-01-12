@@ -15,6 +15,8 @@
 
 #include <epos2_bridge.h>
 
+#include <OC_NMEA2k/oc_filter.h>
+
 #define BLUEBOTTLE_AIS_COVERT              ( 6 - 1)
 #define BLUEBOTTLE_ODROID_PWR_CUT          ( 7 - 1)
 #define BLUEBOTTLE_HYDRAULIC_SPD_CHANN     ( 8 - 1)
@@ -439,8 +441,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
     uint8_t homed;
     int32_t position;
-    uint16_t position_pwm;
-
+    float position_pwm_flt;
 
     // Get motor position
     if (readPosition(nodeid, &position)) {
@@ -476,15 +477,16 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 //    }
     consecutive_failures[ch] = 0;
 
-    position_pwm = 0;
+    position_pwm_flt = 0;
     if (ch == BLUEBOTTLE_SAIL_CHANN) {
-        position_pwm = ((position - BLUEBOTTLE_MOTOR_OFFSET) * 400 / BLUEBOTTLE_MOTOR_TICKS_PER_90) + 1500;  // Sail motor
+        position_pwm_flt = ((position - BLUEBOTTLE_MOTOR_OFFSET) * 400 / (float)BLUEBOTTLE_MOTOR_TICKS_PER_90) + 1500;  // Sail motor
     } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
-        position_pwm = 1100 + (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
+        position_pwm_flt = 1100 + (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
     }
     motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
     motor.raw = position;
-    motor.pwm = position_pwm;
+    motor.pwm = (uint16_t)(::round(position_pwm_flt));
+
     uint16_t motorFam = 0;
     getEPOSFamily(nodeid, &motorFam);
     switch(motorFam) {
@@ -596,7 +598,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     }
 
     // Move sail/winch to desired position
-    if (pwm_last[ch] >= 1100 && pwm_last[ch] <= 1900) {
+    if (pwm_last[ch] >= 1075 && pwm_last[ch] <= 1925) {
         //printf("Comparing desired position with actual.\n");
         int now = millis();
         int desiredPosition = position;  // Default to prevent movement as desired is current position
@@ -655,6 +657,9 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
             0, 0, 0, 0, 0);
 }
 
+static float mast_filt_sec = 2;
+static FiltExpBasic<double> mast_filt(mast_filt_sec);
+
 void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     // get acc from onboard imu
     Vector3f boat_accel = AP::ins().get_accel();
@@ -676,5 +681,6 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     float angle = 180 - ToDeg(acos(dot));
     int pwm = (int)(angle*800/90+1100);
 
-    mast_status.pwm = pwm;
+//    mast_status.pwm = pwm;
+    mast_status.pwm = mast_filt.filterPoint(pwm);
 }
