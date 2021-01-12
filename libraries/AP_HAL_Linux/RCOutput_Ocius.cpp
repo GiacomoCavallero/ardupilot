@@ -52,7 +52,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t addr, bool external_clock, uint8_t channe
 #else
 RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t channel_count) : RCOutput_Ocius_Parent(chip, channel_base, channel_count),
 #endif
-    imu_filt(rover.g2.sailboat.tilt_filt)
+    imu_filt(&(rover.g2.sailboat.tilt_filt))
 {
     pwm_last = new uint16_t[_channel_count];
     pwm_status = new AP_HAL::ServoStatus[_channel_count];
