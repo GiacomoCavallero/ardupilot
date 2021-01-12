@@ -4,6 +4,7 @@
 
 #include <pthread.h>
 //#include "include/mavlink/v2.0/mavlink_types.h"
+#include <OC_NMEA2k/oc_filter.h>
 
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO
 #include "RCOutput_PCA9685.h"
@@ -24,6 +25,7 @@ protected:
     int* last_move_success;
     int* last_move_time;
     uint32_t last_imu_update;
+    FiltExp<float> imu_filt;
 
     char linebuf[128];
     uint8_t linebuf_len = 0;

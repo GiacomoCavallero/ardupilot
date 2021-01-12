@@ -48,10 +48,12 @@ void* thread_init(void *thread_data) {
 
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO
 RCOutput_Ocius::RCOutput_Ocius(uint8_t addr, bool external_clock, uint8_t channel_offset,
-                                int16_t oe_pin_number) : RCOutput_Ocius_Parent(addr, external_clock, channel_offset, oe_pin_number) {
+                                int16_t oe_pin_number) : RCOutput_Ocius_Parent(addr, external_clock, channel_offset, oe_pin_number),
 #else
-RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t channel_count) : RCOutput_Ocius_Parent(chip, channel_base, channel_count) {
+RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t channel_count) : RCOutput_Ocius_Parent(chip, channel_base, channel_count),
 #endif
+    imu_filt(rover.g2.sailboat.tilt_filt)
+{
     pwm_last = new uint16_t[_channel_count];
     pwm_status = new AP_HAL::ServoStatus[_channel_count];
 
@@ -658,9 +660,6 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
             0, 0, 0, 0, 0);
 }
 
-static float mast_filt_sec = 2;
-static FiltExpBasic<double> mast_filt(mast_filt_sec);
-
 void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     // get acc from onboard imu
     Vector3f boat_accel = AP::ins().get_accel();
@@ -681,7 +680,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     float dot = boat_accel * mast_accel;
     float angle = ToDeg(acos(dot));
     int pwm = (int)(angle*800/90+1100);
-    int pwm_filt = mast_filt.filterPoint(pwm);
+    int pwm_filt = imu_filt.filterPoint(pwm);
     if (pwm_filt >= 1800 && mast_status.pwm > pwm_filt && mast_status.pwm <= 2000) {
         // If the filtered value is >= 1800 and reported value is higher in the 'UP' range then don't change it.
     } else if (pwm_filt <= 1200 && mast_status.pwm < pwm_filt && mast_status.pwm >= 1000) {
