@@ -228,7 +228,7 @@ const AP_Param::GroupInfo Sailboat::var_info[] = {
     // @Range: 0+
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("TILT_ERR", 21, Sailboat, tilt_err, 20),
+    AP_GROUPINFO("TILT_ERR", 21, Sailboat, tilt_err, 50),
 
     // @Param: TILT_FILT
     // @DisplayName: Tilt IMU Filter Length
