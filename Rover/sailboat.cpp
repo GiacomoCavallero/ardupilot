@@ -907,7 +907,7 @@ bool Sailboat::sail_is_safe() const {
         return false;
     if (mast_status.moving)                         // Mast is moving
         return false;
-    if (mast_status.pwm < (1900 - 10) || mast_set_pos < (1900 - 10))              // Mast is not upright or has been told to lower
+    if (mast_status.pwm < (1900 - 50) || mast_set_pos < (1900 - 10))              // Mast is not upright or has been told to lower
             return false;
     if (stowing_sail)    // Sail in the process of stowing
         return false;
@@ -996,9 +996,9 @@ uint16_t Sailboat::get_optimal_sail_position() const {
 
     // Restrict the possible pwm values to 1100--1900, this should be unnecessary, but just in case
     if (pwm < 1100)
-        pwm == 1100;
+        pwm = 1100;
     else if (pwm > 1900)
-        pwm == 1900;
+        pwm = 1900;
 
     return pwm;
 }
@@ -1137,7 +1137,9 @@ void Sailboat::sail_guard() {
                     printf("ERROR: The mast isn't homed, but the sail is moving.\n");
                     gcs().send_text(MAV_SEVERITY_ERROR, "Sail moving before mast is homed.");
                 } else if (wind_strength == WIND_HIGH) {
-                        // The mast cannot be homed in high winds, so do nothing.
+                    // The mast cannot be homed in high winds, so do nothing.
+                } else if (rover.g2.sailboat.tilt_imu != 0) {
+                    // If we're using a tilt sensor, we don't home the mast
                 } else if (mast_status.homed != AP_HAL::SERVO_HOMING) {
                     gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Homing the mast.");
                     // Home the mast
@@ -1148,7 +1150,7 @@ void Sailboat::sail_guard() {
         //printf("Rover::sail_guard() - Sail not yet homed.\n");
                 if (mast_status.moving) {
                     // Mast is homed but moving, do nothing
-                } else if (mast_status.pwm < (1900 - 10)) {
+                } else if (mast_status.pwm < (1900 - 50)) {
                     // Mast is not up
                     if (wind_strength == WIND_HIGH) {
                         // Wait for wind to drop
@@ -1179,7 +1181,7 @@ void Sailboat::sail_guard() {
             // Sail centered and stopped, lower mast
 
             if (mast_set_pos > (1100 + 10) ||
-                    (!mast_status.moving && mast_status.pwm > (1100 + 10))) {
+                    (!mast_status.moving && mast_status.pwm > (1100 + 50))) {
                 // mast has not been told to lower, or mast has stopped moving and is not down
                 set_mast_position(1100);
             }
@@ -1190,7 +1192,7 @@ void Sailboat::sail_guard() {
         return;
     } else if (sail_mode == MOTOR_SOLAR || // TODO: in motor solar only raise sail if sun is up
             (wind_strength > WIND_LOW && (sail_mode == MOTOR_SAIL || sail_mode == SAIL_ONLY))) {
-        if (mast_status.pwm < (1900 - 10) || mast_set_pos < (1900 - 10)) {
+        if (mast_status.pwm < (1900 - 50) || mast_set_pos < (1900 - 10)) {
 //            DEBUGV("Rover::sail_guard() - Raising the sail.\n");
             // We are in a mode that uses the sail, so raise it
             if (mast_set_pos < (1900 - 10) || !mast_status.moving || stowing_sail) {

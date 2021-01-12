@@ -143,7 +143,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1900);
                 mast_status.moving = true;
-                timeMastSignalStarted = millis();
+                timeMastSignalStarted = AP_HAL::millis();
                 if (period_us == 1100) {
                     // We offset by 1, so that messages from GCS don't need to change
                     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, 1101);
@@ -156,7 +156,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1900);
                 mast_status.moving = true;
-                timeMastSignalStarted = millis();
+                timeMastSignalStarted = AP_HAL::millis();
                 if (period_us == 1900) {
                     // We offset by 1, so that messages from GCS don't need to change
                     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, 1899);
@@ -237,8 +237,9 @@ void RCOutput_Ocius::motor_status_check(void) {
 //		printf("Checking if mast signal to be disabled. (%u, %u)\n", timeMastSignalStarted, millis());
 
         // if the imu is configured and old, set mast_status.pwm to 0
-        if (rover.g2.sailboat.tilt_imu != 0 && last_imu_update + 5000 < millis()) {
+        if (rover.g2.sailboat.tilt_imu != 0 && last_imu_update + 5000 < AP_HAL::millis()) {
             // If the imu is set but we haven't updated in 5 seconds, we're not sure where the mast is
+            mast_status.homed = AP_HAL::SERVO_UNHOMED;
             mast_status.pwm = 0;
         }
 
@@ -249,7 +250,7 @@ void RCOutput_Ocius::motor_status_check(void) {
         if (timeMastSignalStarted != 0 && rover.g2.sailboat.tilt_imu != 0 &&
                 (abs((int)mast_status.pwm - (int)pwm_last[BLUEBOTTLE_MAST_CHANN]) <= rover.g2.sailboat.tilt_err)) {
             // If the hydraulics are running and the tilt imu is set, when we approach the position we cut the timer short.
-            uint32_t shortTime = millis() + 1000;
+            uint32_t shortTime = AP_HAL::millis() + 1000;
             if (shortTime > hydraulic_run_time) {
                 // avoiding negatives
                 shortTime -= hydraulic_run_time;
@@ -261,7 +262,7 @@ void RCOutput_Ocius::motor_status_check(void) {
         }
 
         if (timeMastSignalStarted != 0 &&
-                (millis() - timeMastSignalStarted) > hydraulic_run_time) {
+                (AP_HAL::millis() - timeMastSignalStarted) > hydraulic_run_time) {
             // Signal has passed desired time / kill it
             printf("RCO_Ocius: Time up. Mast homed.\n");
             gcs().send_text(MAV_SEVERITY_NOTICE, "Mast homed (%s)",
@@ -300,7 +301,7 @@ void RCOutput_Ocius::motor_status_check(void) {
                 // avoid divide by 0
                 relay_delay = hydraulic_run_time / 2;
             }
-            uint32_t signal_time = millis() - timeMastSignalStarted;
+            uint32_t signal_time = AP_HAL::millis() - timeMastSignalStarted;
             if (hydraulic_run_time > 4 * relay_delay) {
                 if (signal_time <= relay_delay || signal_time >= (hydraulic_run_time - relay_delay)) {
                     // We're in the delay period before or after we run.
@@ -600,7 +601,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     // Move sail/winch to desired position
     if (pwm_last[ch] >= 1075 && pwm_last[ch] <= 1925) {
         //printf("Comparing desired position with actual.\n");
-        int now = millis();
+        int now = AP_HAL::millis();
         int desiredPosition = position;  // Default to prevent movement as desired is current position
         if (ch == BLUEBOTTLE_SAIL_CHANN) {
             if (mast_status.homed != AP_HAL::SERVO_HOMED || mast_status.pwm < 1800) {
@@ -665,22 +666,28 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     Vector3f boat_accel = AP::ins().get_accel();
 
     // calc mast angle
-    Vector3f mast_accel(xacc, yacc, zacc);
+    Vector3f mast_accel(xacc, -yacc, -zacc);   // The IMU on the sail has a 180 degree roll, so we correct it here
 
     if (boat_accel.length_squared() == 0 || mast_accel.length_squared() == 0) {
         // Need unit vectors so have to skip.
         return;
     }
 
-    last_imu_update = millis();
+    last_imu_update = AP_HAL::millis();
 
     boat_accel.normalize();
     mast_accel.normalize();
 
     float dot = boat_accel * mast_accel;
-    float angle = 180 - ToDeg(acos(dot));
+    float angle = ToDeg(acos(dot));
     int pwm = (int)(angle*800/90+1100);
-
-//    mast_status.pwm = pwm;
-    mast_status.pwm = mast_filt.filterPoint(pwm);
+    int pwm_filt = mast_filt.filterPoint(pwm);
+    if (pwm_filt >= 1800 && mast_status.pwm > pwm_filt && mast_status.pwm <= 2000) {
+        // If the filtered value is >= 1800 and reported value is higher in the 'UP' range then don't change it.
+    } else if (pwm_filt <= 1200 && mast_status.pwm < pwm_filt && mast_status.pwm >= 1000) {
+        // If the filtered value is <= 1200 and reported value is lower in the 'DOWN' range then don't change it.
+    } else {
+        mast_status.pwm = pwm_filt;
+        mast_status.homed = AP_HAL::SERVO_HOMED;
+    }
 }
