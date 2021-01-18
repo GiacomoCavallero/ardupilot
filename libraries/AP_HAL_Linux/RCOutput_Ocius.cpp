@@ -242,7 +242,7 @@ void RCOutput_Ocius::motor_status_check(void) {
         if (rover.g2.sailboat.tilt_imu != 0 && last_imu_update + 5000 < AP_HAL::millis()) {
             // If the imu is set but we haven't updated in 5 seconds, we're not sure where the mast is
             mast_status.homed = AP_HAL::SERVO_UNHOMED;
-            mast_status.pwm = 0;
+//            mast_status.pwm = 0;
         }
 
         double hydraulic_run_time = rover.g2.sailboat.mast_time_up;
@@ -275,7 +275,7 @@ void RCOutput_Ocius::motor_status_check(void) {
             mast_status.homed = AP_HAL::SERVO_HOMED;
             mast_status.moving = false;
             if (rover.g2.sailboat.tilt_imu == 0) {
-                // If the tilt IMU is 0, we just us the time to set the position.
+                // If the tilt IMU is 0, we just use the time to set the position.
                 mast_status.pwm = pwm_last[BLUEBOTTLE_MAST_CHANN];
             }
             timeMastSignalStarted = 0;

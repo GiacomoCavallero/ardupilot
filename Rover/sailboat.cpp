@@ -910,7 +910,7 @@ bool Sailboat::sail_is_safe() const {
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
-    if (mast_status.homed != AP_HAL::SERVO_HOMED)   // Mast(D) isn't homed.
+    if (mast_status.homed != AP_HAL::SERVO_HOMED && !(tilt_imu != 0 && mast_status.pwm != 0))   // Mast(D) isn't homed.
         return false;
     if (sail_status.homed != AP_HAL::SERVO_HOMED)   // Sail(A) isn't homed.
         return false;
@@ -1122,8 +1122,9 @@ void Sailboat::sail_guard() {
     uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
-
-    if (mast_status.homed != AP_HAL::SERVO_HOMED || sail_status.homed != AP_HAL::SERVO_HOMED) {
+    if (sail_status.homed == AP_HAL::SERVO_HOMED && tilt_imu != 0 && mast_status.pwm != 0) {
+        // The sail is homed, and we assume the mast is at the current/last PWM from the tilt sensor
+    } else if (mast_status.homed != AP_HAL::SERVO_HOMED || sail_status.homed != AP_HAL::SERVO_HOMED) {
         // Mast or Sail not homed
         uint32_t now = millis();
         if (last_not_home_msg == 0 || (now - last_not_home_msg) > 5000) {
@@ -1139,8 +1140,8 @@ void Sailboat::sail_guard() {
             // TODO: MM: do we need to home the mast when the failsafe triggers?
             // Only home the mast, if we are in a sail mode that automatically moves the sail
 
-            if (mast_status.homed != AP_HAL::SERVO_HOMED) {
-                // Mast not homed.
+            if (mast_status.homed != AP_HAL::SERVO_HOMED && (tilt_imu == 0 || mast_status.pwm == 0)) {
+                // Mast not homed and tilt sensor not configured, or not yet seen
                 if (sail_status.moving) {
                     // Sail is moving
                     printf("ERROR: The mast isn't homed, but the sail is moving.\n");
