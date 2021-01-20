@@ -802,19 +802,14 @@ MAV_RESULT Sailboat::set_servo(uint8_t channel, uint16_t pwm, bool gcs_command) 
         return MAV_RESULT_UNSUPPORTED;
     }
 
-//    if (!gcs_command && !rover.arming.is_armed()) {
-//        // Reject servo commands if disarmed and not from GCS
-//        return MAV_RESULT_TEMPORARILY_REJECTED;
-//    }
-
-    if (rover.g2.frame_class != FRAME_BLUEBOTTLE) {
-    }
-    if (channel == MAST_SERVO_CH) {
-        return set_mast_position(pwm, gcs_command);
-    } else if (channel == SAIL_SERVO_CH) {
-        return set_sail_position(pwm, gcs_command);
-    } else if (channel == WINCH_SERVO_CH) {
-        return set_winch_position(pwm, gcs_command);
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+        if (channel == MAST_SERVO_CH) {
+            return set_mast_position(pwm, gcs_command);
+        } else if (channel == SAIL_SERVO_CH) {
+            return set_sail_position(pwm, gcs_command);
+        } else if (channel == WINCH_SERVO_CH) {
+            return set_winch_position(pwm, gcs_command);
+        }
     }
     if (handler->do_set_servo(channel, pwm)) {
         return MAV_RESULT_ACCEPTED;
@@ -910,16 +905,35 @@ bool Sailboat::sail_is_safe() const {
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
-    if (mast_status.homed != AP_HAL::SERVO_HOMED && !(tilt_imu != 0 && mast_status.pwm != 0))   // Mast(D) isn't homed.
+
+    //Check mast is homed
+    if (tilt_imu != 0 && mast_status.pwm != 0) {
+        // Tilt sensor is enabled and we have a position, we assume we're homed at that position
+    } else if (mast_status.homed != AP_HAL::SERVO_HOMED)
         return false;
-    if (sail_status.homed != AP_HAL::SERVO_HOMED)   // Sail(A) isn't homed.
+
+    // Check sail is homed
+    if (sail_status.homed != AP_HAL::SERVO_HOMED)
         return false;
-    if (mast_status.moving)                         // Mast is moving
+
+    // Check mast is not moving
+    if (mast_status.moving)
         return false;
-    if (mast_status.pwm < (1900 - tilt_err) || mast_set_pos < (1900 - 10))              // Mast is not upright or has been told to lower
-            return false;
-    if (stowing_sail)    // Sail in the process of stowing
+
+    // Check mast is upright
+    if (mast_status.pwm < (1900 - tilt_err))
+
         return false;
+    // Check mast has not been told to lower
+    if (tilt_imu != 0 && mast_set_pos == 0) {
+        // If set_pos is 0, skip if tilt_imu is enabled
+    } else if (mast_set_pos < (1900 - 10))
+        return false;
+
+    // Check sail isn't currently stowing
+    if (stowing_sail)
+        return false;
+
     return true;
 }
 
