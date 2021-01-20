@@ -606,8 +606,11 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         int now = AP_HAL::millis();
         int desiredPosition = position;  // Default to prevent movement as desired is current position
         if (ch == BLUEBOTTLE_SAIL_CHANN) {
-            if (mast_status.homed != AP_HAL::SERVO_HOMED || mast_status.pwm < 1800) {
-                // If mast not homed or not up don't move sail
+            if (mast_status.pwm != 0 && mast_status.pwm < 1800) {
+                // Mast is down, not safe to move.
+            } else if (mast_status.homed != AP_HAL::SERVO_HOMED &&
+                    !(rover.g2.sailboat.tilt_imu != 0 && mast_status.pwm != 0)) {
+                // Mast is not homed
             } else {
                 desiredPosition = (pwm_last[ch] - 1500) * BLUEBOTTLE_MOTOR_TICKS_PER_90 / 400 + BLUEBOTTLE_MOTOR_OFFSET;
             }
