@@ -684,12 +684,13 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     float angle = ToDeg(acos(dot));
     int pwm = (int)(angle*800/90+1100);
     int pwm_filt = imu_filt.filterPoint(pwm);
+
     if (pwm_filt >= 1800 && mast_status.pwm > pwm_filt && mast_status.pwm <= 2000) {
         // If the filtered value is >= 1800 and reported value is higher in the 'UP' range then don't change it.
     } else if (pwm_filt <= 1200 && mast_status.pwm < pwm_filt && mast_status.pwm >= 1000) {
         // If the filtered value is <= 1200 and reported value is lower in the 'DOWN' range then don't change it.
     } else {
         mast_status.pwm = pwm_filt;
-        mast_status.homed = AP_HAL::SERVO_HOMED;
     }
+    mast_status.homed = AP_HAL::SERVO_HOMED;
 }
