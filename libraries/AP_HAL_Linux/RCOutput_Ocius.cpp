@@ -685,8 +685,8 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
         return;
     }
 
-    float boat_pitch = atan2(-boat_accel.x, -boat_accel.z);
-    float mast_pitch = atan2(-mast_accel.x, -mast_accel.z);
+    float boat_pitch = degrees(atan2(-boat_accel.x, -boat_accel.z));
+    float mast_pitch = degrees(atan2(-mast_accel.x, -mast_accel.z));
 
     float angle = wrap_360(mast_pitch - boat_pitch);
     int pwm = (int)(angle*800/90+1100);
