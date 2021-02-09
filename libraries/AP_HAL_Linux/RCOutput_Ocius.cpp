@@ -680,8 +680,15 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     boat_accel.normalize();
     mast_accel.normalize();
 
-    float dot = boat_accel * mast_accel;
-    float angle = ToDeg(acos(dot));
+    if (fabs(boat_accel.y) > 0.95 || fabs(mast_accel.y) > 0.95) {
+        // If we roll too far, then the readings can be swamped by noise, so we skip the update hoping to roll back upright
+        return;
+    }
+
+    float boat_pitch = atan2(-boat_accel.x, -boat_accel.z);
+    float mast_pitch = atan2(-mast_accel.x, -mast_accel.z);
+
+    float angle = wrap_360(mast_pitch - boat_pitch);
     int pwm = (int)(angle*800/90+1100);
     int pwm_filt = imu_filt.filterPoint(pwm);
 
