@@ -676,9 +676,10 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     }
 
     last_imu_update = AP_HAL::millis();
-
+//printf("RAW boat: (%f, %f, %f), mast: (%f, %f, %f)\n", boat_accel.x, boat_accel.y, boat_accel.z, mast_accel.x, mast_accel.y, mast_accel.z);
     boat_accel.normalize();
     mast_accel.normalize();
+//printf("NORM boat: (%f, %f, %f), mast: (%f, %f, %f)\n", boat_accel.x, boat_accel.y, boat_accel.z, mast_accel.x, mast_accel.y, mast_accel.z);
 
     if (fabs(boat_accel.y) > 0.95 || fabs(mast_accel.y) > 0.95) {
         // If we roll too far, then the readings can be swamped by noise, so we skip the update hoping to roll back upright
@@ -688,8 +689,10 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     float boat_pitch = degrees(atan2(-boat_accel.x, -boat_accel.z));
     float mast_pitch = degrees(atan2(-mast_accel.x, -mast_accel.z));
 
-    float angle = wrap_360(mast_pitch - boat_pitch);
-    int pwm = (int)(angle*800/90+1100);
+    float angle = wrap_180(mast_pitch - boat_pitch);
+    // FIXME: Adding 95 PWM to calibrate the new sensor, this should be parameterised
+    int pwm = (int)(angle*800/90+1100) + 95;
+//printf("PITCH boat: %f, mast: %f, ANGLE: %f, PWM: %d \n", boat_pitch, mast_pitch, angle, pwm);
     int pwm_filt = imu_filt.filterPoint(pwm);
 
     if (pwm_filt >= 1800 && mast_status.pwm > pwm_filt && mast_status.pwm <= 2000) {
