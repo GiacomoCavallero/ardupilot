@@ -675,6 +675,15 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
         return;
     }
 
+    // Filter out anomalous readings, can be due to sensor failure, or acceleration due to impact, or exceptional vehicle states
+    if (mast_accel.x > 150) {
+        // Either the vessel is upside down, or there is a lot of acceleration in the X direction, or the sensor reading is false
+        return;
+    } else if (fabs(mast_accel.length() - 1000) > 500 || fabs(boat_accel.length() - 1000) > 500) {
+        // 1G acceleration should be ~1000, readings too small/large indicate bad readings or possible impacts, which could alter the pitch calculations
+        return;
+    }
+
     last_imu_update = AP_HAL::millis();
 //printf("RAW boat: (%f, %f, %f), mast: (%f, %f, %f)\n", boat_accel.x, boat_accel.y, boat_accel.z, mast_accel.x, mast_accel.y, mast_accel.z);
     boat_accel.normalize();
