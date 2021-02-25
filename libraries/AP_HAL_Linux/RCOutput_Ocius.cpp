@@ -679,8 +679,8 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     if (mast_accel.x > 150) {
         // Either the vessel is upside down, or there is a lot of acceleration in the X direction, or the sensor reading is false
         return;
-    } else if (fabs(mast_accel.length() - 1000) > 500 || fabs(boat_accel.length() - 1000) > 500) {
-        // 1G acceleration should be ~1000, readings too small/large indicate bad readings or possible impacts, which could alter the pitch calculations
+    } else if (fabs(mast_accel.length() - 1000) > 500 || fabs(boat_accel.length() - 10) > 5) {
+        // 1G acceleration should be ~1000(mast)/10(boat), readings too small/large indicate bad readings or possible impacts, which could alter the pitch calculations
         return;
     }
 
