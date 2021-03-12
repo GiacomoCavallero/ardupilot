@@ -283,6 +283,15 @@ void RCOutput_Ocius::motor_status_check(void) {
                 // Mast is down, disable the sail motor.
                 // This is performed in stinger_sail_comm_thread to avoid multiple threads talking to the EPOS
             }
+        } else if (timeMastSignalStarted != 0 && abs(sail_status.pwm -1500) > rover.g2.sailboat.sail_stow_error &&
+                pwm_last[BLUEBOTTLE_MAST_CHANN] < 1800) {
+            // Sail is no longer centered, emergency abort lowering of the sail
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
+            SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
+            mast_status.homed = AP_HAL::SERVO_UNHOMED;
+            timeMastSignalStarted = 0;
+            gcs().send_text(MAV_SEVERITY_ERROR, "Emergency STOP on mast servo. Sail not centered.");
         } else if (timeMastSignalStarted != 0) {
             uint32_t ramp_spd = 1900 - 1500;
             SRV_Channel* chan = SRV_Channels::srv_channel(BLUEBOTTLE_HYDRAULIC_SPD_CHANN);
@@ -354,10 +363,10 @@ void RCOutput_Ocius::motor_status_check(void) {
 
 static void RCOutput_Ocius_EmergencyHandler(uint8_t nodeid, uint16_t errCode) {
     if (nodeid == 1 || nodeid == 2) {
-        gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: EPOS fault(0x%04x) detected on %s.", (uint32_t)errCode, MOTOR_NAME);
+        gcs().send_text(MAV_SEVERITY_WARNING, "EPOS fault(0x%04x) detected on %s.", (uint32_t)errCode, MOTOR_NAME);
         uint16_t family;
         if (!getEPOSFamily(nodeid, &family)) {
-            gcs().send_text(MAV_SEVERITY_WARNING, "RCOut:     %s", getErrorDescription(errCode, family));
+            gcs().send_text(MAV_SEVERITY_WARNING, ":     %s", getErrorDescription(errCode, family));
         }
     }
 }
