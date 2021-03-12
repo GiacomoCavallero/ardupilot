@@ -819,6 +819,7 @@ MAV_RESULT Sailboat::set_servo(uint8_t channel, uint16_t pwm, bool gcs_command) 
 
 MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
     uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
+    uint16_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     int32_t diff = mast_set_pos;
@@ -836,7 +837,7 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
 
     if (pwm > 1800) {
     } else if (sail_status.homed == AP_HAL::SERVO_HOMED &&
-            !sail_status.moving &&
+            !sail_status.moving && abs(sail_set_pos - 1500) <= 10 &&
             abs(sail_status.pwm - 1500) <= sail_stow_error) {
         // Sail is homed, not moving and within limits of center, safe to lower
     } else {
