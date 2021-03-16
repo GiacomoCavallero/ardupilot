@@ -468,14 +468,15 @@ void Mode::navigate_to_waypoint()
                                 ((g2.sailboat.wind_strength & Sailboat::WIND_GOOD) == 0)))) {
         // In wave_power mode (or sail_only but unable to sail), we use a high P only steering
         // get angle to WP
-        float wp_angle = wrap_180_cd(g2.wp_nav.nav_bearing_cd() - ahrs.yaw_sensor) / 100.0;
+
+        float wp_angle = wrap_180_cd(g2.wp_nav.wp_bearing_cd() - ahrs.yaw_sensor) / 100.0;
         int servo_out = (wp_angle > 0?4500:-4500);
 
         if (fabs(wp_angle) < 45) {
             servo_out = servo_out * (fabs(wp_angle) / 45.0);
         }
 
-        set_steering(servo_out);
+        set_steering(servo_out, false);
     } else if (g2.sailboat.sail_flags & Sailboat::FLAG_HEADING_TO_WP) {
         // use pivot turn rate for tacks
         const float turn_rate = g2.sailboat.tacking() ? g2.wp_nav.get_pivot_rate() : 0.0f;
@@ -535,7 +536,7 @@ void Mode::calc_steering_to_heading(float desired_heading_cd, float rate_max_deg
     set_steering(steering_out * 4500.0f);
 }
 
-void Mode::set_steering(float steering_value)
+void Mode::set_steering(float steering_value, bool apply_scaling)
 {
     if (!rover.arming.is_armed()) {
         // When disarmed we want center rudder
@@ -546,7 +547,7 @@ void Mode::set_steering(float steering_value)
         steering_value = channel_steer->stick_mixing((int16_t)steering_value);
     }
     steering_value = constrain_float(steering_value, -4500.0f, 4500.0f);
-    g2.motors.set_steering(steering_value);
+    g2.motors.set_steering(steering_value, apply_scaling);
 }
 
 Mode *Rover::mode_from_mode_num(const enum Mode::Number num)

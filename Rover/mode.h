@@ -202,7 +202,7 @@ protected:
     // steering_out is in the range -4500 ~ +4500 with positive numbers meaning rotate clockwise
     // throttle_out is in the range -100 ~ +100
     void get_pilot_input(float &steering_out, float &throttle_out);
-    void set_steering(float steering_value);
+    void set_steering(float steering_value, bool apply_scaling = true);
 
     // references to avoid code churn:
     class AP_AHRS &ahrs;
