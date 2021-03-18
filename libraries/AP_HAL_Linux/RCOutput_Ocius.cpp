@@ -685,7 +685,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     }
 
     // Filter out anomalous readings, can be due to sensor failure, or acceleration due to impact, or exceptional vehicle states
-    if (mast_accel.x > 150) {
+    if (mast_accel.x > 350) {
         // Either the vessel is upside down, or there is a lot of acceleration in the X direction, or the sensor reading is false
         return;
     } else if (fabs(mast_accel.length() - 1000) > 500 || fabs(boat_accel.length() - 10) > 5) {
