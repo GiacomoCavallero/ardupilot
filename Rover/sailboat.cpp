@@ -837,7 +837,8 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
 
     if (pwm > 1800) {
     } else if (sail_status.homed == AP_HAL::SERVO_HOMED &&
-            !sail_status.moving && abs(sail_set_pos - 1500) <= 10 &&
+            !sail_status.moving &&
+            (abs(sail_set_pos - 1500) <= 10 || sail_set_pos == 0) &&
             abs(sail_status.pwm - 1500) <= sail_stow_error) {
         // Sail is homed, not moving and within limits of center, safe to lower
     } else {
