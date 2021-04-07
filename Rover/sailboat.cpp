@@ -1397,7 +1397,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Param: COMPASS_1
     // @DisplayName: Primary compass ID
     // @Description: ID of the primary compass.
-    // @Range: 0..127
+    // @Range: 0..255
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("COMPASS_1", 15, NMEA2k_Params, compass_1, 0),
@@ -1405,7 +1405,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Param: COMPASS_2
     // @DisplayName: Secondary compass ID
     // @Description: ID of the secondary compass.
-    // @Range: 0..127
+    // @Range: 0..255
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("COMPASS_2", 16, NMEA2k_Params, compass_2, 0),
@@ -1413,10 +1413,26 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Param: USE_FILT
     // @DisplayName: Use Filtered NMEA2K Input
     // @Description: Whether or not to feed the filtered nmea2k reading into the autopilot.
-    // @Range: 0..127
+    // @Range: 0..1
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("USE_FILT", 17, NMEA2k_Params, use_filtered, 0),
+
+    // @Param: WATER_DEP
+    // @DisplayName: Water depth ID
+    // @Description: ID of the sensor for water depth
+    // @Range: 0..255
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("WATER_DP", 18, NMEA2k_Params, water_depth, 0),
+
+    // @Param: WATER_SPD
+    // @DisplayName: Water speed ID
+    // @Description: ID of the sensor for water speed
+    // @Range: 0..255
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("WATER_SP", 19, NMEA2k_Params, water_speed, 0),
 
     AP_GROUPEND
 };

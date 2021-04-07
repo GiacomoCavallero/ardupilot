@@ -217,6 +217,8 @@ public:
     AP_Int32 compass_1;
     AP_Int32 compass_2;
 //    AP_Int32 wind_1;
+    AP_Int32 water_depth;
+    AP_Int32 water_speed;
 
     // Filtering parameters
     AP_Float filt_cog;

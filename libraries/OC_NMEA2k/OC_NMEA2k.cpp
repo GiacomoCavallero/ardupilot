@@ -209,13 +209,17 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
              gps_secondary_id = rover.g2.nmea2k.gps_2,
              gps_tertiary_id = rover.g2.nmea2k.gps_3,
              compass_primary_id = rover.g2.nmea2k.compass_1,
-             compass_secondary_id = rover.g2.nmea2k.compass_2;
+             compass_secondary_id = rover.g2.nmea2k.compass_2,
+             water_depth_id = rover.g2.nmea2k.water_depth,
+             water_speed_id = rover.g2.nmea2k.water_speed;
 //             wind_primary_id = rover.g2.nmea2k.wind_1;
 #else
     uint32_t gps_primary_id = NMEA2K_AIRMAR, gps_secondary_id = NMEA2K_AIS,
              gps_tertiary_id = NMEA2K_BACKUP,
              compass_primary_id = NMEA2K_AIRMAR,
-             compass_secondary_id = NMEA2K_BACKUP;
+             compass_secondary_id = NMEA2K_BACKUP,
+             water_depth_id = 0,
+             water_speed_id = 0;
 //             wind_primary_id = NMEA2K_AIRMAR;
 #endif
 
@@ -544,13 +548,18 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 128259: // Speed
-        if (fabs(triducer.transverse_speed_water) > FLT_EPSILON)
-            triducer.longitudinal_speed_water =
-                pmv->getDouble("Speed Water Referenced");
+        if (water_speed_id == 0 || pmv->src == water_speed_id)
+        {
+            if (fabs(triducer.transverse_speed_water) > FLT_EPSILON)
+                triducer.longitudinal_speed_water =
+                    pmv->getDouble("Speed Water Referenced");
+        }
         break;
     case 130578: // Vessel Speed Components
-        if (pmv->isValid("Longitudinal Speed, Water-referenced") &&
-                pmv->isValid("Transverse Speed, Water-referenced")) {
+        if ((water_speed_id == 0 || pmv->src == water_speed_id) &&
+                pmv->isValid("Longitudinal Speed, Water-referenced") &&
+                pmv->isValid("Transverse Speed, Water-referenced"))
+        {
             triducer.id = pmv->src;
             triducer.longitudinal_speed_water =
                 pmv->getDouble("Longitudinal Speed, Water-referenced");
@@ -572,13 +581,17 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 128267: // Water Depth
-        triducer.water_depth = pmv->getDouble("Depth");
-        triducer.water_offset = pmv->getDouble("Offset");
-        triducer.water_range = pmv->getDouble("Range");
+        if (water_depth_id == 0 || pmv->src == water_depth_id)
+        {
+            triducer.water_depth = pmv->getDouble("Depth");
+            triducer.water_offset = pmv->getDouble("Offset");
+            triducer.water_range = pmv->getDouble("Range");
+        }
         break;
 
     case 130311: // Environmental Parameters
-        if (pmv->getInteger("Temperature Source") == 0) // Water temp
+        if ((water_depth_id == 0 || pmv->src == water_depth_id) &&
+                pmv->getInteger("Temperature Source") == 0) // Water temp
         {
             triducer.water_temp = pmv->getDouble("Temperature");
         }
