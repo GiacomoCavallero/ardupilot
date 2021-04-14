@@ -283,7 +283,11 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 //            compass_state.variation = ToDeg(declination);
             double variation = get_variation();
 
-            if (compass_reference == 1)
+            if (fabs(compass_state->roll) > M_PI_4 || fabs(compass_state->pitch) > M_PI_4)
+            {
+                // If the compass is rolled, or pitched more than 45 degrees, we don't trust it.
+            }
+            else if (compass_reference == 1)
             {
                 // Magnetic
                 compass_state->heading = wrap_360(ToDeg(heading + variation));
