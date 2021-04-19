@@ -214,6 +214,8 @@ public:
         // TODO: find another source if all GPSs are down
         return 0;
     }
+
+    bool commsMastDown();
 };
 
 extern NMEA2K nmea2k_sensors;

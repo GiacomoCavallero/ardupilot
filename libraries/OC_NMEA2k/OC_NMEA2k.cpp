@@ -853,3 +853,13 @@ float NMEA2K::get_heading() {
     return 0;
 #endif
 }
+
+bool NMEA2K::commsMastDown() {
+    // FIXME need a proper way to determine which compass is the airmar
+    if (primary_compass.id >= 30 && primary_compass.id <= 40) {
+        return fabs(primary_compass.pitch) > M_PI_4 || fabs(primary_compass.roll) > M_PI_4;
+    } else if (secondary_compass.id >= 30 && secondary_compass.id <= 40) {
+        return fabs(secondary_compass.pitch) > M_PI_4 || fabs(secondary_compass.roll) > M_PI_4;
+    }
+    return false;
+}
