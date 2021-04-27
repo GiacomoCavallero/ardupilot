@@ -679,6 +679,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
     case 129038: // AIS Class A Position Report
     case 129041: // AIS Aids to Navigation (AtoN) Report
+    case 129793: // AIS UTC and Date Report
     case 129794: // AIS Class A Static and Voyage Related Data
 
     case 129809: // AIS Class B static data (msg 24 Part A)
