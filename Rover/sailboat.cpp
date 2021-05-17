@@ -875,8 +875,11 @@ MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
     // Only move if armed or received a GCS command to center the sail.
     if (gcs_command && pwm == 1500) {
     } else if (!rover.arming.is_armed()) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Not Armed");
+        }
         return MAV_RESULT_TEMPORARILY_REJECTED;
-    } else if (pwm != 1500 && !sail_is_safe()) {
+    } else if (pwm != 1500 && !sail_is_safe(gcs_command)) {
         // Sail is not safe to move.
         return MAV_RESULT_TEMPORARILY_REJECTED;
     }
@@ -903,7 +906,7 @@ MAV_RESULT Sailboat::set_winch_position(uint16_t pwm, bool gcs_command) {
     return MAV_RESULT_FAILED;
 }
 
-bool Sailboat::sail_is_safe() const {
+bool Sailboat::sail_is_safe(bool gcs_command) const {
     AP_HAL::ServoStatus mast_status = AP_HAL::get_HAL().rcout->read_status(MAST_SERVO_CH-1);
     AP_HAL::ServoStatus sail_status = AP_HAL::get_HAL().rcout->read_status(SAIL_SERVO_CH-1);
     uint16_t mast_set_pos = AP_HAL::get_HAL().rcout->read(MAST_SERVO_CH-1);
@@ -911,30 +914,54 @@ bool Sailboat::sail_is_safe() const {
     //Check mast is homed
     if (tilt_imu != 0 && mast_status.pwm != 0) {
         // Tilt sensor is enabled and we have a position, we assume we're homed at that position
-    } else if (mast_status.homed != AP_HAL::SERVO_HOMED)
+    } else if (mast_status.homed != AP_HAL::SERVO_HOMED) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Mast not homed");
+        }
         return false;
+    }
 
     // Check sail is homed
-    if (sail_status.homed != AP_HAL::SERVO_HOMED)
+    if (sail_status.homed != AP_HAL::SERVO_HOMED) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Sail not homed");
+        }
         return false;
+    }
 
     // Check mast is not moving
-    if (mast_status.moving)
+    if (mast_status.moving) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Mast moving");
+        }
         return false;
+    }
 
     // Check mast is upright
-    if (mast_status.pwm < (1900 - tilt_err))
-
+    if (mast_status.pwm < (1900 - tilt_err)) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Mast not fully raised");
+        }
         return false;
+    }
+
     // Check mast has not been told to lower
     if (tilt_imu != 0 && mast_set_pos == 0) {
         // If set_pos is 0, skip if tilt_imu is enabled
-    } else if (mast_set_pos < (1900 - 10))
+    } else if (mast_set_pos < (1900 - 10)) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Mast told to lower");
+        }
         return false;
+    }
 
     // Check sail isn't currently stowing
-    if (stowing_sail)
+    if (stowing_sail) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Sail is stowing");
+        }
         return false;
+    }
 
     return true;
 }

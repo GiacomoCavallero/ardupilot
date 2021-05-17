@@ -133,7 +133,7 @@ public:
     MAV_RESULT set_mast_position(uint16_t pwm, bool gcs_command = false);
     MAV_RESULT set_sail_position(uint16_t pwm, bool gcs_command = false);
     MAV_RESULT set_winch_position(uint16_t pwm, bool gcs_command = false);
-    bool sail_is_safe() const;
+    bool sail_is_safe(bool gcs_command = false) const;
     uint16_t get_optimal_sail_position() const;
     void check_wind();
     void sail_guard();
