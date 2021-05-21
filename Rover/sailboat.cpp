@@ -831,7 +831,10 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
         }
     }
 
-    if (!rover.arming.is_armed() && !gcs_command) {
+    if (!rover.arming.is_armed()) {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Not Armed");
+        }
         return MAV_RESULT_TEMPORARILY_REJECTED;
     }
 
@@ -842,6 +845,9 @@ MAV_RESULT Sailboat::set_mast_position(uint16_t pwm, bool gcs_command) {
             abs(sail_status.pwm - 1500) <= sail_stow_error) {
         // Sail is homed, not moving and within limits of center, safe to lower
     } else {
+        if (gcs_command) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Sail not centered or not stationary");
+        }
         return MAV_RESULT_TEMPORARILY_REJECTED;
     }
 
@@ -873,8 +879,7 @@ MAV_RESULT Sailboat::set_sail_position(uint16_t pwm, bool gcs_command) {
     }
 
     // Only move if armed or received a GCS command to center the sail.
-    if (gcs_command && pwm == 1500) {
-    } else if (!rover.arming.is_armed()) {
+    if (!rover.arming.is_armed()) {
         if (gcs_command) {
             gcs().send_text(MAV_SEVERITY_WARNING, "GCS Command Reject - Not Armed");
         }
