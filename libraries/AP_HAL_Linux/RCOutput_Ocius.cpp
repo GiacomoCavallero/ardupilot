@@ -681,15 +681,18 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
 
     if (boat_accel.length_squared() == 0 || mast_accel.length_squared() == 0) {
         // Need unit vectors so have to skip.
+        //printf("[%s] Zero vector on IMU.\n", __func__);
         return;
     }
 
     // Filter out anomalous readings, can be due to sensor failure, or acceleration due to impact, or exceptional vehicle states
-    if (mast_accel.x > 350) {
+    if (mast_accel.x > 500) {
         // Either the vessel is upside down, or there is a lot of acceleration in the X direction, or the sensor reading is false
+        //printf("[%s] mast_accel.x is too high.\n", __func__);
         return;
     } else if (fabs(mast_accel.length() - 1000) > 500 || fabs(boat_accel.length() - 10) > 5) {
         // 1G acceleration should be ~1000(mast)/10(boat), readings too small/large indicate bad readings or possible impacts, which could alter the pitch calculations
+        //printf("[%s] Acceleration is not close to 1G.\n", __func__);
         return;
     }
 
@@ -701,6 +704,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
 
     if (fabs(boat_accel.y) > 0.95 || fabs(mast_accel.y) > 0.95) {
         // If we roll too far, then the readings can be swamped by noise, so we skip the update hoping to roll back upright
+        //printf("[%s] Boat is heavily rolled.\n", __func__);
         return;
     }
 
