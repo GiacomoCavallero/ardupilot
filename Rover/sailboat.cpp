@@ -1266,6 +1266,10 @@ void Sailboat::sail_guard() {
                     (int)mast_set_pos);
             stowing_sail = false;
         }
+    } else if (stowing_sail) {
+        gcs().send_text(MAV_SEVERITY_NOTICE, "Sailboat: Stowing of mast no longer required, holding at current position. (%d)",
+                (int)mast_set_pos);
+        stowing_sail = false;
     }
 }
 
