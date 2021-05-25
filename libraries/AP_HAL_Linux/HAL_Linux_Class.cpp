@@ -433,6 +433,11 @@ void HAL_Linux::setup_signal_handlers() const
     sa.sa_handler = HAL_Linux::exit_signal_handler;
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
+
+    struct sigaction sa_pipe = {};
+    sigemptyset(&sa_pipe.sa_mask);
+    sa_pipe.sa_handler = SIG_IGN; /* No-op SIGPIPE handler */
+    sigaction(SIGPIPE, &sa_pipe, nullptr);
 }
 
 HAL_Linux hal_linux;
