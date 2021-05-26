@@ -4,6 +4,8 @@
 # -C is secondary telemetry in the case below is RFD900
 #
 # sudo ./APMrover2.elf -A udp:192.168.1.100:14550 -F /dev/ttyUSB0 -C /dev/ttyUSB1 -B /dev/ttyUSB2
+ulimit -c unlimited
+sudo sysctl -w kernel.core_pattern=/tmp/core-%e.%t-%p.%h
 
 #host ip address can be supplied as parameter 1, if not supplied then will use 192.169.1.100
 
@@ -30,7 +32,7 @@ fi
 #        echo "NO AIRMAR"
 #fi
 #AIRMAR=" -B tcc:192.168.1.5:100"
-#AIRMAR=" -B tcc:127.0.0.1:7799"
+AIRMAR=" -F tcc:127.0.0.1:7799"
 
 #if [ -e "$file3" ]
 #then
