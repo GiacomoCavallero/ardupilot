@@ -473,6 +473,8 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 //                printf("RCOut: Too many consecutive read failures. Resetting bridge connection.\n");
                 shutdownBridge();
                 bridge_initialised = false;
+                sail_status.homed = AP_HAL::SERVO_UNHOMED;
+                winch_status.homed = AP_HAL::SERVO_UNHOMED;
                 memset(consecutive_failures, -1, sizeof(int)*(unsigned int)_channel_count);
             }
         }
