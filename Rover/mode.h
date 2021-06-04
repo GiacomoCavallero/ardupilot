@@ -765,6 +765,9 @@ private:
     bool have_attitude_target;  // true if we have a valid attitude target
     uint32_t _des_att_time_ms;  // system time last call to set_desired_attitude was made (used for timeout)
 
+    float _max_distance;        // max distance to travel in this mode, <0 means use a timeout
+    Location _start_location;   // starting location for tracking the distance travelled
+
 public:
     uint32_t mode_number() const override { return IVP; }
     const char *name4() const override { return "IVP"; }
@@ -785,6 +788,12 @@ public:
 
     // return if external control is allowed in this mode (Guided or Guided-within-Auto)
     bool in_guided_mode() const override { return true; }
+
+    void set_max_distance(float distance);
+
+    float get_distance_to_destination() const override;
+
+    bool get_desired_location(Location& destination) const override;
 
 protected:
     bool _enter(mode_reason_t reason) override;

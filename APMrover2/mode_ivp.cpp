@@ -7,15 +7,31 @@ bool ModeIVP::_enter(mode_reason_t reason)
     have_attitude_target = false;
     _target_is_throttle = false;
 
+    _max_distance = -1;
+
     return true;
 }
 
 void ModeIVP::update()
 {
     // stop vehicle if target not updated within 3 seconds
-    if (have_attitude_target && (millis() - _des_att_time_ms) > 5000) {
+    if (have_attitude_target && _max_distance < 0 && (millis() - _des_att_time_ms) > 5000)
+    {
         rover.gcs().send_text(MAV_SEVERITY_WARNING, "IVP Mode: target not received in last 5 secs, stopping");
         have_attitude_target = false;
+    }
+    else if (have_attitude_target && _max_distance >= 0 && get_distance_to_destination() <= 0)
+    {
+        rover.gcs().send_text(MAV_SEVERITY_WARNING, "IVP Mode: target distance reached, stopping");
+        have_attitude_target = false;
+        // If we're a boat we drop to hold at the end of the travel
+        if (rover.is_boat())
+        {
+            if (!rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END))
+            {
+                stop_vehicle();
+            }
+        }
     }
     if (have_attitude_target) {
         // run steering and throttle controllers
@@ -51,6 +67,7 @@ void ModeIVP::set_desired_heading_and_speed(float yaw_angle_cd, float target_spe
     // handle guided specific initialisation and logging
     _des_att_time_ms = AP_HAL::millis();
     _reached_destination = false;
+    _max_distance = -1;
 
     // record targets
     _desired_yaw_cd = yaw_angle_cd;
@@ -73,6 +90,7 @@ void ModeIVP::set_desired_heading_and_throttle(float yaw_angle_cd, float target_
     // handle guided specific initialisation and logging
     _des_att_time_ms = AP_HAL::millis();
     _reached_destination = false;
+    _max_distance = -1;
 
     // record targets
     _desired_yaw_cd = yaw_angle_cd;
@@ -84,4 +102,31 @@ void ModeIVP::set_desired_heading_and_throttle(float yaw_angle_cd, float target_
     // log new target
     // ModeGuided::Guided_HeadingAndSpeed
     rover.Log_Write_GuidedTarget(1, Vector3f(_desired_yaw_cd, 0.0f, 0.0f), Vector3f(target_throttle*g2.wp_nav.get_default_speed(), 0.0f, 0.0f));
+}
+
+void ModeIVP::set_max_distance(float distance)
+{
+    _start_location = rover.current_loc;
+    _max_distance = distance;
+}
+
+float ModeIVP::get_distance_to_destination() const
+{
+    if (_max_distance < 0)
+        return 0;
+    return _max_distance - _start_location.get_distance(rover.current_loc);
+}
+
+bool ModeIVP::get_desired_location(Location& destination) const
+{
+    if (_max_distance <= 0)
+        return false;
+    float dist = get_distance_to_destination();
+    if (dist <= 0)
+        return false;
+
+    // TODO: this possibly should use the course over ground
+    destination = rover.current_loc;
+    destination.offset_bearing(_desired_yaw_cd/100, dist);
+    return true;
 }
