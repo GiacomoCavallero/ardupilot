@@ -51,6 +51,8 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
         failsafe.bits |= failsafe_type;
     } else {
         failsafe.bits &= ~failsafe_type;
+        failsafe.level_50 = false;
+        failsafe.level_90 = false;
     }
     if (old_bits == 0 && failsafe.bits != 0) {
         // a failsafe event has started
@@ -65,44 +67,52 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
 
     if ((failsafe.triggered == 0) &&
         (failsafe.bits != 0) &&
-        (millis() - failsafe.start_time > g.fs_timeout * 1000) &&
         (control_mode != &mode_rtl) &&
         ((control_mode != &mode_hold || (g2.fs_options & (uint32_t)Failsafe_Options::Failsafe_Option_Active_In_Hold)))) {
-        failsafe.triggered = failsafe.bits;
-        gcs().send_text(MAV_SEVERITY_WARNING, "%s Failsafe", type_str);
+        int32_t failsafe_overtime = (millis() - failsafe.start_time) / 1000;
+        if (failsafe_overtime > g.fs_timeout) {
+            failsafe.triggered = failsafe.bits;
+            gcs().send_text(MAV_SEVERITY_WARNING, "Failsafe trigger 0x%x", (unsigned int)failsafe.triggered);
 
-        // clear rc overrides
-        RC_Channels::clear_overrides();
+            // clear rc overrides
+            RC_Channels::clear_overrides();
 
-        if ((control_mode == &mode_auto) &&
-            ((failsafe_type == FAILSAFE_EVENT_THROTTLE && g.fs_throttle_enabled == FS_THR_ENABLED_CONTINUE_MISSION) ||
-             (failsafe_type == FAILSAFE_EVENT_GCS && g.fs_gcs_enabled == FS_GCS_ENABLED_CONTINUE_MISSION))) {
-            // continue with mission in auto mode
-        } else {
-            switch (g.fs_action) {
-            case Failsafe_Action_None:
-                break;
-            case Failsafe_Action_RTL:
-                if (!set_mode(mode_rtl, ModeReason::FAILSAFE)) {
-                    set_mode(mode_hold, ModeReason::FAILSAFE);
-                }
-                break;
-            case Failsafe_Action_Hold:
-                set_mode(mode_hold, ModeReason::FAILSAFE);
-                break;
-            case Failsafe_Action_SmartRTL:
-                if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
-                    if (!set_mode(mode_rtl, ModeReason::FAILSAFE)) {
-                        set_mode(mode_hold, ModeReason::FAILSAFE);
+            if ((control_mode == &mode_auto) &&
+                ((failsafe_type == FAILSAFE_EVENT_THROTTLE && g.fs_throttle_enabled == FS_THR_ENABLED_CONTINUE_MISSION) ||
+                (failsafe_type == FAILSAFE_EVENT_GCS && g.fs_gcs_enabled == FS_GCS_ENABLED_CONTINUE_MISSION))) {
+                // continue with mission in auto mode
+            } else {
+                switch (g.fs_action) {
+                case Failsafe_Action_None:
+                    break;
+                case Failsafe_Action_RTL:
+                    if (!set_mode(mode_rtl, MODE_REASON_FAILSAFE)) {
+                        set_mode(mode_hold, MODE_REASON_FAILSAFE);
                     }
+                    break;
+                case Failsafe_Action_Hold:
+                    set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                    break;
+                case Failsafe_Action_SmartRTL:
+                    if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
+                        if (!set_mode(mode_rtl, MODE_REASON_FAILSAFE)) {
+                            set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                        }
+                    }
+                    break;
+                case Failsafe_Action_SmartRTL_Hold:
+                    if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
+                        set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                    }
+                    break;
                 }
-                break;
-            case Failsafe_Action_SmartRTL_Hold:
-                if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
-                    set_mode(mode_hold, ModeReason::FAILSAFE);
-                }
-                break;
             }
+        } else if (!failsafe.level_90 && failsafe_overtime > (g.fs_timeout * 9 / 10)) {
+            failsafe.level_90 = true;
+            gcs().send_text(MAV_SEVERITY_WARNING, "At 90%% of failsafe timeout");
+        } else if (!failsafe.level_50 && failsafe_overtime > (g.fs_timeout / 2)) {
+            failsafe.level_50 = true;
+            gcs().send_text(MAV_SEVERITY_NOTICE, "At 50%% of failsafe timeout");
         }
     }
 }

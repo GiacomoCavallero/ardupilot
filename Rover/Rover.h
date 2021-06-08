@@ -216,6 +216,8 @@ private:
     struct {
         uint8_t bits;               // bit flags of failsafes that have started (but not necessarily triggered an action)
         uint32_t start_time;        // start time of the earliest failsafe
+        bool level_50;              // when the failsafe is greater than 75% of the timeout
+        bool level_90;              // when the failsafe is greater than 90% of the timeout
         uint8_t triggered;          // bit flags of failsafes that have triggered an action
         uint32_t last_valid_rc_ms;  // system time of most recent RC input from pilot
         bool ekf;
