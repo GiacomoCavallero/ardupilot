@@ -223,7 +223,28 @@ void SimOcius::update(const struct sitl_input &input)
 
     float throttle_force = 0.0f;
     if (wamv) {
-        // FIXME: the Wam-V uses skid steering
+        // FIXME: the Wam-V should use skid steering
+        // the steering controls the rudder, the throttle controls the main sail position
+        steering = -2*((input.servos[STEERING_SERVO_CH]-1000)/1000.0f - 0.5f);
+        rudder.set_desired_position(steering);
+        rudder.update(delta_time);
+        steering = rudder.get_position();
+
+        // throttle force (for motor sailing)
+        // gives throttle force == hull drag at 10m/s
+        const uint16_t throttle_out = constrain_int16(input.servos[THROTTLE_SERVO_CH], 1000, 2000);
+        throttle_force = -(throttle_out-1500) * 0.1f * BLUEBOTTLE_FORCE_REDUCTION * 4;
+
+        sail_area = 0;
+
+        HALSITL::RCOutput* rcout = dynamic_cast<HALSITL::RCOutput*>(AP_HAL::get_HAL().rcout);
+        if (rcout) {
+            AP_HAL::ServoStatus status;
+            status.homed = AP_HAL::SERVO_HOMED;
+            status.moving = fabs(rudder.get_position() - rudder.get_desired_position()) > FLT_EPSILON;
+            status.pwm = (-rudder.get_position()*500) + 1500;
+            rcout->_actual[STEERING_SERVO_CH] = status;
+        }
     } else {
         // the steering controls the rudder, the throttle controls the main sail position
         steering = -2*((input.servos[STEERING_SERVO_CH]-1000)/1000.0f - 0.5f);
@@ -231,11 +252,11 @@ void SimOcius::update(const struct sitl_input &input)
         rudder.update(delta_time);
         steering = rudder.get_position();
 
-	if (input.servos[WINCH_ROTATE_CH]) {
-            float winch_set_pos = 2*((input.servos[WINCH_ROTATE_CH]-1000)/1000.0f - 0.5f);
-	    winch.set_desired_position(winch_set_pos);
-	}
-	winch.update(delta_time);
+        if (input.servos[WINCH_ROTATE_CH]) {
+                float winch_set_pos = 2*((input.servos[WINCH_ROTATE_CH]-1000)/1000.0f - 0.5f);
+            winch.set_desired_position(winch_set_pos);
+        }
+        winch.update(delta_time);
 
         // throttle force (for motor sailing)
         // gives throttle force == hull drag at 10m/s
