@@ -679,7 +679,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     Vector3f boat_accel = AP::ins().get_accel();
 
     // calc mast angle
-    Vector3f mast_accel(xacc, -yacc, -zacc);   // The IMU on the sail has a 180 degree roll, so we correct it here
+    Vector3f mast_accel(-xacc, yacc, -zacc);   // The IMU on the sail has a 180 degree roll, so we correct it here
 
     if (boat_accel.length_squared() == 0 || mast_accel.length_squared() == 0) {
         // Need unit vectors so have to skip.
@@ -715,7 +715,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
 
     float angle = wrap_180(mast_pitch - boat_pitch);
     // FIXME: Adding 95 PWM to calibrate the new sensor, this should be parameterised
-    int pwm = (int)(angle*800/90+1100) + 95;
+    int pwm = (int)(angle*800/90+1100);
 //printf("PITCH boat: %f, mast: %f, ANGLE: %f, PWM: %d \n", boat_pitch, mast_pitch, angle, pwm);
     int pwm_filt = imu_filt.filterPoint(pwm);
 
