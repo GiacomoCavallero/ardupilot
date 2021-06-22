@@ -1072,7 +1072,8 @@ void Sailboat::check_wind() {
         return;
     }
 
-    float wind_speed = rover.g2.windvane.get_true_wind_speed();
+//    float wind_speed = rover.g2.windvane.get_true_wind_speed();
+    float wind_speed = rover.g2.windvane.get_apparent_wind_speed();
     float max_wind = sail_windspeed_max / KNOTS_PER_METRE;
     float min_wind = sail_windspeed_min / KNOTS_PER_METRE;
 
