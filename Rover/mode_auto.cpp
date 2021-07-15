@@ -347,6 +347,7 @@ bool ModeAuto::start_command(const AP_Mission::Mission_Command& cmd)
 
     switch (cmd.id) {
     case MAV_CMD_NAV_WAYPOINT:  // Navigate to Waypoint
+    case MAV_CMD_WAYPOINT_SEQUENCE_START:
         return do_nav_wp(cmd, false);
 
     case MAV_CMD_NAV_RETURN_TO_LAUNCH:
@@ -488,6 +489,7 @@ bool ModeAuto::verify_command(const AP_Mission::Mission_Command& cmd)
 {
     switch (cmd.id) {
     case MAV_CMD_NAV_WAYPOINT:
+    case MAV_CMD_WAYPOINT_SEQUENCE_START:
         return verify_nav_wp(cmd);
 
     case MAV_CMD_NAV_RETURN_TO_LAUNCH:

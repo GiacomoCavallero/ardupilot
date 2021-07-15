@@ -385,7 +385,7 @@ bool AP_Mission::replace_cmd(uint16_t index, const Mission_Command& cmd)
 bool AP_Mission::is_nav_cmd(const Mission_Command& cmd)
 {
     // NAV commands all have ids below MAV_CMD_NAV_LAST except NAV_SET_YAW_SPEED
-    return (cmd.id <= MAV_CMD_NAV_LAST || cmd.id == MAV_CMD_NAV_SET_YAW_SPEED);
+    return (cmd.id <= MAV_CMD_NAV_LAST || cmd.id == MAV_CMD_NAV_SET_YAW_SPEED || cmd.id == MAV_CMD_WAYPOINT_SEQUENCE_START);
 }
 
 /// get_next_nav_cmd - gets next "navigation" command found at or after start_index
@@ -735,6 +735,7 @@ bool AP_Mission::stored_in_location(uint16_t id)
     case MAV_CMD_NAV_VTOL_TAKEOFF:
     case MAV_CMD_NAV_VTOL_LAND:
     case MAV_CMD_NAV_PAYLOAD_PLACE:
+    case MAV_CMD_WAYPOINT_SEQUENCE_START:
         return true;
     default:
         return false;
@@ -1138,6 +1139,11 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
         cmd.content.scripting.p1 = packet.param2;
         cmd.content.scripting.p2 = packet.param3;
         cmd.content.scripting.p3 = packet.param4;
+        break;
+
+    case MAV_CMD_WAYPOINT_SEQUENCE_START:
+        // TODO:
+        cmd.p1 = packet.param1;
         break;
 
     default:
@@ -1594,6 +1600,10 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
         packet.param2 = cmd.content.scripting.p1;
         packet.param3 = cmd.content.scripting.p2;
         packet.param4 = cmd.content.scripting.p3;
+        break;
+
+    case MAV_CMD_WAYPOINT_SEQUENCE_START:                          // MAV ID: 16
+        packet.param1 = cmd.p1;
         break;
 
     default:
@@ -2305,6 +2315,8 @@ const char *AP_Mission::Mission_Command::type() const
         return "Winch";
     case MAV_CMD_DO_SEND_SCRIPT_MESSAGE:
         return "Scripting";
+    case MAV_CMD_WAYPOINT_SEQUENCE_START:
+        return "WPSequenceStart";
 
     default:
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
