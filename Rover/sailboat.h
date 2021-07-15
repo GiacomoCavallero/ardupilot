@@ -192,6 +192,7 @@ private:
     friend class RCOutput_Ocius;
     friend class Mode;
     friend class ModeHold;
+    friend class ModeOciusRTL;
 };
 
 class Winch {

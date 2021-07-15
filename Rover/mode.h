@@ -799,3 +799,31 @@ protected:
     bool _enter(mode_reason_t reason) override;
 };
 
+class ModeOciusRTL : public Mode
+{
+public:
+
+    uint32_t mode_number() const override { return SMART_RTL; }
+    const char *name4() const override { return "ORTL"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+    // attributes of the mode
+    bool is_autopilot_mode() const override { return true; }
+
+    // return desired location
+    bool get_desired_location(Location& destination) const override WARN_IF_UNUSED;
+
+    // return distance (in meters) to destination
+    float get_distance_to_destination() const override { return _distance_to_destination; }
+    bool reached_destination() const override;
+
+protected:
+
+    bool _enter(mode_reason_t reason) override;
+
+    int32_t rtl_wp_idx;
+    Location next_wp;
+};
+

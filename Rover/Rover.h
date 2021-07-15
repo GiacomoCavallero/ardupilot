@@ -118,6 +118,7 @@ public:
     friend class ModeFollow;
     friend class ModeSimple;
     friend class ModeIVP;
+    friend class ModeOciusRTL;
 
     friend class RC_Channel_Rover;
     friend class RC_Channels_Rover;
@@ -268,7 +269,7 @@ private:
     ModeLoiter mode_loiter;
     ModeSteering mode_steering;
     ModeRTL mode_rtl;
-    ModeSmartRTL mode_smartrtl;
+    ModeOciusRTL mode_smartrtl;
     ModeFollow mode_follow;
     ModeSimple mode_simple;
     ModeIVP mode_ivp;
