@@ -679,7 +679,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
     Vector3f boat_accel = AP::ins().get_accel();
 
     // calc mast angle
-    Vector3f mast_accel(-xacc, yacc, -zacc);   // The IMU on the sail has a 180 degree roll, so we correct it here
+    Vector3f mast_accel(-xacc, -yacc, zacc);   // The IMU on the sail has a 180 degree roll, so we correct it here
 
     if (boat_accel.length_squared() == 0 || mast_accel.length_squared() == 0) {
         // Need unit vectors so have to skip.
