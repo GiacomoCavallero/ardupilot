@@ -571,7 +571,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         uint64_t data;
         uint8_t size = sizeof(data);
         // read motor temp
-        if (readNetworkEntry(nodeid, EPOS4_POWERSUPPLYVOLTAGE_INDEX, 0x01, &size, &data)) {
+        if (readNetworkEntry(nodeid, EPOS4_POWERSTAGETEMPERATURE_INDEX, 0x01, &size, &data)) {
             printf("Unable to read temperature on %s.\n", MOTOR_NAME);
         } else {
             motor.temperature = data*10;
@@ -692,6 +692,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     }
 }
 
+static uint64_t next_device_status = 0;
 void RCOutput_Ocius::send_epos_status(uint8_t chan) {
     mavlink_msg_epos_status_send((mavlink_channel_t)chan,
             sail_status.flag, sail_status.raw, sail_status.pwm, last_move_attempt[BLUEBOTTLE_SAIL_CHANN], pwm_last[BLUEBOTTLE_SAIL_CHANN],
@@ -703,11 +704,10 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0);
 
-    static uint64_t next_device_status = 0;
     uint64_t now = AP_HAL::millis64();
 
     // Only for bluebottles, send device status for the CAN & epos servos
-    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && now <= next_device_status) {
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && (next_device_status == 0 || now >= next_device_status)) {
         next_device_status += 15000;
         if (next_device_status < now)
             next_device_status = now + 15000;
