@@ -283,7 +283,8 @@ void RCOutput_Ocius::motor_status_check(void) {
                 // Mast is down, disable the sail motor.
                 // This is performed in stinger_sail_comm_thread to avoid multiple threads talking to the EPOS
             }
-        } else if (timeMastSignalStarted != 0 && abs(sail_status.pwm -1500) > rover.g2.sailboat.sail_stow_error &&
+        } else if (timeMastSignalStarted != 0 &&
+                abs(sail_status.pwm -1500) > rover.g2.sailboat.sail_stow_error &&
                 pwm_last[BLUEBOTTLE_MAST_CHANN] < 1800) {
             // Sail is no longer centered, emergency abort lowering of the sail
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
@@ -732,4 +733,10 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
         mast_status.pwm = pwm_filt;
     }
     mast_status.homed = AP_HAL::SERVO_HOMED;
+}
+
+void RCOutput_Ocius::updateServoPosition(uint8_t chan, uint16_t pwm) {
+    if (chan >= _channel_count) return;
+
+    pwm_status[chan].pwm = pwm;
 }

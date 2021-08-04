@@ -79,4 +79,5 @@ public:
     void stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_t ch, uint8_t nodeid);
     void send_epos_status(uint8_t chan);
     void updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc);
+    void updateServoPosition(uint8_t chan, uint16_t pwm);
 };
