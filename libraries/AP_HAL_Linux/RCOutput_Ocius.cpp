@@ -479,7 +479,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
                 memset(consecutive_failures, -1, sizeof(int)*(unsigned int)_channel_count);
             }
         }
-        printf("RCOut: Read fail on channel %u, %d consequetive failures.\n", (uint32_t)ch, consecutive_failures[ch]);
+        printf("RCOut: Read fail on channel %u, %d consecutive failures.\n", (uint32_t)ch, consecutive_failures[ch]);
 //        goto THREAD_LOOP_SLEEP;
         return;
 //    } else {
@@ -552,9 +552,38 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
                 motor.homed = AP_HAL::SERVO_UNHOMED;
             }
         }
+
+        if (ch == BLUEBOTTLE_SAIL_CHANN && motor.homed == AP_HAL::SERVO_HOMED && motor_enabled[ch]) {
+            int desiredPosition = (pwm_last[ch] - 1500) * BLUEBOTTLE_MOTOR_TICKS_PER_90 / 400 + BLUEBOTTLE_MOTOR_OFFSET;
+            if (abs(motor.raw - desiredPosition) <= 100) {
+                // Sail is not moving and close to its desired position, so we disable it
+                disableMotor(nodeid);
+                motor_enabled[ch] = false;
+            }
+        }
     }
  //            printf("Stinger: motor_enabled: %d, mast_flag: %d, mast_pos: %d\n",
 //      motor_enabled, mast_status.flag, mast_status.position);
+
+    if (motorFam == 4)
+    {
+
+        uint64_t data;
+        uint8_t size = sizeof(data);
+        // read motor temp
+        if (readNetworkEntry(nodeid, EPOS4_POWERSUPPLYVOLTAGE_INDEX, 0x01, &size, &data)) {
+            printf("Unable to read temperature on %s.\n", MOTOR_NAME);
+        } else {
+            motor.temperature = data*10;
+        }
+
+        // read power supply voltage
+        if (readNetworkEntry(nodeid, EPOS4_POWERSUPPLYVOLTAGE_INDEX, 0x01, &size, &data)) {
+            printf("Unable to read voltage on %s.\n", MOTOR_NAME);
+        } else {
+            motor.volts = data*10;
+        }
+    }
 
     if (motor.homed != AP_HAL::SERVO_HOMED || (ch == BLUEBOTTLE_SAIL_CHANN && (thread_flags & HomeSail))) {
         if (motor.homed != AP_HAL::SERVO_HOMING) {
@@ -673,6 +702,67 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0,
             0, 0, 0, 0, 0);
+
+    static uint64_t next_device_status = 0;
+    uint64_t now = AP_HAL::millis64();
+
+    // Only for bluebottles, send device status for the CAN & epos servos
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE && now <= next_device_status) {
+        next_device_status += 15000;
+        if (next_device_status < now)
+            next_device_status = now + 15000;
+
+        // send CAN Bus status
+        DEVICE_STATUS dev_status = DEVICE_STATUS_HEALTHY;
+        std::string dev_report = "";
+
+        if (!bridge_initialised) {
+            dev_status = DEVICE_STATUS_FAULT;
+            dev_report = "No connection to can-ethernet bridge.";
+        }
+        mavlink_msg_oc_device_status_send((mavlink_channel_t)chan, 20, dev_status, 0, 0, 0, 0);
+        mavlink_msg_oc_device_ext_status_send((mavlink_channel_t)chan, 20, 0, 0, 0, 0, 0, 0, 0, dev_report.c_str());
+
+        if (rover.g2.sailboat.enable) {
+            // send sail status
+            if (!sail_status._position_is_good) {
+                dev_status = DEVICE_STATUS_FAULT;
+                dev_report = "Sail position is not valid.";
+            } else  if (consecutive_failures[BLUEBOTTLE_SAIL_CHANN]) {
+                dev_status = DEVICE_STATUS_WARN;
+                dev_report = "Sail has read errors.";
+            } else if (sail_status.homed != AP_HAL::SERVO_HOMED) {
+                dev_status = DEVICE_STATUS_WARN;
+                dev_report = "Sail isn't homed.";
+            } else {
+                dev_status = DEVICE_STATUS_HEALTHY;
+                dev_report = "";
+            }
+
+            mavlink_msg_oc_device_status_send((mavlink_channel_t)chan, 21, dev_status, sail_status.temperature * 0.01, 0, 0, 0);
+            mavlink_msg_oc_device_ext_status_send((mavlink_channel_t)chan, 21, 0, 0, sail_status.volts * 0.01, 0, 0, 0, 0, dev_report.c_str());
+        }
+
+        if (rover.g2.winch.enable) {
+            // send winch status
+            if (!winch_status._position_is_good) {
+                dev_status = DEVICE_STATUS_FAULT;
+                dev_report = "Winch position is not valid.";
+            } else  if (consecutive_failures[BLUEBOTTLE_SAIL_CHANN]) {
+                dev_status = DEVICE_STATUS_WARN;
+                dev_report = "Winch has read errors.";
+            } else if (winch_status.homed != AP_HAL::SERVO_HOMED) {
+                dev_status = DEVICE_STATUS_WARN;
+                dev_report = "Winch isn't homed.";
+            } else {
+                dev_status = DEVICE_STATUS_HEALTHY;
+                dev_report = "";
+            }
+
+            mavlink_msg_oc_device_status_send((mavlink_channel_t)chan, 22, dev_status, winch_status.temperature * 0.01, 0, 0, 0);
+            mavlink_msg_oc_device_ext_status_send((mavlink_channel_t)chan, 22, 0, 0, winch_status.volts * 0.01, 0, 0, 0, 0, dev_report.c_str());
+        }
+    }
 }
 
 void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
