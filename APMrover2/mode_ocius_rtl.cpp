@@ -9,6 +9,8 @@ bool ModeOciusRTL::_enter(mode_reason_t reason)
         return false;
     }
 
+    _desired_throttle = constrain_float(g2.rtl_throttle, 0.0, 100.0);
+
     rtl_wp_idx = -1;
     Location wp = {};
     float dist = INFINITY;
@@ -93,6 +95,8 @@ void ModeOciusRTL::update()
 {
     // update distance to destination
     _distance_to_destination = rover.current_loc.get_distance(g2.wp_nav.get_destination());
+
+    _desired_throttle = constrain_float(g2.rtl_throttle, 0.0, 100.0);
 
     bool location_is_end = (rtl_wp_idx == -1);
     if (!g2.wp_nav.reached_destination()) {

@@ -415,6 +415,9 @@ public:
 
     // FS options
     AP_Int32 fs_options;
+
+    // default throttle for rtl
+    AP_Float rtl_throttle;
 };
 
 extern const AP_Param::Info var_info[];

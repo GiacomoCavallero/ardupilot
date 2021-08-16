@@ -452,8 +452,13 @@ void Mode::navigate_to_waypoint()
 
     // pass speed to throttle controller after applying nudge from pilot
     float desired_speed = g2.wp_nav.get_speed();
-    desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
-    calc_throttle(desired_speed, true);
+    if (is_positive(_desired_throttle))
+    {
+        g2.motors.set_throttle(_desired_throttle);
+    } else {
+        desired_speed = calc_speed_nudge(desired_speed, g2.wp_nav.get_reversed());
+        calc_throttle(desired_speed, true);
+    }
 
     float desired_heading_cd = g2.wp_nav.oa_wp_bearing_cd();
     if (g2.sailboat.use_indirect_route(desired_heading_cd)) {

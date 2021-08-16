@@ -673,6 +673,15 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("NUDGE_ENABLE", 52, ParametersG2, nudge_enable, 0),
 
+    // @Param: RTL_THROTTLE
+    // @DisplayName: Return-to-Launch throttle default
+    // @Description: Return-to-Launch throttle default.  If zero use RTL_SPEED or WP_SPEED or CRUISE_SPEED.
+    // @Units: %
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("RTL_THROTTLE", 53, ParametersG2, rtl_throttle, 0.0),
+
     AP_GROUPEND
 };
 
