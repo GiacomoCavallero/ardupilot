@@ -59,7 +59,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t chann
 
     motor_enabled = new bool[_channel_count];
 
-    consecutive_failures = new int[_channel_count];
+//    consecutive_failures = new int[_channel_count];
     last_move_attempt = new int[_channel_count];
     last_move_success = new int[_channel_count];
     last_move_time = new int[_channel_count];
@@ -68,7 +68,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t chann
     memset(pwm_last, 0, sizeof(uint16_t)*(unsigned int)channel_count);
     memset(pwm_status, 0, sizeof(AP_HAL::ServoStatus)*(unsigned int)channel_count);
     memset(motor_enabled, 0, sizeof(bool)*(unsigned int)channel_count);
-    memset(consecutive_failures, -1, sizeof(int)*(unsigned int)channel_count);
+//    memset(consecutive_failures, -1, sizeof(int)*(unsigned int)channel_count);
     memset(last_move_attempt, 0, sizeof(int)*(unsigned int)channel_count);
     memset(last_move_success, 0, sizeof(int)*(unsigned int)channel_count);
     memset(last_move_time, 0, sizeof(int)*(unsigned int)channel_count);
@@ -284,7 +284,7 @@ void RCOutput_Ocius::motor_status_check(void) {
                 // This is performed in stinger_sail_comm_thread to avoid multiple threads talking to the EPOS
             }
         } else if (timeMastSignalStarted != 0 &&
-                abs(sail_status.pwm -1500) > rover.g2.sailboat.sail_stow_error &&
+                abs(sail_status.pwm - 1500) > rover.g2.sailboat.sail_stow_error &&
                 pwm_last[BLUEBOTTLE_MAST_CHANN] < 1800) {
             // Sail is no longer centered, emergency abort lowering of the sail
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_HYDRAULIC_SPD_CHANN, 1500);
@@ -292,7 +292,7 @@ void RCOutput_Ocius::motor_status_check(void) {
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
             mast_status.homed = AP_HAL::SERVO_UNHOMED;
             timeMastSignalStarted = 0;
-            gcs().send_text(MAV_SEVERITY_ERROR, "Emergency STOP on mast servo. Sail not centered.");
+            gcs().send_text(MAV_SEVERITY_ERROR, "Emergency STOP on mast servo. Sail not centered. (%u)", (uint32_t)sail_status.pwm);
         } else if (timeMastSignalStarted != 0) {
             uint32_t ramp_spd = 1900 - 1500;
             SRV_Channel* chan = SRV_Channels::srv_channel(BLUEBOTTLE_HYDRAULIC_SPD_CHANN);
@@ -434,12 +434,13 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
 
 
 #define MAX_CONSEQ_FAILS     10
-bool RCOutput_Ocius_stinger_epos_all_broken(int* consecutive_failures, int channel_count) {
+bool RCOutput_Ocius_stinger_epos_all_broken(uint8_t* nodeids, int node_count) {
     bool have_broken_reading = false;
-    for (int i = 0; i < channel_count; ++i) {
-        if (consecutive_failures[i] >= MAX_CONSEQ_FAILS) {
+    for (int i = 0; i < node_count; ++i) {
+        if (nodeids[i] == 0) continue;
+        if (getCANErrorCount(nodeids[i]) >= MAX_CONSEQ_FAILS) {
             have_broken_reading = true;
-        } else if (consecutive_failures[i] >= 0) {
+        } else {
             return false;
         }
     }
@@ -460,26 +461,30 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (readPosition(nodeid, &position)) {
         motor._position_is_good = false;
         // Error reading motor position.
-        consecutive_failures[ch]++;
-        if (consecutive_failures[ch] >= MAX_CONSEQ_FAILS) {
-            consecutive_failures[ch] = MAX_CONSEQ_FAILS;
+//        consecutive_failures[ch]++;
+        if (getCANErrorCount(nodeid) >= MAX_CONSEQ_FAILS) {
+//            getCANErrorCount(nodeid) = MAX_CONSEQ_FAILS;
             if (motor.homed != AP_HAL::SERVO_UNHOMED) {
                 gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
 //                printf("RCOut: Consecutive fails on servo %u, unhoming motor", (uint32_t)ch);
             }
             motor.homed = AP_HAL::SERVO_UNHOMED;
 
-            if (RCOutput_Ocius_stinger_epos_all_broken(consecutive_failures, (int)_channel_count)) {
+            uint8_t nodelist[2] =  {1,0};
+            if (rover.g2.winch.enable && WINCH_ENCODER_DEPLOY != WINCH_ENCODER_RETRACT) {
+                nodelist[1] = 2;
+            }
+            if (RCOutput_Ocius_stinger_epos_all_broken(nodelist, 2)) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: Too many consecutive read failures. Resetting bridge connection.");
 //                printf("RCOut: Too many consecutive read failures. Resetting bridge connection.\n");
                 shutdownBridge();
                 bridge_initialised = false;
                 sail_status.homed = AP_HAL::SERVO_UNHOMED;
                 winch_status.homed = AP_HAL::SERVO_UNHOMED;
-                memset(consecutive_failures, -1, sizeof(int)*(unsigned int)_channel_count);
+//                memset(consecutive_failures, -1, sizeof(int)*(unsigned int)_channel_count);
             }
         }
-        printf("RCOut: Read fail on channel %u, %d consecutive failures.\n", (uint32_t)ch, consecutive_failures[ch]);
+        printf("RCOut: Read fail on channel %u, %d consecutive failures.\n", (uint32_t)ch, getCANErrorCount(nodeid));
 //        goto THREAD_LOOP_SLEEP;
         return;
 //    } else {
@@ -490,7 +495,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 //    if (consecutive_failures[ch] > 0) {
 //        printf("RCOut: Successful read, clearing consecutive failures.\n");
 //    }
-    consecutive_failures[ch] = 0;
+//    consecutive_failures[ch] = 0;
 
     position_pwm_flt = 0;
     if (ch == BLUEBOTTLE_SAIL_CHANN) {
@@ -517,6 +522,11 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (motor.pwm >= 1000 && motor.pwm <= 2000) {
         motor._position_is_good = true;
     } else {
+        if (motor._position_is_good) {
+            // If the motor position previously was good, we disable to prevent damage
+            disableMotor(nodeid);
+            motor_enabled[ch] = false;
+        }
         motor._position_is_good = false;
     }
 	//printf("EPOS %d is at position %d(%d)\n", nodeid, position, position_pwm);
@@ -543,7 +553,9 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
                     gcs().send_text(MAV_SEVERITY_NOTICE, "RCOut: %s is homed.", MOTOR_NAME);
                 }
                 motor.homed = AP_HAL::SERVO_HOMED;
-                RCOutput_Ocius::thread_flags = RCOutput_Ocius::thread_flags & !HomeSail; // FIXME: only for sail
+                if (ch == BLUEBOTTLE_SAIL_CHANN) {
+                    RCOutput_Ocius::thread_flags = RCOutput_Ocius::thread_flags & !HomeSail; // only for sail
+                }
             } else {
                 if (motor.homed == AP_HAL::SERVO_HOMED)
                     gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: %s has LOST its homing.", MOTOR_NAME);
@@ -728,7 +740,7 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
             if (!sail_status._position_is_good) {
                 dev_status = DEVICE_STATUS_FAULT;
                 dev_report = "Sail position is not valid.";
-            } else  if (consecutive_failures[BLUEBOTTLE_SAIL_CHANN]) {
+            } else  if (getCANErrorCount(1)) {
                 dev_status = DEVICE_STATUS_WARN;
                 dev_report = "Sail has read errors.";
             } else if (sail_status.homed != AP_HAL::SERVO_HOMED) {
@@ -748,7 +760,7 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
             if (!winch_status._position_is_good) {
                 dev_status = DEVICE_STATUS_FAULT;
                 dev_report = "Winch position is not valid.";
-            } else  if (consecutive_failures[BLUEBOTTLE_SAIL_CHANN]) {
+            } else  if (getCANErrorCount(1)) {
                 dev_status = DEVICE_STATUS_WARN;
                 dev_report = "Winch has read errors.";
             } else if (winch_status.homed != AP_HAL::SERVO_HOMED) {

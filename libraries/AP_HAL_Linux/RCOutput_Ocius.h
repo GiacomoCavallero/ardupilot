@@ -20,7 +20,7 @@ protected:
     AP_HAL::ServoStatus *pwm_status;
 
     bool* motor_enabled;
-    int* consecutive_failures;
+//    int* consecutive_failures;
     int* last_move_attempt;
     int* last_move_success;
     int* last_move_time;
