@@ -737,7 +737,11 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
 
         if (rover.g2.sailboat.enable) {
             // send sail status
-            if (!sail_status._position_is_good) {
+            uint16_t motor_fam = 0;
+            if (getEPOSFamily(1, &motor_fam) != 0 || motor_fam == 0) {
+                dev_status = DEVICE_STATUS_FAULT;
+                dev_report = "Not connected to EPOS.";
+            } else if (!sail_status._position_is_good) {
                 dev_status = DEVICE_STATUS_FAULT;
                 dev_report = "Sail position is not valid.";
             } else  if (getCANErrorCount(1)) {
@@ -757,7 +761,11 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
 
         if (rover.g2.winch.enable) {
             // send winch status
-            if (!winch_status._position_is_good) {
+            uint16_t motor_fam = 0;
+            if (getEPOSFamily(1, &motor_fam) != 0 || motor_fam == 0) {
+                dev_status = DEVICE_STATUS_FAULT;
+                dev_report = "Not connected to EPOS.";
+            } else if (!winch_status._position_is_good) {
                 dev_status = DEVICE_STATUS_FAULT;
                 dev_report = "Winch position is not valid.";
             } else  if (getCANErrorCount(1)) {
