@@ -273,6 +273,10 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         }
         break;
 
+    case 126996: //Product Information
+        gcs().send_text(MAV_SEVERITY_INFO, "NMEA2K: %d: %s", pmv->src, pmv->getLookup("Model ID"));
+        break;
+
     case 127250: // Vessel Heading
         if (compass_state != NULL)
         {
