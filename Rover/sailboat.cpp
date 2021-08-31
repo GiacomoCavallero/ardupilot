@@ -1312,7 +1312,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("GPS_1", 1, NMEA2k_Params, gps_1, 0),
+    AP_GROUPINFO("GPS_1", 1, NMEA2k_Params, gps_1, 255),
 
     // @Param: GPS_2
     // @DisplayName: Secondary GPS ID
@@ -1321,7 +1321,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("GPS_2", 2, NMEA2k_Params, gps_2, 0),
+    AP_GROUPINFO("GPS_2", 2, NMEA2k_Params, gps_2, 255),
 
     // @Param: GPS_3
     // @DisplayName: Tertiary GPS ID
@@ -1330,7 +1330,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: ...
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("GPS_3", 3, NMEA2k_Params, gps_3, 0),
+    AP_GROUPINFO("GPS_3", 3, NMEA2k_Params, gps_3, 255),
 
     // @Param: FILT_COG
     // @DisplayName: COG filter time constant
@@ -1437,7 +1437,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: 0..255
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("COMPASS_1", 15, NMEA2k_Params, compass_1, 0),
+    AP_GROUPINFO("COMPASS_1", 15, NMEA2k_Params, compass_1, 255),
 
     // @Param: COMPASS_2
     // @DisplayName: Secondary compass ID
@@ -1445,7 +1445,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: 0..255
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("COMPASS_2", 16, NMEA2k_Params, compass_2, 0),
+    AP_GROUPINFO("COMPASS_2", 16, NMEA2k_Params, compass_2, 255),
 
     // @Param: USE_FILT
     // @DisplayName: Use Filtered NMEA2K Input
@@ -1461,7 +1461,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: 0..255
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("WATER_DP", 18, NMEA2k_Params, water_depth, 0),
+    AP_GROUPINFO("WATER_DP", 18, NMEA2k_Params, water_depth, 255),
 
     // @Param: WATER_SPD
     // @DisplayName: Water speed ID
@@ -1469,7 +1469,7 @@ const AP_Param::GroupInfo NMEA2k_Params::var_info[] = {
     // @Range: 0..255
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("WATER_SP", 19, NMEA2k_Params, water_speed, 0),
+    AP_GROUPINFO("WATER_SP", 19, NMEA2k_Params, water_speed, 255),
 
     AP_GROUPEND
 };

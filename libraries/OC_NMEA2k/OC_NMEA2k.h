@@ -43,7 +43,7 @@ public:
         FiltExpAng<float> filter_cog;
         FiltExp<float> filter_sog;
 
-        GPS() : id(0), cog(0), cog_filt(0), sog(0), sog_filt(0), variation(M_PI + 1), last_update(0),
+        GPS() : id(255), cog(0), cog_filt(0), sog(0), sog_filt(0), variation(M_PI + 1), last_update(0),
                 have_fix(false), hdop(0), vdop(0), num_sats(0), time_week(0), time_week_ms(0),
                 time_last_update(0), 
                 filter_cog(&(rover.g2.nmea2k.filt_cog)), filter_sog(&(rover.g2.nmea2k.filt_sog)) {}
@@ -71,7 +71,7 @@ public:
         FiltExp<float> filter_boatspeed;
         FiltExp<float> filter_leeway;
 
-        Triducer() : id(0), water_depth(0), water_offset(0), water_range(0), water_temp(0),
+        Triducer() : id(255), water_depth(0), water_offset(0), water_range(0), water_temp(0),
                      longitudinal_speed_water(0), transverse_speed_water(0),
                      longitudinal_speed_water_filt(0), transverse_speed_water_filt(0),
                      longitudinal_speed_ground(0), transverse_speed_ground(0),
@@ -114,7 +114,7 @@ public:
         FiltExpAng<float> filter_gwd;   // Filter for ground wind direction
         FiltExp<float> filter_gws;      // Filter for ground wind speed
 
-        WeatherStation() : id(0), apparent_wind_angle(0), apparent_wind_angle_filt(0),
+        WeatherStation() : id(255), apparent_wind_angle(0), apparent_wind_angle_filt(0),
                            apparent_wind_speed(0), apparent_wind_speed_filt(0),
                            water_wind_angle(0), water_wind_angle_filt(0),
                            water_wind_dir(0), water_wind_dir_filt(0),
@@ -149,7 +149,7 @@ public:
 
         FiltExpNlAng<float> filter_hdg;
 
-        Compass() : id(0), heading(0), heading_filt(0),
+        Compass() : id(255), heading(0), heading_filt(0),
                     magnetic(0), variation(M_PI+1), last_update(0),
                     roll(0), pitch(0), yaw(0),
                     filter_hdg(&(rover.g2.nmea2k.filt_hdg_tc),&(rover.g2.nmea2k.filt_hdg_nl)) {}

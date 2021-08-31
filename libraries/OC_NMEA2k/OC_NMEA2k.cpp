@@ -218,8 +218,8 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
              gps_tertiary_id = NMEA2K_BACKUP,
              compass_primary_id = NMEA2K_AIRMAR,
              compass_secondary_id = NMEA2K_BACKUP,
-             water_depth_id = 0,
-             water_speed_id = 0;
+             water_depth_id = 255,
+             water_speed_id = 255;
 //             wind_primary_id = NMEA2K_AIRMAR;
 #endif
 
@@ -552,7 +552,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 128259: // Speed
-        if (water_speed_id == 0 || pmv->src == water_speed_id)
+        if (water_speed_id == 255 || pmv->src == water_speed_id)
         {
             if (fabs(triducer.transverse_speed_water) > FLT_EPSILON)
                 triducer.longitudinal_speed_water =
@@ -560,7 +560,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         }
         break;
     case 130578: // Vessel Speed Components
-        if ((water_speed_id == 0 || pmv->src == water_speed_id) &&
+        if ((water_speed_id == 255 || pmv->src == water_speed_id) &&
                 pmv->isValid("Longitudinal Speed, Water-referenced") &&
                 pmv->isValid("Transverse Speed, Water-referenced"))
         {
@@ -585,7 +585,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 128267: // Water Depth
-        if (water_depth_id == 0 || pmv->src == water_depth_id)
+        if (water_depth_id == 255 || pmv->src == water_depth_id)
         {
             triducer.water_depth = pmv->getDouble("Depth");
             triducer.water_offset = pmv->getDouble("Offset");
@@ -594,7 +594,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 130311: // Environmental Parameters
-        if ((water_depth_id == 0 || pmv->src == water_depth_id) &&
+        if ((water_depth_id == 255 || pmv->src == water_depth_id) &&
                 pmv->getInteger("Temperature Source") == 0) // Water temp
         {
             triducer.water_temp = pmv->getDouble("Temperature");
