@@ -67,7 +67,7 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
 
     if ((failsafe.triggered == 0) &&
         (failsafe.bits != 0) &&
-        (control_mode != &mode_rtl) &&
+        (control_mode != &mode_smartrtl) &&
         ((control_mode != &mode_hold || (g2.fs_options & (uint32_t)Failsafe_Options::Failsafe_Option_Active_In_Hold)))) {
         int32_t failsafe_overtime = (millis() - failsafe.start_time) / 1000;
         if (failsafe_overtime > g.fs_timeout) {
@@ -86,7 +86,7 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
                 case Failsafe_Action_None:
                     break;
                 case Failsafe_Action_RTL:
-                    if (!set_mode(mode_rtl, MODE_REASON_FAILSAFE)) {
+                    if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
                         set_mode(mode_hold, MODE_REASON_FAILSAFE);
                     }
                     break;
@@ -95,7 +95,7 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
                     break;
                 case Failsafe_Action_SmartRTL:
                     if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
-                        if (!set_mode(mode_rtl, MODE_REASON_FAILSAFE)) {
+                        if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
                             set_mode(mode_hold, MODE_REASON_FAILSAFE);
                         }
                     }
@@ -128,7 +128,7 @@ void Rover::handle_battery_failsafe(const char* type_str, const int8_t action)
                 }
                 FALLTHROUGH;
             case Failsafe_Action_RTL:
-                if (set_mode(mode_rtl, ModeReason::BATTERY_FAILSAFE)) {
+                if (set_mode(mode_smartrtl, ModeReason::BATTERY_FAILSAFE)) {
                     break;
                 }
                 FALLTHROUGH;

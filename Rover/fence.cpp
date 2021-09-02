@@ -24,7 +24,7 @@ void Rover::fence_check()
                 case Failsafe_Action_None:
                     break;
                 case Failsafe_Action_RTL:
-                    if (!set_mode(mode_rtl, ModeReason::FENCE_BREACHED)) {
+                    if (!set_mode(mode_smartrtl, ModeReason::FENCE_BREACHED)) {
                         set_mode(mode_hold, ModeReason::FENCE_BREACHED);
                     }
                     break;

@@ -665,6 +665,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
     case 60928:  // ISO Address Claim
     case 65410:  // Airmar: Device Information
     case 126993: // Heartbeat
+//    case 126996: // Product Information
     case 127251: // Rate of Turn
     case 129044: // Datum
     // case 130311: // Environmental Parameters
