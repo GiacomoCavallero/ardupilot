@@ -459,6 +459,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
     // Get motor position
     if (readPosition(nodeid, &position)) {
+        gcs().send_text(MAV_SEVERITY_DEBUG, "EPOS: Servo %u(Node: %u) Read error. (%s:%u)", (uint32_t)ch, (uint32_t)nodeid, __FILE__, __LINE__);
         motor._position_is_good = false;
         // Error reading motor position.
 //        consecutive_failures[ch]++;
@@ -503,9 +504,6 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
         position_pwm_flt = 1100 + (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
     }
-    motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
-    motor.raw = position;
-    motor.pwm = (uint16_t)(::round(position_pwm_flt));
 
     uint16_t motorFam = 0;
     getEPOSFamily(nodeid, &motorFam);
@@ -521,15 +519,29 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     motor.flag = motorFam;
     if (motor.pwm >= 1000 && motor.pwm <= 2000) {
         motor._position_is_good = true;
+        motor._suspect_position_reads = 0;
     } else {
-        if (motor._position_is_good) {
+        motor._suspect_position_reads++;
+        if (motor._suspect_position_reads == 1) {
+            // We ignore the 1st possible bad read, (due to a canfestival bug)
+            // But we do skip the rest of the update.
+            gcs().send_text(MAV_SEVERITY_DEBUG, "RCOut: Suspicious read on %s.", MOTOR_NAME);
+            return;
+        } else if (motor._position_is_good) {
             // If the motor position previously was good, we disable to prevent damage
+            gcs().send_text(MAV_SEVERITY_DEBUG, "RCOut: Suspicious read %u on %s. Disabling motor.", motor._suspect_position_reads, MOTOR_NAME);
             disableMotor(nodeid);
             motor_enabled[ch] = false;
+            motor._position_is_good = false;
+        } else if (motor._suspect_position_reads == 2) {
+            gcs().send_text(MAV_SEVERITY_DEBUG, "RCOut: Suspicious read %u on %s.", motor._suspect_position_reads, MOTOR_NAME);
         }
-        motor._position_is_good = false;
     }
 	//printf("EPOS %d is at position %d(%d)\n", nodeid, position, position_pwm);
+
+    motor.moving = abs(motor.raw - position) > 5;  // if the raw reading has changes by 5 or more, the motor is considered as moving
+    motor.raw = position;
+    motor.pwm = (uint16_t)(::round(position_pwm_flt));
 
     if (!(motor.moving)) {
         uint64_t now = AP_HAL::millis64();
@@ -579,7 +591,6 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
     if (motorFam == 4)
     {
-
         uint64_t data;
         uint8_t size = sizeof(data);
         // read motor temp
@@ -595,6 +606,11 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         } else {
             motor.volts = data*10;
         }
+    }
+
+    if (!motor._position_is_good || motor._suspect_position_reads != 0) {
+        // Last read position of motor is not good, not safe to move
+        return;
     }
 
     if (motor.homed != AP_HAL::SERVO_HOMED || (ch == BLUEBOTTLE_SAIL_CHANN && (thread_flags & HomeSail))) {
@@ -622,11 +638,6 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (motor.homed != AP_HAL::SERVO_HOMED) {
         // Sail/Winch not homed so not safe to move.
 //        goto THREAD_LOOP_SLEEP;
-        return;
-    }
-
-    if (!motor._position_is_good) {
-        // Last read position of motor is not good, not safe to move
         return;
     }
 
