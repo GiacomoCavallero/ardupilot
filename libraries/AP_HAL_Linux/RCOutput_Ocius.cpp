@@ -454,7 +454,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     }
 
     uint8_t homed;
-    int32_t position;
+    int32_t position = 0;
     float position_pwm_flt;
 
     // Get motor position
@@ -591,20 +591,25 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
     if (motorFam == 4)
     {
-        uint64_t data;
-        uint8_t size = sizeof(data);
-        // read motor temp
-        if (readNetworkEntry(nodeid, EPOS4_POWERSTAGETEMPERATURE_INDEX, 0x01, &size, &data)) {
-            printf("Unable to read temperature on %s.\n", MOTOR_NAME);
-        } else {
-            motor.temperature = data*10;
-        }
+        uint64_t now = AP_HAL::millis64();
+        if (now - motor._last_device_update > 1000) {
+            motor._last_device_update = now;
 
-        // read power supply voltage
-        if (readNetworkEntry(nodeid, EPOS4_POWERSUPPLYVOLTAGE_INDEX, 0x01, &size, &data)) {
-            printf("Unable to read voltage on %s.\n", MOTOR_NAME);
-        } else {
-            motor.volts = data*10;
+            uint64_t data;
+            uint8_t size = sizeof(data);
+            // read motor temp
+            if (readNetworkEntry(nodeid, EPOS4_POWERSTAGETEMPERATURE_INDEX, 0x01, &size, &data)) {
+                printf("Unable to read temperature on %s.\n", MOTOR_NAME);
+            } else {
+                motor.temperature = data*10;
+            }
+
+            // read power supply voltage
+            if (readNetworkEntry(nodeid, EPOS4_POWERSUPPLYVOLTAGE_INDEX, 0x01, &size, &data)) {
+                printf("Unable to read voltage on %s.\n", MOTOR_NAME);
+            } else {
+                motor.volts = data*10;
+            }
         }
     }
 
