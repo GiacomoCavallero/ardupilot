@@ -525,7 +525,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         if (motor._suspect_position_reads <= 2) {
             // We ignore the 1st & 2nd possible bad reads, (due to a canfestival bug)
             // But we do skip the rest of the update.
-            gcs().send_text(MAV_SEVERITY_DEBUG, "RCOut: Suspicious read(%u) on %s.", motor._suspect_position_reads, MOTOR_NAME);
+            gcs().send_text(MAV_SEVERITY_DEBUG, "RCOut: Suspicious read(%u,raw:%d,pwm:%d) on %s.", motor._suspect_position_reads, position, (int)position_pwm_flt, MOTOR_NAME);
             return;
         } else if (motor._position_is_good) {
             // If the motor position previously was good, we disable to prevent damage
