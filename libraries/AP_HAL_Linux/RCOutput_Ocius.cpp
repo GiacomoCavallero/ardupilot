@@ -412,6 +412,10 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
             last_initialise_fail_message = 0;
             sail_status.homed = AP_HAL::SERVO_UNHOMED;
             winch_status.homed = AP_HAL::SERVO_UNHOMED;
+
+            sail_status.error_count = 0;
+            winch_status.error_count = 0;
+
             setEmergencyHandler(&RCOutput_Ocius_EmergencyHandler);
         }
 
@@ -460,6 +464,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     // Get motor position
     if (readPosition(nodeid, &position)) {
         gcs().send_text(MAV_SEVERITY_DEBUG, "EPOS: Servo %u(Node: %u) Read error. (%s:%u)", (uint32_t)ch, (uint32_t)nodeid, __FILE__, __LINE__);
+        motor.error_count++;
         motor._position_is_good = false;
         // Error reading motor position.
 //        consecutive_failures[ch]++;
@@ -521,6 +526,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         motor._position_is_good = true;
         motor._suspect_position_reads = 0;
     } else {
+        motor.error_count++;
         motor._suspect_position_reads++;
         if (motor._suspect_position_reads <= 2) {
             // We ignore the 1st & 2nd possible bad reads, (due to a canfestival bug)
@@ -552,6 +558,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     //        if (motor.homed != AP_HAL::SERVO_HOMED)
     //            gcs().send_text(MAV_SEVERITY_WARNING, "Stinger: Checking home status of motor %d( %d )", ch, (int)motor.homed);
             if (isHomed(nodeid, &homed, NULL)) {
+                motor.error_count++;
                 // Error checking motor homed status
     //            goto THREAD_LOOP_SLEEP;
                 return;
@@ -599,6 +606,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
             uint8_t size = sizeof(data);
             // read motor temp
             if (readNetworkEntry(nodeid, EPOS4_POWERSTAGETEMPERATURE_INDEX, 0x01, &size, &data)) {
+                motor.error_count++;
                 printf("Unable to read temperature on %s.\n", MOTOR_NAME);
             } else {
                 motor.temperature = data*10;
@@ -606,6 +614,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
             // read power supply voltage
             if (readNetworkEntry(nodeid, EPOS4_POWERSUPPLYVOLTAGE_INDEX, 0x01, &size, &data)) {
+                motor.error_count++;
                 printf("Unable to read voltage on %s.\n", MOTOR_NAME);
             } else {
                 motor.volts = data*10;
@@ -697,6 +706,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
                 // Wait 5 seconds after a successful send before retrying.
             } else {
                 if(enableMotor(nodeid)) {
+                    motor.error_count++;
                     // Error ensuring motor is enabled.
 //                    goto THREAD_LOOP_SLEEP;
                     return;
@@ -712,6 +722,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 //                printf("RCOut: Moving %s to position %d.\n", MOTOR_NAME, desiredPosition);
                 last_move_attempt[ch] = desiredPosition;
                 if (!moveToPosition(nodeid, desiredPosition)) {
+                    motor.error_count++;
                     last_move_success[ch] = desiredPosition;
                     last_move_time[ch] = now;
                 }
@@ -725,12 +736,13 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
     mavlink_msg_epos_status_send((mavlink_channel_t)chan,
             sail_status.flag, sail_status.raw, sail_status.pwm, last_move_attempt[BLUEBOTTLE_SAIL_CHANN], pwm_last[BLUEBOTTLE_SAIL_CHANN],
             winch_status.flag, winch_status.raw, winch_status.pwm, last_move_attempt[BLUEBOTTLE_WINCH_CHANN], pwm_last[BLUEBOTTLE_WINCH_CHANN],
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0);
+            0, 0, 0, 0, 0, // epos 3
+            0, 0, 0, 0, 0, // epos 4
+            0, 0, 0, 0, 0, // epos 5
+            0, 0, 0, 0, 0, // epos 6
+            0, 0, 0, 0, 0, // epos 7
+            0, 0, 0, 0, 0, // epos 8
+            sail_status.error_count, winch_status.error_count, 0, 0, 0, 0, 0, 0); // error counts
 
     uint64_t now = AP_HAL::millis64();
 
