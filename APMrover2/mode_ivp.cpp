@@ -35,7 +35,14 @@ void ModeIVP::update()
     }
     if (have_attitude_target) {
         // run steering and throttle controllers
-        calc_steering_to_heading(_desired_yaw_cd);
+        // calc_steering_to_heading(_desired_yaw_cd);
+        // call heading controller
+        const float steering_out = attitude_control.get_steering_out_heading(radians(_desired_yaw_cd*0.01f),
+                                                                             radians(0.0f),
+                                                                             g2.motors.limit.steer_left,
+                                                                             g2.motors.limit.steer_right,
+                                                                             rover.G_Dt);
+        set_steering(steering_out * 4500.0f, false);
 
         if (_target_is_throttle) {
             // IVP allows the sail to automatically adjust
