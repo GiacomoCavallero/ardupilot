@@ -358,9 +358,23 @@ bool Mode::stop_vehicle()
         throttle_out = 100.0f * attitude_control.get_throttle_out_stop(g2.motors.limit.throttle_lower, g2.motors.limit.throttle_upper, g.speed_cruise, g.throttle_cruise * 0.01f, rover.G_Dt, stopped);
     }
 
-    // relax sails if present
-    g2.motors.set_mainsail(100.0f);
-    g2.motors.set_wingsail(0.0f);
+    if (rover.g2.frame_class == FRAME_BLUEBOTTLE) {
+        // TODO: adjust sail angle
+        if (g2.sailboat.sail_is_safe()) {
+            if (g2.sailboat.sail_mode == Sailboat::SailMode::SAIL_ONLY || g2.sailboat.sail_mode == Sailboat::SailMode::MOTOR_SAIL || g2.sailboat.sail_mode == Sailboat::SailMode::MOTOR_SOLAR) {
+                int32_t sail_set_pos = AP_HAL::get_HAL().rcout->read(SAIL_SERVO_CH-1);
+                int32_t optimal_pos = g2.sailboat.get_optimal_sail_position();
+
+                if (optimal_pos != 0 && abs(optimal_pos - sail_set_pos) >= g2.sailboat.sail_stow_error) {
+                    g2.sailboat.set_sail_position(optimal_pos);
+                }
+            }
+        }
+    } else {
+        // relax sails if present
+        g2.motors.set_mainsail(100.0f);
+        g2.motors.set_wingsail(0.0f);
+    }
 
     // send to motor
     g2.motors.set_throttle(throttle_out);
