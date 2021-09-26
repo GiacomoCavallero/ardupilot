@@ -5416,5 +5416,5 @@ GCS &gcs()
 
 void GCS::send_oc_pid_feedback(const char* locn, float desired, float achieved, float output, float ff, float p, float i, float d, float param1, float param2, float param3, float param4)
 {
-    mavlink_msg_oc_pid_feedback_send(MAVLINK_COMM_0, locn, desired, achieved, output, ff, p, i, d, param1, param2, param3, param4);
+//    mavlink_msg_oc_pid_feedback_send(MAVLINK_COMM_0, locn, desired, achieved, output, ff, p, i, d, param1, param2, param3, param4);
 }
