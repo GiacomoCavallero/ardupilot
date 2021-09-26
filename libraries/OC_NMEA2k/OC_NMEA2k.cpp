@@ -679,7 +679,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
                  // TODO: Look up these PGNs
     case 65408:  // Airmar: Depth Quality Factor
     case 65409:  // Airmar: Speed Pulse Count
-    case 128000:
+    case 128000: // Leeway Angle - TODO: needs pgn.h update
     case 128275: // Distance Log
         break;
     case 129038: // AIS Class A Position Report
@@ -853,6 +853,7 @@ Location NMEA2K::get_location() {
 }
 
 float NMEA2K::get_heading() {
+    // FIXME: return the filtered value
     Compass* compass = get_active_compass();
     if (compass != NULL) {
         return compass->heading;

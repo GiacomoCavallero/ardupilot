@@ -427,12 +427,15 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
         // retrieve lateral acceleration, heading back towards line and crosstrack error
         _desired_lat_accel = constrain_float(_nav_controller.lateral_acceleration(), -_atc.get_turn_lat_accel_max(), _atc.get_turn_lat_accel_max());
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
+
+        gcs().send_oc_pid_feedback("WP_LAT_ACCEL", _desired_heading_cd/100, degrees(AP::ahrs().groundspeed_vector().angle()), _desired_lat_accel);
         if (_reversed) {
             _desired_lat_accel *= -1.0f;
             _desired_heading_cd = wrap_360_cd(_desired_heading_cd + 18000);
         }
         _cross_track_error = _nav_controller.crosstrack_error();
         _desired_turn_rate_rads = _atc.get_turn_rate_from_lat_accel(_desired_lat_accel, current_speed);
+        gcs().send_oc_pid_feedback("WP_TURN_RATE", _desired_lat_accel, 0, _desired_turn_rate_rads);
     }
 }
 

@@ -968,6 +968,8 @@ public:
 
     bool out_of_time() const;
 
+    void send_oc_pid_feedback(const char* locn, float desired, float achieved, float output, float ff = 0, float p = 0, float i = 0, float d = 0, float param1 = 0, float param2 = 0, float param3 = 0, float param4 = 0);
+
     // frsky backend
     AP_Frsky_Telem *frsky;
 

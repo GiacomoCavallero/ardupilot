@@ -508,6 +508,8 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool motor_l
     float output = _steer_rate_pid.update_all(_desired_turn_rate, _ahrs.get_yaw_rate_earth(), (motor_limit_left || motor_limit_right));
     output += _steer_rate_pid.get_ff();
     // constrain and return final output
+
+    gcs().send_oc_pid_feedback("ATC_STR_RAT", desired_rate, _ahrs.get_yaw_rate_earth(), output, _steer_rate_pid.get_ff());
     return output;
 }
 
@@ -614,6 +616,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
         }
     }
 
+    gcs().send_oc_pid_feedback("ATC_SPEED", desired_speed, speed, throttle_out, _throttle_speed_pid.get_ff(), 0, 0, 0, throttle_base);
     // final output throttle in range -1 to 1
     return throttle_out;
 }

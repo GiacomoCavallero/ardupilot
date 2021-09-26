@@ -169,6 +169,7 @@ float AC_PID::update_all(float target, float measurement, bool limit)
     _pid_info.P = P_out;
     _pid_info.D = D_out;
 
+    gcs().send_oc_pid_feedback("AC_PID", target, measurement, P_out + _integrator + D_out, get_ff(), get_p(), get_i(), get_d(), limit);
     return P_out + _integrator + D_out;
 }
 

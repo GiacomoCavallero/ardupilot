@@ -463,7 +463,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
     // Get motor position
     if (readPosition(nodeid, &position)) {
-        gcs().send_text(MAV_SEVERITY_DEBUG, "EPOS: Servo %u(Node: %u) Read error. (%s:%u)", (uint32_t)ch, (uint32_t)nodeid, __FILE__, __LINE__);
+        gcs().send_text(MAV_SEVERITY_DEBUG, "EPOS: Servo %u(Node: %u) Read error. (%u)", (uint32_t)ch, (uint32_t)nodeid, __LINE__);
         motor.error_count++;
         motor._position_is_good = false;
         // Error reading motor position.
