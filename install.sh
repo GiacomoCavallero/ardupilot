@@ -5,8 +5,7 @@ if ! [ $(id -u) = 0 ]; then
 fi
 
 echo "Installing ardupilot"
-# if empty will use current dir
-if [ $# -ge 1 ]; then
+if [[ $# -ge 1 && "$1" != DEFAULT ]]; then
 	STAGE_DIR=$1
 else
 	STAGE_DIR=.
