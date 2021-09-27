@@ -622,11 +622,6 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         }
     }
 
-    if (!motor._position_is_good || motor._suspect_position_reads != 0) {
-        // Last read position of motor is not good, not safe to move
-        return;
-    }
-
     if (motor.homed != AP_HAL::SERVO_HOMED || (ch == BLUEBOTTLE_SAIL_CHANN && (thread_flags & HomeSail))) {
         if (motor.homed != AP_HAL::SERVO_HOMING) {
             gcs().send_text(MAV_SEVERITY_WARNING, "RCOut: homing %s.", MOTOR_NAME);
@@ -636,6 +631,11 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
         homeMotor(nodeid);
         motor.homed = AP_HAL::SERVO_HOMING;
 //        goto THREAD_LOOP_SLEEP;
+        return;
+    }
+
+    if (!motor._position_is_good || motor._suspect_position_reads != 0) {
+        // Last read position of motor is not good, not safe to move
         return;
     }
 
