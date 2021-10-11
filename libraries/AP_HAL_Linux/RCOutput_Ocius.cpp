@@ -726,9 +726,10 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 //                printf("RCOut: Moving %s to position %d.\n", MOTOR_NAME, desiredPosition);
                 last_move_attempt[ch] = desiredPosition;
                 if (!moveToPosition(nodeid, desiredPosition)) {
-                    motor.error_count++;
                     last_move_success[ch] = desiredPosition;
                     last_move_time[ch] = now;
+                } else {
+                    motor.error_count++;
                 }
             }
         }
