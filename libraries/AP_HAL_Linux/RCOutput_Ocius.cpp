@@ -430,7 +430,7 @@ void RCOutput_Ocius::stinger_sail_comm_thread() {
         }
 
         stinger_sail_update_epos(sail_status, BLUEBOTTLE_SAIL_CHANN, 1);
-        if (rover.g2.winch.enable && WINCH_ENCODER_DEPLOY != WINCH_ENCODER_RETRACT) {
+        if (rover.g2.winch.enable) {
             stinger_sail_update_epos(winch_status, BLUEBOTTLE_WINCH_CHANN, 2);
         }
     }
@@ -507,7 +507,11 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     if (ch == BLUEBOTTLE_SAIL_CHANN) {
         position_pwm_flt = ((position - BLUEBOTTLE_MOTOR_OFFSET) * 400 / (float)BLUEBOTTLE_MOTOR_TICKS_PER_90) + 1500;  // Sail motor
     } else if (ch == BLUEBOTTLE_WINCH_CHANN) {
-        position_pwm_flt = 1100 + (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
+        if (WINCH_ENCODER_RANGE == 0) {
+            position_pwm_flt = 0;
+        } else {
+            position_pwm_flt = 1100 + (((position - WINCH_ENCODER_RETRACT)/ (float)WINCH_ENCODER_RANGE) * 800);
+        }
     }
 
     uint16_t motorFam = 0;
@@ -733,9 +737,12 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 
 static uint64_t next_device_status = 0;
 void RCOutput_Ocius::send_epos_status(uint8_t chan) {
+    uint16_t epos1_family = 0, epos2_family = 0;  // TODO: these may need conversion before being cast to a uint8_t in the message
+    if (getEPOSFamily(1, &epos1_family)) epos1_family = 0;
+    if (getEPOSFamily(2, &epos2_family)) epos2_family = 0;
     mavlink_msg_epos_status_send((mavlink_channel_t)chan,
-            sail_status.flag, sail_status.raw, sail_status.pwm, last_move_attempt[BLUEBOTTLE_SAIL_CHANN], pwm_last[BLUEBOTTLE_SAIL_CHANN],
-            winch_status.flag, winch_status.raw, winch_status.pwm, last_move_attempt[BLUEBOTTLE_WINCH_CHANN], pwm_last[BLUEBOTTLE_WINCH_CHANN],
+            epos1_family, sail_status.raw, sail_status.pwm, last_move_attempt[BLUEBOTTLE_SAIL_CHANN], pwm_last[BLUEBOTTLE_SAIL_CHANN],
+            epos2_family, winch_status.raw, winch_status.pwm, last_move_attempt[BLUEBOTTLE_WINCH_CHANN], pwm_last[BLUEBOTTLE_WINCH_CHANN],
             0, 0, 0, 0, 0, // epos 3
             0, 0, 0, 0, 0, // epos 4
             0, 0, 0, 0, 0, // epos 5
@@ -790,7 +797,7 @@ void RCOutput_Ocius::send_epos_status(uint8_t chan) {
         if (rover.g2.winch.enable) {
             // send winch status
             uint16_t motor_fam = 0;
-            if (getEPOSFamily(1, &motor_fam) != 0 || motor_fam == 0) {
+            if (getEPOSFamily(2, &motor_fam) != 0 || motor_fam == 0) {
                 dev_status = DEVICE_STATUS_FAULT;
                 dev_report = "Not connected to EPOS.";
             } else if (!winch_status._position_is_good) {
