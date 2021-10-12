@@ -366,7 +366,7 @@ static void RCOutput_Ocius_EmergencyHandler(uint8_t nodeid, uint16_t errCode) {
     if (nodeid == 1 || nodeid == 2) {
         gcs().send_text(MAV_SEVERITY_WARNING, "EPOS fault(0x%04x) detected on %s.", (uint32_t)errCode, MOTOR_NAME);
         uint16_t family;
-        if (!getEPOSFamily(nodeid, &family)) {
+        if (!getEPOSFamily(nodeid, &family, true)) {
             gcs().send_text(MAV_SEVERITY_WARNING, ":     %s", getErrorDescription(errCode, family));
         }
     }
@@ -515,7 +515,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     }
 
     uint16_t motorFam = 0;
-    getEPOSFamily(nodeid, &motorFam);
+    getEPOSFamily(nodeid, &motorFam, false);
     switch(motorFam) {
     case FamilyEPOS2:
         motorFam = 2; break;
@@ -739,8 +739,8 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
 static uint64_t next_device_status = 0;
 void RCOutput_Ocius::send_epos_status(uint8_t chan) {
     uint16_t epos1_family = 0, epos2_family = 0;  // TODO: these may need conversion before being cast to a uint8_t in the message
-    if (getEPOSFamily(1, &epos1_family)) epos1_family = 0;
-    if (getEPOSFamily(2, &epos2_family)) epos2_family = 0;
+    if (getEPOSFamily(1, &epos1_family, true)) epos1_family = 0;
+    if (getEPOSFamily(2, &epos2_family, true)) epos2_family = 0;
     mavlink_msg_epos_status_send((mavlink_channel_t)chan,
             epos1_family, sail_status.raw, sail_status.pwm, last_move_attempt[BLUEBOTTLE_SAIL_CHANN], pwm_last[BLUEBOTTLE_SAIL_CHANN],
             epos2_family, winch_status.raw, winch_status.pwm, last_move_attempt[BLUEBOTTLE_WINCH_CHANN], pwm_last[BLUEBOTTLE_WINCH_CHANN],
