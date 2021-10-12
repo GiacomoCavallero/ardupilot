@@ -526,7 +526,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     }
 
     motor.flag = motorFam;
-    if (motor.pwm >= 1000 && motor.pwm <= 2000) {
+    if (position_pwm_flt >= 1000 && position_pwm_flt <= 2000) {
         motor._position_is_good = true;
         motor._suspect_position_reads = 0;
     } else {
