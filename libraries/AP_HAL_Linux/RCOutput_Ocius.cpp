@@ -62,7 +62,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t chann
 //    consecutive_failures = new int[_channel_count];
     last_move_attempt = new int[_channel_count];
     last_move_success = new int[_channel_count];
-    last_move_time = new int[_channel_count];
+    last_move_time = new uint64_t[_channel_count];
     last_imu_update = 0;
 
     memset(pwm_last, 0, sizeof(uint16_t)*(unsigned int)channel_count);
@@ -71,7 +71,7 @@ RCOutput_Ocius::RCOutput_Ocius(uint8_t chip, uint8_t channel_base, uint8_t chann
 //    memset(consecutive_failures, -1, sizeof(int)*(unsigned int)channel_count);
     memset(last_move_attempt, 0, sizeof(int)*(unsigned int)channel_count);
     memset(last_move_success, 0, sizeof(int)*(unsigned int)channel_count);
-    memset(last_move_time, 0, sizeof(int)*(unsigned int)channel_count);
+    memset(last_move_time, 0, sizeof(uint64_t)*(unsigned int)channel_count);
 
     closing = false;
     thread_flags = 0;
@@ -100,7 +100,7 @@ void RCOutput_Ocius::init() {
     hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &RCOutput_Ocius::motor_status_check, void));
 }
 
-static uint32_t timeMastSignalStarted = 0;
+static uint64_t timeMastSignalStarted = 0;
 
 #define mast_status     pwm_status[BLUEBOTTLE_MAST_CHANN]
 #define sail_status     pwm_status[BLUEBOTTLE_SAIL_CHANN]
@@ -145,7 +145,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1900);
                 mast_status.moving = true;
-                timeMastSignalStarted = AP_HAL::millis();
+                timeMastSignalStarted = AP_HAL::millis64();
                 if (period_us == 1100) {
                     // We offset by 1, so that messages from GCS don't need to change
                     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, 1101);
@@ -158,7 +158,7 @@ void RCOutput_Ocius::write(uint8_t ch, uint16_t period_us) {
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
                 SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1900);
                 mast_status.moving = true;
-                timeMastSignalStarted = AP_HAL::millis();
+                timeMastSignalStarted = AP_HAL::millis64();
                 if (period_us == 1900) {
                     // We offset by 1, so that messages from GCS don't need to change
                     SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_CHANN, 1899);
@@ -239,7 +239,7 @@ void RCOutput_Ocius::motor_status_check(void) {
 //		printf("Checking if mast signal to be disabled. (%u, %u)\n", timeMastSignalStarted, millis());
 
         // if the imu is configured and old, set mast_status.pwm to 0
-        if (rover.g2.sailboat.tilt_imu != 0 && last_imu_update + 5000 < AP_HAL::millis()) {
+        if (rover.g2.sailboat.tilt_imu != 0 && last_imu_update + 5000 < AP_HAL::millis64()) {
             // If the imu is set but we haven't updated in 5 seconds, we're not sure where the mast is
             mast_status.homed = AP_HAL::SERVO_UNHOMED;
 //            mast_status.pwm = 0;
@@ -252,7 +252,7 @@ void RCOutput_Ocius::motor_status_check(void) {
         if (timeMastSignalStarted != 0 && rover.g2.sailboat.tilt_imu != 0 &&
                 (abs((int)mast_status.pwm - (int)pwm_last[BLUEBOTTLE_MAST_CHANN]) <= rover.g2.sailboat.tilt_err)) {
             // If the hydraulics are running and the tilt imu is set, when we approach the position we cut the timer short.
-            uint32_t shortTime = AP_HAL::millis() + 1000;
+            uint64_t shortTime = AP_HAL::millis64() + 1000;
             if (shortTime > hydraulic_run_time) {
                 // avoiding negatives
                 shortTime -= hydraulic_run_time;
@@ -264,7 +264,7 @@ void RCOutput_Ocius::motor_status_check(void) {
         }
 
         if (timeMastSignalStarted != 0 &&
-                (AP_HAL::millis() - timeMastSignalStarted) > hydraulic_run_time) {
+                (AP_HAL::millis64() - timeMastSignalStarted) > hydraulic_run_time) {
             // Signal has passed desired time / kill it
             printf("RCO_Ocius: Time up. Mast homed.\n");
             gcs().send_text(MAV_SEVERITY_NOTICE, "Mast homed (%s)",
@@ -313,7 +313,7 @@ void RCOutput_Ocius::motor_status_check(void) {
                 // avoid divide by 0
                 relay_delay = hydraulic_run_time / 2;
             }
-            uint32_t signal_time = AP_HAL::millis() - timeMastSignalStarted;
+            uint64_t signal_time = AP_HAL::millis64() - timeMastSignalStarted;
             if (hydraulic_run_time > 4 * relay_delay) {
                 if (signal_time <= relay_delay || signal_time >= (hydraulic_run_time - relay_delay)) {
                     // We're in the delay period before or after we run.
@@ -685,7 +685,7 @@ void RCOutput_Ocius::stinger_sail_update_epos(AP_HAL::ServoStatus& motor, uint8_
     // Move sail/winch to desired position
     if (pwm_last[ch] >= 1075 && pwm_last[ch] <= 1925) {
         //printf("Comparing desired position with actual.\n");
-        int now = AP_HAL::millis();
+        uint64_t now = AP_HAL::millis64();
         int desiredPosition = position;  // Default to prevent movement as desired is current position
         if (ch == BLUEBOTTLE_SAIL_CHANN) {
             if (mast_status.pwm != 0 && mast_status.pwm < 1800) {
@@ -845,7 +845,7 @@ void RCOutput_Ocius::updateMastIMU(int16_t xacc, int16_t yacc, int16_t zacc) {
         return;
     }
 
-    last_imu_update = AP_HAL::millis();
+    last_imu_update = AP_HAL::millis64();
 //printf("RAW boat: (%f, %f, %f), mast: (%f, %f, %f)\n", boat_accel.x, boat_accel.y, boat_accel.z, mast_accel.x, mast_accel.y, mast_accel.z);
     boat_accel.normalize();
     mast_accel.normalize();

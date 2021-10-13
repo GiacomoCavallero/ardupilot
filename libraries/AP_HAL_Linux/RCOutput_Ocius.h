@@ -23,8 +23,8 @@ protected:
 //    int* consecutive_failures;
     int* last_move_attempt;
     int* last_move_success;
-    int* last_move_time;
-    uint32_t last_imu_update;
+    uint64_t* last_move_time;
+    uint64_t last_imu_update;
     FiltExp<float> imu_filt;
 
     char linebuf[128];
