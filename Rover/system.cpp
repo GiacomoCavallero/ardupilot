@@ -129,12 +129,35 @@ void Rover::init_ardupilot()
     initialised = true;
 }
 
+inline const char* to_string(enum frame_class cls) {
+    switch(cls) {
+    case FRAME_UNDEFINED:
+        return "Undedined"; break;
+    case FRAME_ROVER:
+            return "Rover"; break;
+    case FRAME_BOAT:
+            return "Boat"; break;
+    case FRAME_BALANCEBOT:
+            return "BalanceBot"; break;
+    case FRAME_BLUEBOTTLE:
+            return "Bluebottle"; break;
+    case FRAME_WAMV:
+            return "Wam-V"; break;
+    }
+
+    static char ach[64];
+    sprintf(ach, "Unknown(%d)", (int)cls);
+
+    return ach;
+}
+
 //*********************************************************************************
 // This function does all the calibrations, etc. that we need during a ground start
 //*********************************************************************************
 void Rover::startup_ground(void)
 {
     set_mode(mode_initializing, ModeReason::INITIALISED);
+    gcs().send_text(MAV_SEVERITY_NOTICE, "Ardurover: %s", to_string((enum frame_class)(int)g2.frame_class));
 
     gcs().send_text(MAV_SEVERITY_INFO, "<startup_ground> Ground start");
 
