@@ -144,11 +144,7 @@ inline const char* to_string(enum frame_class cls) {
     case FRAME_WAMV:
             return "Wam-V"; break;
     }
-
-    static char ach[64];
-    sprintf(ach, "Unknown(%d)", (int)cls);
-
-    return ach;
+    return "Unknown";
 }
 
 //*********************************************************************************
@@ -157,7 +153,8 @@ inline const char* to_string(enum frame_class cls) {
 void Rover::startup_ground(void)
 {
     set_mode(mode_initializing, ModeReason::INITIALISED);
-    gcs().send_text(MAV_SEVERITY_NOTICE, "Ardurover: %s", to_string((enum frame_class)(int)g2.frame_class));
+    gcs().send_text(MAV_SEVERITY_NOTICE, "%s", AP::fwversion().fw_string); // Should call if we could: gcs().send_banner();
+    gcs().send_text(MAV_SEVERITY_NOTICE, "FRAME_CLASS: %d(%s)", (int)g2.frame_class, to_string((enum frame_class)(int)g2.frame_class));
 
     gcs().send_text(MAV_SEVERITY_INFO, "<startup_ground> Ground start");
 
