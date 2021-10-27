@@ -170,6 +170,7 @@ public:
 private:
     AP_HAL::UARTDriver *_port;
     unsigned char msg[512];
+    uint64_t last_device_check;
 
     bool term_complete(unsigned int pgn, MsgVals *pmv);
     void update_status();

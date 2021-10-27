@@ -30,6 +30,11 @@ NMEA2K nmea2k_sensors;
 
 #define NMEA2K_LATLONG_RESOLUTION 10000000
 
+const uint8_t NMEA2K_ISO_REQUEST[16] =
+{
+        16, 2, 148, 9, 4, 0, 234, 0, 255, 3, 20, 240, 1, 110, 16, 3
+};
+
 static uint32_t getBSDDate(const char *date)
 {
     uint32_t year, month, day;
@@ -274,7 +279,7 @@ bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
         break;
 
     case 126996: //Product Information
-        gcs().send_text(MAV_SEVERITY_INFO, "NMEA2K: %d: %s", pmv->src, pmv->getLookup("Model ID"));
+        gcs().send_text(MAV_SEVERITY_DEBUG, "NMEA2K: %d: %s", pmv->src, pmv->getLookup("Model ID"));
         break;
 
     case 127250: // Vessel Heading
@@ -803,6 +808,14 @@ bool NMEA2K::read()
         update_status();
         return false;
     }
+
+    uint64_t now = AP_HAL::millis64();
+    if (now - last_device_check >= (10*60*1000)) {
+        // Periodically request all devices on the NMEA2K bus identify themselves
+        _port->write(NMEA2K_ISO_REQUEST, sizeof(NMEA2K_ISO_REQUEST));
+        last_device_check = now;
+    }
+
     bool parsed = false;
     int16_t numc = _port->available();
     if (numc == 0)
