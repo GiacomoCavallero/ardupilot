@@ -153,8 +153,6 @@ inline const char* to_string(enum frame_class cls) {
 void Rover::startup_ground(void)
 {
     set_mode(mode_initializing, ModeReason::INITIALISED);
-    gcs().send_text(MAV_SEVERITY_NOTICE, "%s", AP::fwversion().fw_string); // Should call if we could: gcs().send_banner();
-    gcs().send_text(MAV_SEVERITY_NOTICE, "FRAME_CLASS: %d(%s)", (int)g2.frame_class, to_string((enum frame_class)(int)g2.frame_class));
 
     gcs().send_text(MAV_SEVERITY_INFO, "<startup_ground> Ground start");
 
@@ -186,6 +184,9 @@ void Rover::startup_ground(void)
     // we don't want writes to the serial port to cause us to pause
     // so set serial ports non-blocking once we are ready to drive
     serial_manager.set_blocking_writes_all(false);
+
+    gcs().send_text(MAV_SEVERITY_NOTICE, "%s", AP::fwversion().fw_string); // Should call if we could: gcs().send_banner();
+    gcs().send_text(MAV_SEVERITY_NOTICE, "FRAME_CLASS: %d(%s)", (int)g2.frame_class, to_string((enum frame_class)(int)g2.frame_class));
 }
 
 // update the ahrs flyforward setting which can allow
