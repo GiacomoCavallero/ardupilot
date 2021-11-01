@@ -291,6 +291,7 @@ void RCOutput_Ocius::motor_status_check(void) {
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_LOWER_CHANN, 1100);
             SRV_Channels::set_output_pwm_chan(BLUEBOTTLE_MAST_RAISE_CHANN, 1100);
             mast_status.homed = AP_HAL::SERVO_UNHOMED;
+            mast_status.moving = false;
             timeMastSignalStarted = 0;
             gcs().send_text(MAV_SEVERITY_ERROR, "Emergency STOP on mast servo. Sail not centered. (%u)", (uint32_t)sail_status.pwm);
         } else if (timeMastSignalStarted != 0) {
