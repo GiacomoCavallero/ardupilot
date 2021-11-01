@@ -682,6 +682,15 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("RTL_THROTTLE", 53, ParametersG2, rtl_throttle, 0.0),
 
+    // @Param: OC_PID_ENABLE
+    // @DisplayName: Enable OC_PID_FEEDBACK
+    // @Description: Turn on/off OC_PID_FEEDBACK messages for tuning PIDs.
+    // @Units: %
+    // @Range: 0 1
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("OC_PID_FEEDBACK", 54, ParametersG2, oc_pid_feedback, 0),
+
     AP_GROUPEND
 };
 

@@ -418,6 +418,9 @@ public:
 
     // default throttle for rtl
     AP_Float rtl_throttle;
+
+    // parameter to enable/disable PID messages
+    AP_Int8 oc_pid_feedback;
 };
 
 extern const AP_Param::Info var_info[];

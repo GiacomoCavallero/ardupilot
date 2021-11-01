@@ -509,7 +509,8 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool motor_l
     output += _steer_rate_pid.get_ff();
     // constrain and return final output
 
-    gcs().send_oc_pid_feedback("ATC_STR_RAT", desired_rate, _ahrs.get_yaw_rate_earth(), output, _steer_rate_pid.get_ff());
+    const AP_Logger::PID_Info& _pid_info = _steer_rate_pid.get_pid_info();
+    gcs().send_oc_pid_feedback("ATC_STR_RAT", _pid_info.target, _pid_info.actual, output, _pid_info.FF, _pid_info.P, _pid_info.I, _pid_info.D, _pid_info.error, desired_rate, _ahrs.get_yaw_rate_earth(), 0);
     return output;
 }
 
@@ -616,7 +617,8 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
         }
     }
 
-    gcs().send_oc_pid_feedback("ATC_SPEED", desired_speed, speed, throttle_out, _throttle_speed_pid.get_ff(), 0, 0, 0, throttle_base);
+    const AP_Logger::PID_Info& _pid_info = _throttle_speed_pid.get_pid_info();
+    gcs().send_oc_pid_feedback("ATC_SPEED", _pid_info.target, _pid_info.actual, throttle_out, _pid_info.FF, _pid_info.P, _pid_info.I, _pid_info.D, _pid_info.error, desired_speed, speed, 0);
     // final output throttle in range -1 to 1
     return throttle_out;
 }

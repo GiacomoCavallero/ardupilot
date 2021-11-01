@@ -129,6 +129,7 @@ public:
     friend class AP_WindVane_Ocius;
     friend class AP_GPS_Ocius;
     friend class AP_Compass_Ocius;
+    friend class GCS;
 
     // TODO: add friends for gps, compass, windvane
 
