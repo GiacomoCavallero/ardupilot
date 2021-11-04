@@ -243,8 +243,11 @@ bool Rover::set_mode(Mode &new_mode, ModeReason reason)
     case MODE_REASON_FENCE_BREACH:
         gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s set after fence breach", new_mode.name4());
         break;
-    case MODE_REASON_INITIALISED:
     case MODE_REASON_GCS_COMMAND:
+        // treat as a GCS heartbeat
+        gcs().sysid_myggcs_seen(tnow);
+        break;
+    case MODE_REASON_INITIALISED:
         // These don't need log messages
         break;
     }

@@ -2,7 +2,13 @@
 
 #include "GCS_Mavlink.h"
 
-#include <AP_RangeFinder/AP_RangeFinder_Backend.h>
+#include <AP_RangeFinder/RangeFinder_Backend.h>
+#include <OC_NMEA2k/OC_NMEA2k.h>
+#include <deque>
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+#include <AP_HAL_Linux/RCOutput_Ocius.h>
+#endif
 
 MAV_TYPE GCS_Rover::frame_type() const
 {
@@ -132,8 +138,9 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
 }
 
 void GCS_MAVLINK_Rover::send_sail_status() {
-    Location hold_loc;
-    bool have_wp = rover.mode_hold.get_desired_location(hold_loc);
+    Location destination, hold_loc;
+    bool have_wp = rover.control_mode->get_desired_location(destination);
+    bool have_hold_wp = rover.mode_hold.get_desired_location(hold_loc);
 
     AP_HAL::RCOutput* rcout = AP_HAL::get_HAL().rcout;
     AP_HAL::ServoStatus rudder_status = rcout->read_status(RUDDER_SERVO_CH-1),
@@ -141,6 +148,10 @@ void GCS_MAVLINK_Rover::send_sail_status() {
             sail_status = rcout->read_status(SAIL_SERVO_CH-1),
             winch_status = rcout->read_status(WINCH_SERVO_CH-1);
 
+
+    uint8_t align2 = (nmea2k_sensors.commsMastDown()?1:0) |
+            (mast_status.moving?2:0) | (sail_status.moving?4:0) |
+            (rudder_status.moving?8:0) | (winch_status.moving?16:0);
 
     mavlink_msg_sail_status_send(chan,
             sail_status.pwm, rudder_status.pwm,
@@ -150,15 +161,23 @@ void GCS_MAVLINK_Rover::send_sail_status() {
             sail_status.homed, rudder_status.homed,
             mast_status.homed, winch_status.homed,
             // TODO: populate with parameters when created
-            0,0,0,0,0,0,0,0,0,0,0,
-//            rover.g2.sailboat.sail_mode, rover.g2.sailboat.sail_hold_mode, rover.g2.sailboat.sail_hold_radius,
-//            rover.g2.sailboat.sail_max_wind,
+            rover.g2.sailboat.sail_mode,
+            rover.g2.sailboat.hold_mode, rover.g2.sailboat.hold_radius,
+            rover.g2.sailboat.sail_windspeed_max,
 //            rover.g2.sailboat.sail_attack_angle, rover.g2.sailboat.sail_attack_err,
+            rover.g2.sailboat.sail_angle_ideal, rover.g2.sailboat.sail_angle_error,
 //            rover.g2.sailboat.sail_throttle_mode,
+            0,
 //            rover.g2.sailboat.sail_tack_angle, rover.g2.sailboat.sail_max_tack,
+            rover.g2.sailboat.sail_no_go, rover.g2.sailboat.sail_tack_corridor,
 //            rover.g2.sailboat.sail_tack_push, rover.g2.sailboat.sail_tack_push_angle,
-            0, 0, 0, 0,
-            (have_wp?hold_loc.lat:0), (have_wp?hold_loc.lng:0));
+            0,0,
+            // align2, align3,
+            align2, 0,
+            // tack_lat, tack_lon
+            (have_wp?destination.lat:0), (have_wp?destination.lng:0),
+            // hold_lat, hold_lon
+            (have_hold_wp?hold_loc.lat:0), (have_hold_wp?hold_loc.lng:0));
 }
 
 void GCS_MAVLINK_Rover::send_water() {
@@ -186,38 +205,92 @@ void GCS_MAVLINK_Rover::send_vessel_speed_components() {
             nmea2k_sensors.triducer.stern_speed_ground);
 }
 
-void GCS_MAVLINK_Rover::send_water_velocity() {
-    float water_spd = -1, water_dir = -1,
-            wave_height = -1, wave_spd = -1, wave_dir = -1, wave_period = -1;
+#define AVERAGING_WINDOW        60000
+class AverageCurrent {
+private:
+    struct DataPoint {
+        uint64_t timestamp;
+        Location l;
+        Vector2f vel_thru_water_NED;
 
-    // TODO: Calculate water velocity
-//    float my_speed = 1, my_dir = 0, my_hdg_rad = rover.ahrs.yaw,
+        DataPoint(uint64_t timestamp_, Location l_, Vector2f vel_thru_water_NED_) :
+            timestamp(timestamp_), l(l_), vel_thru_water_NED(vel_thru_water_NED_)
+        {}
+    };
+
+    std::deque< DataPoint > queue;
+public:
+    void addDataPoint(Location l, Vector2f vel_thru_water_NED) {
+        uint64_t now = AP_HAL::millis64();
+
+        while (queue.size() > 0) {
+            DataPoint& dp = queue.front();
+
+            if (now - dp.timestamp <= AVERAGING_WINDOW) {
+                // oldest reading is still valid.
+                break;
+            }
+
+            queue.pop_front();
+        }
+
+        queue.push_back(DataPoint(now, l, vel_thru_water_NED));
+    }
+
+    // Get the (speed, direction) estimate of the current
+    Vector2f getCurrentMagBrg() {
+        if (queue.size() > 0) {
+            // Get the average thru water velocity in NED frame
+            Vector2f averageVelThruW(0,0);
+            for (auto it = queue.begin(); it != queue.end(); ++it) {
+                averageVelThruW += it->vel_thru_water_NED;
+            }
+
+            averageVelThruW /= queue.size();
+
+            // Project estimated position based on average speed thru water
+            double duration = (queue.back().timestamp - queue.front().timestamp) / 1000.0L;
+            if (duration < FLT_EPSILON) {
+                // If duration is zero, cannot do the calculation.
+                return Vector2f(0,0);
+            }
+            Location lProj = queue.front().l;
+            lProj.offset(averageVelThruW[0]*duration, averageVelThruW[1]*duration);
+
+            // Difference from projected position to actual position is the current.
+            Location lEnd = queue.back().l;
+            return Vector2f(lProj.get_distance(lEnd) / duration, lProj.get_bearing_to(lEnd));
+        }
+
+        return Vector2f(0,0);
+    }
+};
+
+static AverageCurrent avCurrent;  // TODO: Need to find a better place to house this.
+
+void GCS_MAVLINK_Rover::send_water_velocity() {
+    // Calculate water velocity
     float my_hdg_rad = rover.ahrs.yaw,
             longitudinal_spd = nmea2k_sensors.triducer.longitudinal_speed_water,
             transverse_spd = nmea2k_sensors.triducer.transverse_speed_water;
 
-    Vector2f g_speed = rover.ahrs.groundspeed_vector();
-
-//    float my_speed_E = my_speed * sin(radians(my_dir)),
-//            my_speed_N = my_speed * cos(radians(my_dir));
-    float my_speed_E = g_speed[1],
-            my_speed_N = g_speed[0];
-
-    // TODO: Add any filtering here.
-
     float my_w_spd_N = cos(my_hdg_rad) * longitudinal_spd - sin(my_hdg_rad) * transverse_spd,
             my_w_spd_E = sin(my_hdg_rad) * longitudinal_spd + cos(my_hdg_rad) * transverse_spd;
 
-    float water_spd_N = my_speed_N - my_w_spd_N,
-            water_spd_E = my_speed_E - my_w_spd_E;
+    Location l;
+    if (rover.ahrs.get_position(l)) {
+        // Have valid location, add new data point to avCurrent
+        avCurrent.addDataPoint(l, Vector2f(my_w_spd_N, my_w_spd_E));
+    }
 
-    water_spd = sqrt(water_spd_N*water_spd_N+water_spd_E*water_spd_E);
-    water_dir = wrap_360(degrees(atan2(water_spd_E, water_spd_N)));
+    // get average current
+    Vector2f current = avCurrent.getCurrentMagBrg();
 
     // TODO: Calculate wave parameters
+    float wave_height = -1, wave_spd = -1, wave_dir = -1, wave_period = -1;
 
     mavlink_msg_water_velocity_send(chan,
-            water_spd, water_dir,
+            current[0], current[1],
             wave_height, wave_spd, wave_dir, wave_period);
 }
 
@@ -235,10 +308,10 @@ void GCS_MAVLINK_Rover::send_weather_data() {
 void GCS_MAVLINK_Rover::send_compass_airmar() {
     mavlink_msg_compass_airmar_send(chan,
             1,
-            nmea2k_sensors.compass.last_update,
-            nmea2k_sensors.compass.heading + rover.g2.magnetic_offset,
-            nmea2k_sensors.compass.magnetic,
-            nmea2k_sensors.compass.variation,
+            nmea2k_sensors.primary_compass.last_update,
+            nmea2k_sensors.primary_compass.heading + rover.g2.magnetic_offset,
+            nmea2k_sensors.primary_compass.magnetic,
+            ToDeg(nmea2k_sensors.primary_compass.variation),
             rover.g2.magnetic_offset,
             nmea2k_sensors.primary_gps.location.lat * 1e-7,
             nmea2k_sensors.primary_gps.location.lng * 1e-7,
@@ -271,12 +344,12 @@ void GCS_MAVLINK_Rover::send_nmea2k_sensors() {
     NMEA2K::GPS* gps = nmea2k_sensors.get_active_gps();
     NMEA2K::Compass* compass = nmea2k_sensors.get_active_compass();
     mavlink_msg_nmea2k_sensors_send(chan,
-            (gps!=NULL?gps->id:0),
+            (gps!=NULL?gps->id:255),
             (gps!=NULL?gps->location.lat:0), (gps!=NULL?gps->location.lng:0),
             (gps!=NULL?gps->cog:0), (gps!=NULL?gps->cog_filt:0),
             (gps!=NULL?gps->sog:0), (gps!=NULL?gps->sog_filt:0),
-            (gps!=NULL?gps->variation:0),
-            (compass!=NULL?compass->id:0),
+            (gps!=NULL?ToDeg(gps->variation):0),
+            (compass!=NULL?compass->id:255),
             (compass!=NULL?compass->magnetic:0),
             (compass!=NULL?compass->heading:0), (compass!=NULL?compass->heading_filt:0),
             nmea2k_sensors.triducer.id,
@@ -291,6 +364,15 @@ void GCS_MAVLINK_Rover::send_nmea2k_sensors() {
             nmea2k_sensors.weather.ground_wind_dir, nmea2k_sensors.weather.ground_wind_dir_filt,
             nmea2k_sensors.weather.ground_wind_speed_filt, nmea2k_sensors.weather.ground_wind_speed_filt
     );
+}
+
+void GCS_MAVLINK_Rover::send_epos_status() {
+#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+    RCOutput_Ocius* rco_ocius = dynamic_cast<RCOutput_Ocius*>(hal.rcout);
+    if (rco_ocius != NULL) {
+        rco_ocius->send_epos_status(chan);
+    }
+#endif
 }
 
 void Rover::send_servo_out(mavlink_channel_t chan)
@@ -550,7 +632,7 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
     case MSG_AIS_VESSEL_STATUS:
     case MSG_RADIO_LINK_STATUS:
         // TODO: send the Ocius messages
-        printf("Hello (%d).\n", (int)id);
+//        printf("Hello (%d).\n", (int)id);
         break;
 
     default:
@@ -818,9 +900,10 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_packet(const mavlink_command_in
     case MAV_CMD_DO_CHANGE_SPEED:
         // param1 : unused
         // param2 : new speed in m/s
-        if (!rover.control_mode->set_desired_speed(packet.param2)) {
-            return MAV_RESULT_FAILED;
-        }
+        rover.g2.wp_nav.set_desired_speed(packet.param2);
+//        if (!rover.control_mode->set_desired_speed(packet.param2)) {
+//            return MAV_RESULT_FAILED;
+//        }
         return MAV_RESULT_ACCEPTED;
 
     case MAV_CMD_DO_REPOSITION:
@@ -841,7 +924,7 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_long_packet(const mavlink_command_l
     switch (packet.command) {
 
     case MAV_CMD_NAV_RETURN_TO_LAUNCH:
-        if (rover.set_mode(rover.mode_rtl, ModeReason::GCS_COMMAND)) {
+        if (rover.set_mode(rover.mode_smartrtl, ModeReason::GCS_COMMAND)) {
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
@@ -855,9 +938,10 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_long_packet(const mavlink_command_l
     case MAV_CMD_DO_CHANGE_SPEED:
         // param1 : unused
         // param2 : new speed in m/s
-        if (!rover.control_mode->set_desired_speed(packet.param2)) {
-            return MAV_RESULT_FAILED;
-        }
+        rover.g2.wp_nav.set_desired_speed(packet.param2);
+//        if (!rover.control_mode->set_desired_speed(packet.param2)) {
+//            return MAV_RESULT_FAILED;
+//        }
         return MAV_RESULT_ACCEPTED;
 
     case MAV_CMD_DO_SET_REVERSE:
@@ -869,20 +953,60 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_long_packet(const mavlink_command_l
     {
         // param1 : yaw angle to adjust direction by in centidegress
         // param2 : Speed - normalized to 0 .. 1
-        // param3 : 0 = absolute, 1 = relative
+        // param3 : 0,1: param2 is speed, 2: param2 is throttle %
+        // param4 : >0 don't timeout, travel a specified distance
 
         // exit if vehicle is not in Guided mode
         if (!rover.control_mode->in_guided_mode()) {
             return MAV_RESULT_FAILED;
         }
 
-        // get final angle, 1 = Relative, 0 = Absolute
-        if (packet.param3 > 0) {
-            // relative angle
-            rover.mode_guided.set_desired_heading_delta_and_speed(packet.param1 * 100.0f, packet.param2);
-        } else {
-            // absolute angle
-            rover.mode_guided.set_desired_heading_and_speed(packet.param1 * 100.0f, packet.param2);
+        int param3 = packet.param3;
+        if (rover.control_mode == &rover.mode_ivp) {
+            switch (param3) {
+            case 0: case 1:
+            {
+                float target_speed = packet.param2;
+                rover.mode_ivp.set_desired_heading_and_speed(packet.param1, target_speed);
+                if (packet.param4 > 0)
+                    rover.mode_ivp.set_max_distance(packet.param4);
+            }
+                break;
+            case 2:
+            {
+                float target_throttle = packet.param2;  // Target throttle is +/- 100 as percentage.
+                rover.mode_ivp.set_desired_heading_and_throttle(packet.param1, target_throttle);
+                if (packet.param4 > 0)
+                    rover.mode_ivp.set_max_distance(packet.param4);
+            }
+                break;
+            default:
+                gcs().send_text(MAV_SEVERITY_ERROR, "Invalid heading control option.");
+                return MAV_RESULT_DENIED;
+            }
+            return MAV_RESULT_ACCEPTED;
+        }
+
+        switch (param3) {
+        case 1:
+        {
+            float target_speed = packet.param2;
+            rover.mode_guided.set_desired_heading_and_speed(packet.param1, target_speed);
+        }
+            break;
+        case 2:
+        {
+            float target_throttle = packet.param2;  // Target throttle is +/- 100 as percentage.
+            rover.mode_guided.set_desired_heading_and_throttle(packet.param1, target_throttle);
+        }
+            break;
+        default:
+        {
+            // send yaw change and target speed to guided mode controller
+            const float speed_max = rover.g2.wp_nav.get_default_speed();
+            const float target_speed = constrain_float(packet.param2 * speed_max, -speed_max, speed_max);
+            rover.mode_guided.set_desired_heading_delta_and_speed(packet.param1, target_speed);
+        }
         }
         return MAV_RESULT_ACCEPTED;
     }
@@ -908,8 +1032,18 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_long_packet(const mavlink_command_l
     }
 }
 
+
+// a RC override message is considered to be a 'heartbeat' from the ground station for failsafe purposes
+void GCS_MAVLINK_Rover::handle_rc_channels_override(const mavlink_message_t &msg)
+{
+    rover.failsafe.last_heartbeat_ms = AP_HAL::millis();
+    GCS_MAVLINK::handle_rc_channels_override(msg);
+}
+
 MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_do_reposition(const mavlink_command_int_t &packet)
 {
+    rover.failsafe.last_heartbeat_ms = AP_HAL::millis();
+    GCS_MAVLINK::handle_rc_channels_override(msg);
     const bool change_modes = ((int32_t)packet.param2 & MAV_DO_REPOSITION_FLAGS_CHANGE_MODE) == MAV_DO_REPOSITION_FLAGS_CHANGE_MODE;
     if (!rover.control_mode->in_guided_mode() && !change_modes) {
         return MAV_RESULT_DENIED;
@@ -981,6 +1115,58 @@ void GCS_MAVLINK_Rover::handleMessage(const mavlink_message_t &msg)
         handle_radio(msg);
         break;
 
+    case MAVLINK_MSG_ID_PARAM_SET:
+        handle_common_message(msg);
+        {{
+            //FIXME:: these need to also be implemented on a mission wp/item command
+            mavlink_param_set_t param_set;
+            mavlink_msg_param_set_decode(&msg, &param_set);
+            if (strncasecmp(param_set.param_id, "WP_SPEED", 10) == 0) {
+                rover.g2.wp_nav.set_desired_speed_to_default();
+            } else if (strcasecmp(param_set.param_id, "SAIL_MODE") == 0) {
+                rover.g2.sailboat.set_sail_mode((Sailboat::SailMode)param_set.param_value);
+            } else if (strcasecmp(param_set.param_id, "WINCH_ENCODE_IN") == 0) {
+                // If we set the WINCH_ENCODE_IN
+                // TODO: get winch position
+                AP_HAL::ServoStatus winch_status = AP_HAL::get_HAL().rcout->read_status(WINCH_SERVO_CH-1);
+                if (fabs(winch_status.raw - param_set.param_value) <= 250) {
+                    // We're at the 1100 position we just set the value to, so set the servo position to 1100
+                    AP_ServoRelayEvents *handler = AP::servorelayevents();
+                    handler->do_set_servo(WINCH_SERVO_CH, 1100);
+                }
+            }
+        }}
+        break;
+
+
+    case MAVLINK_MSG_ID_RAW_IMU:
+#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+        {{
+            RCOutput_Ocius* rco_ocius = dynamic_cast<RCOutput_Ocius*>(hal.rcout);
+            if (msg.sysid == rover.g.sysid_this_mav && rco_ocius != NULL && msg.compid == rover.g2.sailboat.tilt_imu) {
+                mavlink_raw_imu_t raw_imu;
+                mavlink_msg_raw_imu_decode(&msg, &raw_imu);
+                rco_ocius->updateMastIMU(raw_imu.xacc, raw_imu.yacc, raw_imu.zacc);
+            }
+        }}
+#endif
+        handle_common_message(msg);
+        break;
+
+    case MAVLINK_MSG_ID_SERVO_FEEDBACK_CHANNEL:
+#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+        {{
+            RCOutput_Ocius* rco_ocius = dynamic_cast<RCOutput_Ocius*>(hal.rcout);
+            if (msg.sysid == rover.g.sysid_this_mav && rco_ocius != NULL) {
+                mavlink_servo_feedback_channel_t sfc;
+                mavlink_msg_servo_feedback_channel_decode(&msg, &sfc);
+                rco_ocius->updateServoPosition(sfc.channel-1, sfc.servo);
+            }
+        }}
+#endif
+        handle_common_message(msg);
+        break;
+
     default:
         handle_common_message(msg);
         break;
@@ -1028,7 +1214,7 @@ void GCS_MAVLINK_Rover::handle_set_attitude_target(const mavlink_message_t &msg)
 
     // convert thrust to ground speed
     packet.thrust = constrain_float(packet.thrust, -1.0f, 1.0f);
-    const float target_speed = rover.control_mode->get_speed_default() * packet.thrust;
+    const float target_speed = rover.g2.wp_nav.get_default_speed() * packet.thrust;
 
     // if the body_yaw_rate field is ignored, convert quaternion to heading
     if ((packet.type_mask & MAVLINK_SET_ATT_TYPE_MASK_YAW_RATE_IGNORE) != 0) {
@@ -1105,7 +1291,7 @@ void GCS_MAVLINK_Rover::handle_set_position_target_local_ned(const mavlink_messa
 
     // consume velocity and convert to target speed and heading
     if (!vel_ignore) {
-        const float speed_max = rover.control_mode->get_speed_default();
+                const float speed_max = rover.g2.wp_nav.get_default_speed();
         // convert vector length into a speed
         target_speed = constrain_float(safe_sqrt(sq(packet.vx) + sq(packet.vy)), -speed_max, speed_max);
         // convert vector direction to target yaw
@@ -1209,7 +1395,7 @@ void GCS_MAVLINK_Rover::handle_set_position_target_global_int(const mavlink_mess
 
     // consume velocity and convert to target speed and heading
     if (!vel_ignore) {
-        const float speed_max = rover.control_mode->get_speed_default();
+                const float speed_max = rover.g2.wp_nav.get_default_speed();
         // convert vector length into a speed
         target_speed = constrain_float(safe_sqrt(sq(packet.vx) + sq(packet.vy)), -speed_max, speed_max);
         // convert vector direction to target yaw
