@@ -17,8 +17,8 @@
 #include <OC_NMEA2k/OC_NMEA2k.h>
 #include <AP_AHRS/AP_AHRS.h>
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#include <../APMrover2/Rover.h>
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#include <../Rover/Rover.h>
 #endif
 
 // constructor
@@ -30,7 +30,7 @@ AP_WindVane_Ocius::AP_WindVane_Ocius(AP_WindVane &frontend) :
 
 void AP_WindVane_Ocius::update_direction()
 {
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     if (rover.g2.nmea2k.use_filtered) {
         update_frontend_all(wrap_2PI(ToRad(nmea2k_sensors.weather.ground_wind_dir_filt)), nmea2k_sensors.weather.ground_wind_speed_filt,
                 wrap_PI(ToRad(nmea2k_sensors.weather.apparent_wind_angle_filt)), nmea2k_sensors.weather.apparent_wind_speed_filt);
@@ -46,7 +46,7 @@ void AP_WindVane_Ocius::update_direction()
 
 void AP_WindVane_Ocius::update_speed()
 {
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     if (rover.g2.nmea2k.use_filtered) {
         update_frontend_all(wrap_2PI(ToRad(nmea2k_sensors.weather.ground_wind_dir_filt)), nmea2k_sensors.weather.ground_wind_speed_filt,
                 wrap_PI(ToRad(nmea2k_sensors.weather.apparent_wind_angle_filt)), nmea2k_sensors.weather.apparent_wind_speed_filt);

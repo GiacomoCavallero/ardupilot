@@ -296,7 +296,7 @@ void AP_WindVane::update()
     }
 
     // calculate true wind speed and direction from apparent wind
-    if (have_speed && have_direciton) {
+    if (have_speed && have_direction) {
         if (_sensor_reference == WIND_TRUE) {
             update_apparent_wind_speed_and_direction();
         } else if (_sensor_reference == WIND_APPARENT) {
@@ -415,7 +415,7 @@ void AP_WindVane::send_wind(mavlink_channel_t chan) const
     // send apparent wind using named floats
     // TODO: create a dedicated MAVLink message
     gcs().send_named_float("AppWndSpd", get_apparent_wind_speed());
-    gcs().send_named_float("AppWndDir", degrees(get_apparent_wind_direction_rad()));
+    gcs().send_named_float("AppWndDir", degrees(get_apparent_wind_angle_rad()));
 
 }
 
@@ -473,7 +473,6 @@ void AP_WindVane::update_apparent_wind_speed_and_direction()
     Vector3f veh_velocity;
     if (!AP::ahrs().get_velocity_NED(veh_velocity)) {
         // if no vehicle speed use apparent speed and direction directly
-        _direction_apparent_ef = _direction_true;
         _speed_apparent = _speed_true;
         return;
     }
@@ -492,7 +491,6 @@ void AP_WindVane::update_apparent_wind_speed_and_direction()
     }
 
     _speed_apparent = wind_vector_ef.length();
-    _direction_apparent_ef = atan2f(wind_vector_ef.y, wind_vector_ef.x);
 }
 
 AP_WindVane *AP_WindVane::_singleton = nullptr;
