@@ -260,7 +260,7 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, const st
         } else {
             // calculate maximum speed that keeps overshoot within bounds
             const float radius_m = fabsf(_overshoot / (cosf(radians(turn_angle_cd * 0.01f)) - 1.0f));
-            _desired_speed_final = MIN(_desired_speed, safe_sqrt(_turn_max_mss * radius_m));
+            _desired_speed_final = MIN(_desired_speed, safe_sqrt(_atc.get_turn_lat_accel_max() * radius_m));
             // ensure speed does not fall below minimum
             apply_speed_min(_desired_speed_final);
         }
