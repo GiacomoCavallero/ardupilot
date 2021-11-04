@@ -41,8 +41,8 @@
 #include <GCS_MAVLink/GCS.h>
 #include <OC_NMEA2k/OC_NMEA2k.h>
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#include <../APMrover2/Rover.h>
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#include <../Rover/Rover.h>
 #endif
 
 extern const AP_HAL::HAL& hal;
@@ -77,7 +77,7 @@ bool AP_GPS_Ocius::read(void)
     state.location = nmea_gps->location;
 
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     if (rover.g2.nmea2k.use_filtered) {
         state.ground_course = nmea_gps->cog_filt;
         state.ground_speed = nmea_gps->sog_filt;
