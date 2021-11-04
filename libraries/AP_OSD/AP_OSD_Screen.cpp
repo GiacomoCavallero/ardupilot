@@ -1568,7 +1568,7 @@ void AP_OSD_Screen::draw_wind(uint8_t x, uint8_t y)
 #else
     const AP_WindVane* windvane = AP_WindVane::get_singleton();
     if (windvane != nullptr) {
-        draw_speed(x + 1, y, wrap_2PI(windvane->get_apparent_wind_direction_rad() + M_PI), windvane->get_apparent_wind_speed());
+        draw_speed(x + 1, y, wrap_2PI(windvane->get_apparent_wind_angle_rad() + M_PI), windvane->get_apparent_wind_speed());
     }
 #endif
 
