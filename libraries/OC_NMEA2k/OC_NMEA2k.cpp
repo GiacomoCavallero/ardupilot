@@ -17,8 +17,8 @@
 
 #include "n2kparse.h"
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#include <../APMrover2/Rover.h>
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#include <../Rover/Rover.h>
 #endif
 
 NMEA2K nmea2k_sensors;
@@ -209,7 +209,7 @@ std::map<uint32_t, uint32_t> new_pgns;
 bool NMEA2K::term_complete(unsigned int pgn, MsgVals *pmv)
 {
     // printf("Have complete term: %u\n", pgn);
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     uint32_t gps_primary_id = rover.g2.nmea2k.gps_1,
              gps_secondary_id = rover.g2.nmea2k.gps_2,
              gps_tertiary_id = rover.g2.nmea2k.gps_3,
@@ -782,7 +782,7 @@ void NMEA2K::init()
 {
     if (_port == nullptr)
     {
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
         _port = rover.serial_manager.find_serial(
             AP_SerialManager::SerialProtocol_NMEA2K, 0);
 #endif
@@ -856,7 +856,7 @@ Location NMEA2K::get_location() {
     GPS* gps = get_active_gps();
     if (gps != NULL)
         return gps->location;
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     Location l;
     if (rover.ahrs.get_position(l)) {
         return l;
@@ -871,7 +871,7 @@ float NMEA2K::get_heading() {
     if (compass != NULL) {
         return compass->heading;
     }
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     return wrap_360(ToDeg(rover.ahrs.get_yaw()));
 #else
     return 0;

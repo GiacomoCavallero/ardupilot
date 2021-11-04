@@ -12,8 +12,8 @@
 #include <OC_NMEA2k/oc_filter.h>
 
 
-//#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#include <../APMrover2/Rover.h>
+//#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#include <../Rover/Rover.h>
 //#endif
 
 class MsgVals;
