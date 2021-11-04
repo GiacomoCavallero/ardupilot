@@ -33,7 +33,7 @@ protected:
 
     void send_sail_status();
     void send_water();
-    void send_water_depth();
+    void send_oc_water_depth();
     void send_vessel_speed_components();
     void send_water_velocity();
     void send_weather_data();

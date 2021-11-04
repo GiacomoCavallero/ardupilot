@@ -187,8 +187,8 @@ void GCS_MAVLINK_Rover::send_water() {
             nmea2k_sensors.triducer.water_depth);
 }
 
-void GCS_MAVLINK_Rover::send_water_depth() {
-    mavlink_msg_water_depth_send(chan,
+void GCS_MAVLINK_Rover::send_oc_water_depth() {
+    mavlink_msg_oc_water_depth_send(chan,
             nmea2k_sensors.triducer.water_depth,
             nmea2k_sensors.triducer.water_offset,
             nmea2k_sensors.triducer.water_range,
@@ -618,8 +618,8 @@ bool GCS_MAVLINK_Rover::try_send_message(enum ap_message id)
     case MSG_WATER:
         CHECK_PAYLOAD_SIZE(WATER);
         send_water();
-        CHECK_PAYLOAD_SIZE(WATER_DEPTH);
-        send_water_depth();
+        CHECK_PAYLOAD_SIZE(OC_WATER_DEPTH);
+        send_oc_water_depth();
         CHECK_PAYLOAD_SIZE(VESSEL_SPEED_COMPONENTS);
         send_vessel_speed_components();
         CHECK_PAYLOAD_SIZE(WATER_VELOCITY);
