@@ -2,7 +2,7 @@
 #include "Rover.h"
 
 // initialize follow mode
-bool ModeFollow::_enter(mode_reason_t reason)
+bool ModeFollow::_enter(ModeReason reason)
 {
     if (!g2.follow.enabled()) {
         return false;
@@ -15,7 +15,7 @@ bool ModeFollow::_enter(mode_reason_t reason)
 }
 
 // exit handling
-void ModeFollow::_exit(mode_reason_t reason)
+void ModeFollow::_exit(ModeReason reason)
 {
     g2.follow.clear_offsets_if_required();
 }

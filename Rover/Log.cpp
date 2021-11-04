@@ -143,15 +143,11 @@ void Rover::Log_Write_Sail()
         return;
     }
 
-    float wind_dir_tack = logger.quiet_nanf();
     float wind_dir_rel = logger.quiet_nanf();
     float wind_dir_abs = logger.quiet_nanf();
     float wind_speed_true = logger.quiet_nanf();
     float wind_speed_apparent = logger.quiet_nanf();
-    uint8_t current_tack = 0;
     if (rover.g2.windvane.enabled()) {
-        wind_dir_tack = degrees(g2.windvane.get_tack_threshold_wind_dir_rad());
-        current_tack = uint8_t(g2.windvane.get_current_tack());
         wind_dir_abs = degrees(g2.windvane.get_true_wind_direction_rad());
         wind_dir_rel = degrees(g2.windvane.get_apparent_wind_angle_rad());
         wind_speed_true = g2.windvane.get_true_wind_speed();

@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeGuided::_enter(mode_reason_t reason)
+bool ModeGuided::_enter(ModeReason reason)
 {
     // set desired location to reasonable stopping point
     if (!g2.wp_nav.set_desired_location_to_stopping_location()) {
@@ -28,7 +28,7 @@ void ModeGuided::update()
                 // Wait for the GUIDED target.
                 if (rover.is_boat() && (millis() - _des_att_time_ms) > 3000) {
                     rover.gcs().send_text(MAV_SEVERITY_WARNING, "waited 3 seconds for Guided WP, was not received, going to HOLD");
-                    if (rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                    if (rover.set_mode(rover.mode_hold, ModeReason::FAILSAFE)) {
                         return;
                     }
                     rover.gcs().send_text(MAV_SEVERITY_ERROR, "Unable to go to HOLD after Guided WP timeout");
@@ -49,7 +49,7 @@ void ModeGuided::update()
 
                 // we have reached the destination so hold here
                 if (rover.is_boat()) {
-                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END)) {
+                    if (!rover.set_mode(rover.mode_hold, ModeReason::MISSION_END)) {
                         stop_vehicle();
                     }
                 } else {
@@ -75,7 +75,7 @@ void ModeGuided::update()
             } else {
                 // we have reached the destination so stay here
                 if (rover.is_boat()) {
-                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                    if (!rover.set_mode(rover.mode_hold, ModeReason::FAILSAFE)) {
                         stop_vehicle();
                     }
                 } else {
@@ -99,7 +99,7 @@ void ModeGuided::update()
             } else {
                 // we have reached the destination so stay here
                 if (rover.is_boat()) {
-                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                    if (!rover.set_mode(rover.mode_hold, ModeReason::FAILSAFE)) {
                         stop_vehicle();
                     }
                 } else {
@@ -127,7 +127,7 @@ void ModeGuided::update()
             } else {
                 // we have reached the destination so stay here
                 if (rover.is_boat()) {
-                    if (!rover.set_mode(rover.mode_hold, MODE_REASON_FAILSAFE)) {
+                    if (!rover.set_mode(rover.mode_hold, ModeReason::FAILSAFE)) {
                         stop_vehicle();
                     }
                 } else {
@@ -228,6 +228,7 @@ bool ModeGuided::set_desired_speed(float speed)
     case Guided_Loiter:
         return rover.mode_loiter.set_desired_speed(speed);
     case Guided_SteeringAndThrottle:
+    case Guided_HeadingAndThrottle:
         // no speed control
         return false;
     }
@@ -362,7 +363,7 @@ void ModeGuided::set_steering_and_throttle(float steering, float throttle)
 
 bool ModeGuided::start_loiter()
 {
-    if (rover.mode_loiter.enter(MODE_REASON_MISSION_END)) {
+    if (rover.mode_loiter.enter(ModeReason::MISSION_END)) {
         _guided_mode = Guided_Loiter;
         return true;
     }

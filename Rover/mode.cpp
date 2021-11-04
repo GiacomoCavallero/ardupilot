@@ -14,13 +14,13 @@ Mode::Mode() :
     attitude_control(rover.g2.attitude_control)
 { }
 
-void Mode::exit(mode_reason_t reason)
+void Mode::exit(ModeReason reason)
 {
     // call sub-classes exit
     _exit(reason);
 }
 
-bool Mode::enter(mode_reason_t reason)
+bool Mode::enter(ModeReason reason)
 {
     bool ignore_checks = !hal.util->get_soft_armed();   // allow switching to any mode if disarmed.  We rely on the arming check to perform
     ignore_checks = true;
@@ -411,21 +411,7 @@ float Mode::calc_speed_max(float cruise_speed, float cruise_throttle) const
 //  reversed should be true if the vehicle is intentionally backing up which allows the pilot to increase the backing up speed by pulling the throttle stick down
 float Mode::calc_speed_nudge(float target_speed, bool reversed)
 {
-    // return immediately if nudge is disabled.
     if (!g2.nudge_enable) {
-        return target_speed;
-    }
-
-    // return immediately during RC/GCS failsafe
-    if (rover.failsafe.bits & FAILSAFE_EVENT_THROTTLE) {
-        return target_speed;
-    }
-
-    // return immediately if pilot is not attempting to nudge speed
-    // pilot can nudge up speed if throttle (in range -100 to +100) is above 50% of center in direction of travel
-    const int16_t pilot_throttle = constrain_int16(rover.channel_throttle->get_control_in(), -100, 100);
-    if (((pilot_throttle <= 50) && !reversed) ||
-        ((pilot_throttle >= -50) && reversed)) {
         return target_speed;
     }
 

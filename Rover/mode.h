@@ -46,10 +46,10 @@ public:
     Mode &operator=(const Mode&) = delete;
 
     // enter this mode, returns false if we failed to enter
-    bool enter(mode_reason_t reason);
+    bool enter(ModeReason reason);
 
     // perform any cleanups required:
-    void exit(mode_reason_t reason);
+    void exit(ModeReason reason);
 
     // returns a unique number specific to this mode
     virtual uint32_t mode_number() const = 0;
@@ -139,10 +139,10 @@ public:
 protected:
 
     // subclasses override this to perform checks before entering the mode
-    virtual bool _enter(mode_reason_t reason) { return true; }
+    virtual bool _enter(ModeReason reason) { return true; }
 
     // subclasses override this to perform any required cleanup when exiting the mode
-    virtual void _exit(mode_reason_t reason) { return; }
+    virtual void _exit(ModeReason reason) { return; }
 
     // decode pilot steering and throttle inputs and return in steer_out and throttle_out arguments
     // steering_out is in the range -4500 ~ +4500 with positive numbers meaning rotate clockwise
@@ -284,8 +284,8 @@ public:
 
 protected:
 
-    bool _enter(mode_reason_t reason) override;
-    void _exit(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
+    void _exit(ModeReason reason) override;
 
     enum AutoSubMode {
         Auto_WP,                // drive to a given location
@@ -432,7 +432,7 @@ protected:
         Guided_HeadingAndThrottle,
     };
 
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
 
     GuidedMode _guided_mode;    // stores which GUIDED mode the vehicle is in
 
@@ -468,7 +468,7 @@ public:
     const char *name4() const override { return "HOLD"; }
 
     // enter this mode, returns false if we failed to enter
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
 
     // attributes of the mode
     bool is_autopilot_mode() const override { return true; }
@@ -544,7 +544,7 @@ public:
 
 protected:
 
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
 
     Location _destination;      // target location to hold position around
     float _desired_speed;       // desired speed (ramped down from initial speed to zero)
@@ -570,7 +570,7 @@ public:
 
 protected:
 
-    void _exit(mode_reason_t reason) override;
+    void _exit(ModeReason reason) override;
 };
 
 
@@ -602,7 +602,7 @@ public:
 
 protected:
 
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
 
     bool send_notification; // used to send one time notification to ground station
     bool _holding;        // true if loitering at end of RTL
@@ -648,7 +648,7 @@ protected:
         SmartRTL_Failure
     } smart_rtl_state;
 
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
     bool _load_point;
     bool _holding;        // true if loitering at end of SRTL
 };
@@ -697,7 +697,7 @@ public:
     bool has_manual_input() const override { return true; }
     bool attitude_stabilized() const override { return false; }
 protected:
-    bool _enter() override { return false; };
+    bool _enter(ModeReason) override { return false; };
 };
 
 class ModeFollow : public Mode
@@ -728,8 +728,8 @@ public:
     bool set_desired_speed(float speed) override;
 
 protected:
-    bool _enter(mode_reason_t reason) override;
-    void _exit(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
+    void _exit(ModeReason reason) override;
 
     float _desired_speed;       // desired speed in m/s
 };
@@ -777,7 +777,7 @@ public:
     float nav_speed() const { return _desired_speed; }
 
     // set desired heading and speed
-    void set_desired_heading_and_speed(float yaw_angle_cd, float target_speed) override;
+    void set_desired_heading_and_speed(float yaw_angle_cd, float target_speed);
     // set desired heading and throttle(-100..100)
     void set_desired_heading_and_throttle(float yaw_angle_cd, float target_throttle);
 
@@ -797,7 +797,7 @@ public:
     bool get_desired_location(Location& destination) const override;
 
 protected:
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
 };
 
 class ModeOciusRTL : public Mode
@@ -822,7 +822,7 @@ public:
 
 protected:
 
-    bool _enter(mode_reason_t reason) override;
+    bool _enter(ModeReason reason) override;
 
     int32_t rtl_wp_idx;
     Location next_wp;

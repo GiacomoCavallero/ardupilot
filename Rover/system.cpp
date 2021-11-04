@@ -6,6 +6,7 @@ The init_ardupilot function processes everything we need for an in - air restart
 *****************************************************************************/
 
 #include "Rover.h"
+#include <AP_Common/AP_FWVersion.h>
 
 static void failsafe_check_static()
 {
@@ -185,7 +186,8 @@ void Rover::startup_ground(void)
     // so set serial ports non-blocking once we are ready to drive
     serial_manager.set_blocking_writes_all(false);
 
-    gcs().send_text(MAV_SEVERITY_NOTICE, "%s", AP::fwversion().fw_string); // Should call if we could: gcs().send_banner();
+    const AP_FWVersion &fwver = AP::fwversion();
+    gcs().send_text(MAV_SEVERITY_NOTICE, "%s", fwver.fw_string); // Should call if we could: gcs().send_banner();
     gcs().send_text(MAV_SEVERITY_NOTICE, "FRAME_CLASS: %d(%s)", (int)g2.frame_class, to_string((enum frame_class)(int)g2.frame_class));
 }
 
@@ -226,29 +228,36 @@ bool Rover::set_mode(Mode &new_mode, ModeReason reason)
     }
 
     switch (reason) {
-    case MODE_REASON_TX_COMMAND:
+    case ModeReason::RC_COMMAND:
         gcs().send_text(MAV_SEVERITY_INFO, "Flight mode %s request from transmitter", new_mode.name4());
         break;
-    case MODE_REASON_MISSION_END:
+    case ModeReason::MISSION_END:
         gcs().send_text(MAV_SEVERITY_INFO, "Flight mode %s set at mission end", new_mode.name4());
         break;
-    case MODE_REASON_MISSION_COMMAND:
+    case ModeReason::MISSION_CMD:
         gcs().send_text(MAV_SEVERITY_INFO, "Flight mode %s set in mission command", new_mode.name4());
         break;
-    case MODE_REASON_FAILSAFE:
-    case MODE_REASON_CRASH_FAILSAFE:
-    case MODE_REASON_EKF_FAILSAFE:
-        gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s set due to failsafe", new_mode.name4());
+    case ModeReason::FAILSAFE:
+    case ModeReason::CRASH_FAILSAFE:
+    case ModeReason::EKF_FAILSAFE:
+    case ModeReason::RADIO_FAILSAFE:
+    case ModeReason::BATTERY_FAILSAFE:
+    case ModeReason::GCS_FAILSAFE:
+    case ModeReason::GPS_GLITCH:
+        gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s set due to failsafe(%u)", new_mode.name4(), unsigned(reason));
         break;
-    case MODE_REASON_FENCE_BREACH:
+    case ModeReason::FENCE_BREACHED:
         gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s set after fence breach", new_mode.name4());
         break;
-    case MODE_REASON_GCS_COMMAND:
+    case ModeReason::GCS_COMMAND:
         // treat as a GCS heartbeat
-        gcs().sysid_myggcs_seen(tnow);
+        gcs().sysid_myggcs_seen(AP_HAL::millis());
         break;
-    case MODE_REASON_INITIALISED:
+    case ModeReason::INITIALISED:
         // These don't need log messages
+        break;
+    default:
+        gcs().send_text(MAV_SEVERITY_WARNING, "Flight mode %s REASON(%u)", new_mode.name4(), unsigned(reason));
         break;
     }
 

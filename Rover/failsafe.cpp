@@ -86,23 +86,23 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
                 case Failsafe_Action_None:
                     break;
                 case Failsafe_Action_RTL:
-                    if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
-                        set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                    if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
+                        set_mode(mode_hold, ModeReason::FAILSAFE);
                     }
                     break;
                 case Failsafe_Action_Hold:
-                    set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                    set_mode(mode_hold, ModeReason::FAILSAFE);
                     break;
                 case Failsafe_Action_SmartRTL:
-                    if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
-                        if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
-                            set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                    if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
+                        if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
+                            set_mode(mode_hold, ModeReason::FAILSAFE);
                         }
                     }
                     break;
                 case Failsafe_Action_SmartRTL_Hold:
-                    if (!set_mode(mode_smartrtl, MODE_REASON_FAILSAFE)) {
-                        set_mode(mode_hold, MODE_REASON_FAILSAFE);
+                    if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
+                        set_mode(mode_hold, ModeReason::FAILSAFE);
                     }
                     break;
                 }

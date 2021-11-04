@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-void ModeManual::_exit(mode_reason_t reason)
+void ModeManual::_exit(ModeReason reason)
 {
     // clear lateral when exiting manual mode
     g2.motors.set_lateral(0);

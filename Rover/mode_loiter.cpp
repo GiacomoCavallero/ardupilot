@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeLoiter::_enter(mode_reason_t reason)
+bool ModeLoiter::_enter(ModeReason reason)
 {
     // set _destination to reasonable stopping point
     if (!g2.wp_nav.get_stopping_location(_destination)) {

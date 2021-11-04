@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeOciusRTL::_enter(mode_reason_t reason)
+bool ModeOciusRTL::_enter(ModeReason reason)
 {
     // TODO: find index of sequence start WP
     AP_Mission *mission = AP::mission();

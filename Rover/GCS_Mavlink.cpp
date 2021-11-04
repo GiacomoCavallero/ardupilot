@@ -2,13 +2,14 @@
 
 #include "GCS_Mavlink.h"
 
-#include <AP_RangeFinder/RangeFinder_Backend.h>
 #include <OC_NMEA2k/OC_NMEA2k.h>
 #include <deque>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
 #include <AP_HAL_Linux/RCOutput_Ocius.h>
 #endif
+
+#include <AP_RangeFinder/AP_RangeFinder_Backend.h>
 
 MAV_TYPE GCS_Rover::frame_type() const
 {
@@ -1033,17 +1034,8 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_long_packet(const mavlink_command_l
 }
 
 
-// a RC override message is considered to be a 'heartbeat' from the ground station for failsafe purposes
-void GCS_MAVLINK_Rover::handle_rc_channels_override(const mavlink_message_t &msg)
-{
-    rover.failsafe.last_heartbeat_ms = AP_HAL::millis();
-    GCS_MAVLINK::handle_rc_channels_override(msg);
-}
-
 MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_do_reposition(const mavlink_command_int_t &packet)
 {
-    rover.failsafe.last_heartbeat_ms = AP_HAL::millis();
-    GCS_MAVLINK::handle_rc_channels_override(msg);
     const bool change_modes = ((int32_t)packet.param2 & MAV_DO_REPOSITION_FLAGS_CHANGE_MODE) == MAV_DO_REPOSITION_FLAGS_CHANGE_MODE;
     if (!rover.control_mode->in_guided_mode() && !change_modes) {
         return MAV_RESULT_DENIED;

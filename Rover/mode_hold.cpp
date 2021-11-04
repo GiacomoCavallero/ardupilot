@@ -3,9 +3,9 @@
 #include <GCS_MAVLink/GCS.h>
 
 // enter this mode, returns false if we failed to enter
-bool ModeHold::_enter(mode_reason_t reason) {
+bool ModeHold::_enter(ModeReason reason) {
     // Need to get the end location from guided or auto modes
-    if (reason == MODE_REASON_MISSION_END) {
+    if (reason == ModeReason::MISSION_END) {
         if (!rover.control_mode->get_desired_location(hold_wp)) {
             hold_wp = rover.current_loc;
         }

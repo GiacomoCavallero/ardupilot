@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeIVP::_enter(mode_reason_t reason)
+bool ModeIVP::_enter(ModeReason reason)
 {
     _reached_destination = false;
     have_attitude_target = false;
@@ -27,7 +27,7 @@ void ModeIVP::update()
         // If we're a boat we drop to hold at the end of the travel
         if (rover.is_boat())
         {
-            if (!rover.set_mode(rover.mode_hold, MODE_REASON_MISSION_END))
+            if (!rover.set_mode(rover.mode_hold, ModeReason::MISSION_END))
             {
                 stop_vehicle();
             }
@@ -51,7 +51,9 @@ void ModeIVP::update()
                 // but we ignore the throttle out
                 float mainsail_out = 0.0f;
                 float throttle_out = 0.0f;
-                rover.g2.sailboat.get_throttle_and_mainsail_out(1.0, throttle_out, mainsail_out);
+                float wingsail_out = 0;
+                float mast_rotation_out = 0;
+                rover.g2.sailboat.get_throttle_and_mainsail_out(1.0, throttle_out, mainsail_out, wingsail_out, mast_rotation_out);
                 rover.g2.motors.set_mainsail(mainsail_out);
             }
             g2.motors.set_throttle(_desired_speed);
@@ -68,9 +70,6 @@ void ModeIVP::update()
 // set desired attitude
 void ModeIVP::set_desired_heading_and_speed(float yaw_angle_cd, float target_speed)
 {
-    // call parent
-    Mode::set_desired_heading_and_speed(yaw_angle_cd, target_speed);
-
     // handle guided specific initialisation and logging
     _des_att_time_ms = AP_HAL::millis();
     _reached_destination = false;

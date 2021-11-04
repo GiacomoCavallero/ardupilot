@@ -1,7 +1,7 @@
 #include "mode.h"
 #include "Rover.h"
 
-bool ModeSmartRTL::_enter(mode_reason_t reason)
+bool ModeSmartRTL::_enter(ModeReason reason)
 {
     // SmartRTL requires EKF (not DCM)
     Location ekf_origin;
@@ -83,7 +83,7 @@ void ModeSmartRTL::update()
             } else {
                 // if not loitering yet, start loitering
                 if (!_holding) {
-                    _holding = rover.mode_hold.enter(smart_rtl_state == SmartRTL_StopAtHome?MODE_REASON_MISSION_END:MODE_REASON_FAILSAFE);
+                    _holding = rover.mode_hold.enter(smart_rtl_state == SmartRTL_StopAtHome?ModeReason::MISSION_END:ModeReason::FAILSAFE);
                 }
                 if (_holding) {
                     rover.mode_hold.update();
