@@ -7,15 +7,14 @@
 #include <AP_Declination/AP_Declination.h>
 
 #include <AP_Vehicle/AP_Vehicle_Type.h>
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#include <../APMrover2/Rover.h>
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
+#include <../Rover/Rover.h>
 #endif
 
 AP_Compass_Ocius::AP_Compass_Ocius() : 
     AP_Compass_Backend(),
     compass_instance(0), last_plublished_ms(0)
 {
-    _compass._setup_earth_field();
 }
 
 AP_Compass_Backend *AP_Compass_Ocius::probe() {
@@ -23,7 +22,7 @@ AP_Compass_Backend *AP_Compass_Ocius::probe() {
 	
 #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     if (rover.get_frame_class() == FRAME_BLUEBOTTLE || rover.get_frame_class() == FRAME_WAMV) {
         driver = new AP_Compass_Ocius();
         driver->init();
@@ -35,9 +34,14 @@ AP_Compass_Backend *AP_Compass_Ocius::probe() {
     return driver;
 }
 
-bool AP_Compass_Ocius::init(void) {
-    compass_instance = register_compass();
-    set_dev_id(compass_instance, DEVTYPE_OCIUS);
+bool AP_Compass_Ocius::init(void)
+{
+    const uint32_t bus_id = AP_HAL::Device::make_bus_id(AP_HAL::Device::BUS_TYPE_NMEA2K,
+                                                        0, 0, DEVTYPE_OCIUS);
+    if (!register_compass(bus_id, compass_instance)) {
+        return false;
+    }
+
     nmea2k_sensors.init();
 
     uint64_t tstart = AP_HAL::millis64(), tdiff = 0;
@@ -108,7 +112,7 @@ void AP_Compass_Ocius::read()
           //yaw   = compass->yaw,
           heading = compass->heading;
 
-#if APM_BUILD_TYPE(APM_BUILD_APMrover2)
+#if APM_BUILD_TYPE(APM_BUILD_Rover)
     if (rover.g2.nmea2k.use_filtered) {
         heading = compass->heading_filt;
     }
