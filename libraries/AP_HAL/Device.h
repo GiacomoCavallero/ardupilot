@@ -34,6 +34,7 @@ public:
         BUS_TYPE_SITL    = 4,
         BUS_TYPE_MSP     = 5,
         BUS_TYPE_SERIAL  = 6,
+        BUS_TYPE_NMEA2K  = 7,
     };
 
     enum Speed {
